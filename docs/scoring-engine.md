@@ -56,11 +56,24 @@ if swell_dir outside acceptable                    → 0–30
 
 #### Swell Period Score
 
+Period scoring is **relative to the beach profile**, not a fixed global table. Use `beach.minSwellPeriodS` and `beach.idealSwellPeriodS` as anchors:
+
 ```
-< 7s   → 0–20   (local wind chop, poorly organised)
-7–9s   → 30–55  (weak/average)
-10–12s → 60–80  (good, organised swell)
-13s+   → 80–100 (very powerful, check beach size tolerance)
+below beach.minSwellPeriodS              → 0–20
+between min and idealSwellPeriodS[0]     → 20–60
+inside beach.idealSwellPeriodS range     → 70–100
+above idealSwellPeriodS[1]               → 60–80 (powerful but may exceed beach tolerance)
+```
+
+**Why:** A confined-gulf beach (e.g. Kokkino Limanaki, min 3s) should score well at 5s period wind chop. The same 5s period at Langouvardos (min 8s) should score poorly. Global tables would penalise appropriate conditions for low-period beaches.
+
+**Reference baseline** (for context, not for scoring):
+```
+< 5s   → pure local wind chop, very short fetch
+5–7s   → short-period wind swell, typical for enclosed seas
+8–10s  → organised swell, moderate fetch or storm origin
+11–14s → powerful organised swell, storm or long fetch
+15s+   → long-period groundswell (rare in Mediterranean)
 ```
 
 #### Swell Height Score
@@ -90,6 +103,53 @@ onshore + moderate/strong (> 20 km/h)  → 0–25
 ```
 
 Wind direction scoring uses the difference between forecast wind direction and the beach shoreline normal (negative = offshore, positive = onshore).
+
+**Exception — `wave-generating-onshore` beaches:**
+Some enclosed-water beaches (e.g. Vouliagmeni) rely on onshore wind to generate swell. Standard offshore-good / onshore-bad logic does not apply. These beaches define a `windScoringLogic` block in their profile. The scorer must check `windScoringLogic.type` and apply the following conditional tree instead of the standard wind score:
+
+```
+IF windScoringLogic.type == "wave-generating-onshore":
+
+  swellGeneratingWind = profile.windScoringLogic.swellGeneratingWind
+
+  IF forecast wind direction ≈ swellGeneratingWind.directionDeg (±20°)
+     AND forecast wind speed ≥ swellGeneratingWind.minSpeedKmh:
+       → swell generation confirmed → swell score contribution is valid
+
+  IF forecast wind direction ≈ offshore (north for this beach):
+       → apply quality multiplier ↑ (clean surface bonus)
+
+  IF forecast wind direction ≈ swellGeneratingWind.directionDeg (±20°)
+     AND forecast wind speed > messinessPenalty.thresholdSpeedKmh:
+       → apply messiness penalty ↓ (choppy surface)
+
+  Optimal scenario: SSE built the swell AND wind is now easing or shifting north
+```
+
+This pattern applies to the majority of Greek surf beaches. Always check `windScoringLogic.type` before applying standard wind scoring.
+
+**Sub-variant — side-onshore generating wind (e.g. Palaiohora):**
+Some beaches have a generating wind that is side-onshore (~45–70° off the beach normal) rather than dead onshore. The wave generation is effective but surface quality is less degraded than a direct onshore wind.
+
+```
+IF generating wind angle to beach normal > 45°:
+  → apply reduced messiness penalty (side-onshore is less destructive)
+  → swell generation still valid if wind speed ≥ minSpeedKmh
+```
+
+Use `windAngleToBenchNormal = abs(forecastWindDir - shorelineNormalDeg)` to determine this at runtime — do not hardcode per beach.
+
+**Dual-mode beaches (e.g. Falasarna):**
+Some beaches have `windScoringLogic` defined but also receive organised swell in a different season where standard scoring is more appropriate. The scorer should determine which mode applies based on the current wind direction:
+
+```
+IF beach has windScoringLogic AND forecast wind direction ≈ swellGeneratingWind.directionDeg (±30°):
+  → apply wave-generating-onshore scoring
+ELSE IF swell is arriving from beach's idealSwellDirection:
+  → apply standard scoring (offshore = good, onshore = bad)
+```
+
+This allows a dual-mode beach to score correctly in both seasons without separate profile entries.
 
 #### Secondary Swell Score (bonus/penalty)
 
@@ -153,7 +213,7 @@ The daily summary is what the frontend shows in the 10-day forecast strip.
 
 ```json
 {
-  "beachId": "kokkari-samos",
+  "beachId": "langouvardos-filiatra",
   "timestamp": "2026-03-26T09:00:00Z",
   "surfScore": 74,
   "label": "good",
