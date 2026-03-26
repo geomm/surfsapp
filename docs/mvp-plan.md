@@ -1,6 +1,6 @@
 # Surf App — MVP Development Plan
 
-**Goal:** An offline-first PWA that shows Greek surf beaches on a map, fetches live marine forecasts, computes surfability scores per beach, and works offline using cached data.
+**Goal:** An offline-first PWA that lists Greek surf beaches with live surfability scores, fetches marine forecasts, and works offline using cached data.
 
 ---
 
@@ -8,15 +8,16 @@
 
 The user should be able to:
 
-1. Open the app
-2. See Greek beaches on a map with surfability indicators
-3. Tap a beach and read its current surf score, label, and reasons
+1. Open the app and see all beaches listed with current surfability score + label
+2. Filter beaches by region, difficulty, or favourites
+3. Tap a beach and read its current surf score, reasons, and localised map
 4. Browse a 10-day forecast for that beach (daily summaries)
-5. Favourite a beach
+5. Favourite a beach from the listing or detail screen
 6. Reopen the app offline and still see the last known scores
 7. Know when data was last refreshed ("Last updated X hours ago")
 
 Do NOT build in MVP:
+- Full interactive map view (all beaches as markers) — add in v2
 - User accounts / auth
 - Push notifications
 - Social features
@@ -122,24 +123,26 @@ settings        — mapCenter, mapZoom, filters, offlinePreferences
 - Compute daily summaries (best window + peak score per day)
 - See `docs/scoring-engine.md` for algorithm details
 
-### Phase 6 — Map View
-- MapLibre GL JS map
-- Load beaches from API
-- Render markers colour-coded by surfability (green/yellow/orange/grey)
-- Cluster markers at low zoom
-- Tap marker → open beach detail
+### Phase 6 — Beach Listing View
+- List all beaches from API, sorted by surf score (best first)
+- Each beach card shows: name, region, surf score badge, label, current swell summary
+- Staleness indicator per card: "Last updated X hours ago"
+- Favourite toggle on each card
+- Pull-to-refresh
 
 ### Phase 7 — Beach Detail View
-- Current surf score + label
+- Back navigation to listing
+- Current surf score + label (prominent)
 - Reasons list ("swell direction matches", "wind is offshore", etc.)
-- 10-day forecast strip (day cards with score + label)
-- Favourite toggle button
+- Localised MapLibre map: single beach pin + surrounding coastline, read-only orientation view
+- 10-day forecast strip (scrollable day cards with score + label)
+- Favourite toggle
 - Staleness indicator: "Last updated X hours ago"
 
-### Phase 8 — Favourites
+### Phase 8 — Favourites (filter, not separate screen)
 - Save/remove favourites in IndexedDB
-- Favourites screen: list saved beaches with last known score
-- Tap to navigate to beach on map or open detail
+- "Favourites only" filter toggle on listing
+- Favourite state persisted across sessions
 
 ### Phase 9 — Offline First
 - Service worker via Vite PWA Plugin
@@ -154,14 +157,19 @@ settings        — mapCenter, mapZoom, filters, offlinePreferences
 - Test standalone mode
 
 ### Phase 11 — Filters
-- Filter by: region, difficulty, wave type, favourites only
+- Filter by: region, difficulty, favourites only
 - Persist active filters in IndexedDB settings
 
 ### Phase 12 — Mobile Polish
 - Touch-optimised interactions
-- Bottom sheet for beach details on mobile
 - Safe area insets
 - Test on real Android + iOS Safari
+
+### Phase 13 — Full Map View (v2)
+- MapLibre GL JS map with all beaches as markers
+- Colour-coded by surfability
+- Cluster markers at low zoom
+- Tap marker → open beach detail
 
 ---
 
@@ -178,10 +186,8 @@ surfsapp/
 │       │   ├── main.ts
 │       │   └── router.ts
 │       ├── views/
-│       │   ├── MapView.vue
-│       │   ├── BeachDetailView.vue
-│       │   ├── FavouritesView.vue
-│       │   └── SettingsView.vue
+│       │   ├── BeachListView.vue
+│       │   └── BeachDetailView.vue
 │       ├── components/
 │       │   ├── vue/
 │       │   └── lit/
