@@ -37,61 +37,155 @@ See `docs/beach-profiles.md` for the full schema.
 
 ## Scoring Algorithm
 
+The weights in the formula are **heuristics, not physical constants**. They represent relative importance beliefs, tuned per beach. They will be calibrated against real observations over time.
+
+---
+
 ### Step 1 — Fetch forecast point
 
 Query Open-Meteo Marine API at the beach's offshore coordinates.
 Optionally query 2–3 nearby grid points and average (future improvement).
 
-### Step 2 — Compute subscores (0–100 each)
+---
+
+### Step 2 — Apply hard gates
+
+Before scoring, apply mandatory pass/fail rules. A failed gate short-circuits the entire calculation and returns `"flat"` immediately — no weighted averaging can recover a fundamentally broken condition.
+
+```
+GATE 1 — Swell direction
+  IF swell_dir outside beach.acceptableSwellDirection:
+    → return { score: 0, label: "flat", reason: "Swell direction blocked" }
+
+GATE 2 — Swell height
+  IF swell_wave_height < beach.minSwellHeightM:
+    → return { score: 0, label: "flat", reason: "Swell too small" }
+
+GATE 3 — Wave-generating-onshore: generating wind absent
+  IF beach.windScoringLogic.type == "wave-generating-onshore"
+     AND forecast wind direction is NOT ≈ swellGeneratingWind.directionDeg (±30°)
+     AND swell_wave_height < beach.minSwellHeightM * 1.5:
+    → return { score: 5, label: "flat", reason: "Generating wind absent, no residual swell" }
+```
+
+**Why gating matters:** Without gates, a beach with perfect wind, perfect period, and wrong swell direction could score "maybe" or higher. Gating prevents the weighted sum from averaging around a deal-breaker.
+
+---
+
+### Step 3 — Compute subscores (0–100 each)
 
 #### Swell Direction Score
 
-Compare forecast swell direction to the beach's preferred window.
+Use a **continuous gradient** from the ideal centre, not discrete buckets. This prevents a swell at the edge of the ideal window scoring the same as one dead-centre.
 
 ```
-if swell_dir inside beach.idealSwellDirection     → 90–100
-if swell_dir inside beach.acceptableSwellDirection → 50–89
-if swell_dir outside acceptable                    → 0–30
+angle_from_ideal_centre = angular_distance(swell_dir, midpoint(beach.idealSwellDirection))
+
+if angle_from_ideal_centre == 0                         → 100
+if swell_dir inside idealSwellDirection                 → linear decay toward 80 at window edge
+if swell_dir inside acceptableSwellDirection only       → linear decay from 79 toward 40 at window edge
+if swell_dir outside acceptable (already gated above)  → 0
 ```
+
+Note: direction ranges crossing 360° (e.g. `[330, 30]`) require modular arithmetic.
 
 #### Swell Period Score
 
+Period scoring is **relative to the beach profile**, not a fixed global table:
+
 ```
-< 7s   → 0–20   (local wind chop, poorly organised)
-7–9s   → 30–55  (weak/average)
-10–12s → 60–80  (good, organised swell)
-13s+   → 80–100 (very powerful, check beach size tolerance)
+below beach.minSwellPeriodS                → 0–20
+between min and idealSwellPeriodS[0]       → 20–60  (linear interpolation)
+inside beach.idealSwellPeriodS range       → 70–100
+above idealSwellPeriodS[1]                 → 60–80  (powerful but may exceed tolerance)
 ```
+
+A confined-gulf beach (Kokkino Limanaki, min 3s) scores well at 5s. The same 5s period at Langouvardos (min 8s) scores poorly. Global tables would penalise appropriate conditions for low-period beaches.
 
 #### Swell Height Score
 
-Per beach `minSwellHeightM` and `idealSwellHeightM` range:
+```
+below beach.minSwellHeightM                     → 0 (already gated, shouldn't reach here)
+between min and idealSwellHeightM[0]            → 20–70  (linear interpolation)
+inside beach.idealSwellHeightM range            → 80–100
+above idealSwellHeightM[1]:
+  beach.skillLevel == "advanced"               → gradual penalty (score stays 50–70)
+  beach.skillLevel == "intermediate"           → moderate penalty (30–55)
+  beach.skillLevel == "beginner"               → steep penalty (0–30)
+```
+
+#### Wave Energy Score (bonus dimension)
+
+Wave energy is proportional to `height² × period`. This captures swell power more accurately than height alone — a 1.5m / 12s swell carries far more energy than a 1.5m / 5s chop.
 
 ```
-below minimum       → 0–20
-approaching minimum → 20–50
-inside ideal range  → 80–100
-above ideal max     → penalty based on beach skill level
-  - advanced beach  → smaller penalty
-  - beginner beach  → large penalty
+wave_energy = swell_wave_height² × swell_wave_period
+
+normalise against beach.idealSwellHeightM and beach.idealSwellPeriodS to get 0–100 score
+
+Use as a bonus modifier (+0 to +10) on top of height and period subscores,
+or as a standalone subscore if beach.weights.waveEnergy is defined.
 ```
+
+This is an additive signal. Do not replace height and period scores with it — use it to boost the score when both height and period are simultaneously in the ideal range.
 
 #### Wind Score
 
 Wind direction relative to beach `shorelineNormalDeg`:
 
 ```
-offshore + light/moderate (< 15 km/h)  → 90–100
-offshore + strong (15–25 km/h)         → 70–85
-glassy / calm (< 5 km/h any direction) → 100
-cross-shore                            → 40–65
-onshore + light                        → 30–45
-onshore + moderate/strong (> 20 km/h)  → 0–25
+windAngle = angular_distance(forecastWindDir, shorelineNormalDeg)
+  → 0°   = dead offshore
+  → 90°  = cross-shore
+  → 180° = dead onshore
+
+Standard scoring:
+  windAngle < 30° AND speed < 15 km/h   → 90–100  (light offshore)
+  windAngle < 30° AND speed 15–25 km/h  → 70–85   (moderate offshore)
+  windAngle < 30° AND speed > 35 km/h   → 40–60   (strong offshore — paddling difficulty)
+  speed < 5 km/h (any direction)        → 100      (glassy)
+  windAngle 30–70°                      → 40–70    (cross-shore, variable)
+  windAngle 70–120° (onshore)           → 20–45
+  windAngle > 120° AND speed > 20 km/h  → 0–20    (strong onshore)
 ```
 
-Wind direction scoring uses the difference between forecast wind direction and the beach shoreline normal (negative = offshore, positive = onshore).
+**Exception — `wave-generating-onshore` beaches:**
+Standard offshore-good / onshore-bad logic does not apply. The scorer checks `windScoringLogic.type` and produces a numeric wind score using the conditional logic below:
 
-#### Secondary Swell Score (bonus/penalty)
+```
+wind_score = 50 (neutral baseline)
+
+IF forecast wind ≈ swellGeneratingWind.directionDeg (±20°)
+   AND speed ≥ swellGeneratingWind.minSpeedKmh:
+     wind_score += 20  (generating wind present — swell exists)
+
+IF forecast wind ≈ qualityMultiplier.triggerDirectionDeg (±20°):
+     wind_score += 25  (offshore wind — clean surface bonus)
+
+IF forecast wind ≈ swellGeneratingWind.directionDeg (±20°)
+   AND speed > messinessPenalty.thresholdSpeedKmh:
+     wind_score -= 35  (strong generating wind — heavy chop penalty)
+
+wind_score = clamp(wind_score, 0, 100)
+```
+
+**Sub-variant — side-onshore generating wind (e.g. Palaiohora):**
+```
+windAngleToNormal = abs(forecastWindDir - shorelineNormalDeg)
+IF windAngleToNormal > 45°:
+  → reduce messiness penalty by 40% (side-onshore is less destructive)
+```
+
+**Dual-mode beaches (e.g. Falasarna):**
+```
+IF beach has windScoringLogic
+   AND forecast wind ≈ swellGeneratingWind.directionDeg (±30°):
+     → apply wave-generating-onshore wind scoring
+ELSE:
+     → apply standard wind scoring
+```
+
+#### Secondary Swell Modifier
 
 ```
 secondary swell from same window as primary → +5
@@ -99,20 +193,38 @@ secondary swell from opposing direction     → -10
 no secondary swell                          → 0
 ```
 
-### Step 3 — Weighted final score
+---
+
+### Step 4 — Weighted final score
+
+Each beach profile defines its own `weights` object. Weights must sum to 1.0.
 
 ```
 surf_score =
-  0.30 * swell_direction_score +
-  0.25 * swell_period_score +
-  0.20 * swell_height_score +
-  0.20 * wind_score +
-  0.05 * secondary_swell_bonus
+  beach.weights.swellDirection * swell_direction_score +
+  beach.weights.swellPeriod    * swell_period_score +
+  beach.weights.swellHeight    * swell_height_score +
+  beach.weights.wind           * wind_score +
+  beach.weights.tide           * tide_score (default 0 until tide data added)
+  + secondary_swell_modifier
 
 surf_score = clamp(surf_score, 0, 100)
 ```
 
-### Step 4 — Map to label
+**Default weights by beach type (starting heuristics — tune per beach over time):**
+
+| Beach type | swellDirection | swellPeriod | swellHeight | wind | tide |
+|---|---|---|---|---|---|
+| Open beach break (e.g. Langouvardos) | 0.35 | 0.25 | 0.20 | 0.15 | 0.05 |
+| Wave-gen onshore / enclosed gulf (e.g. Vouliagmeni) | 0.20 | 0.20 | 0.25 | 0.30 | 0.05 |
+| Open Meltemi / north-facing (e.g. Mesachti) | 0.30 | 0.20 | 0.25 | 0.20 | 0.05 |
+| Sheltered point / directional (hypothetical) | 0.45 | 0.30 | 0.15 | 0.05 | 0.05 |
+
+**Why per-beach weights:** For an enclosed-gulf beach, wind carries more weight because it is simultaneously the wave generator and the quality killer. For a directional point break, swell direction dominates — wrong angle means no waves regardless of everything else. These weights are product design parameters, not physical constants.
+
+---
+
+### Step 5 — Map to label
 
 ```
 0–39   → "poor"
@@ -153,7 +265,7 @@ The daily summary is what the frontend shows in the 10-day forecast strip.
 
 ```json
 {
-  "beachId": "kokkari-samos",
+  "beachId": "langouvardos-filiatra",
   "timestamp": "2026-03-26T09:00:00Z",
   "surfScore": 74,
   "label": "good",
@@ -190,14 +302,26 @@ Later, calibrate confidence against real observed conditions.
 
 ## Evolution Path
 
+The weights are product design parameters, not physical constants. They improve through observation.
+
 | Phase | Approach |
 |---|---|
-| MVP | Rule-based scorer with manually tuned beach profiles |
-| Phase 2 | Calibration — compare output against real conditions, adjust beach thresholds |
-| Phase 3 | Add confidence decay, historical accuracy tracking |
-| Phase 4 | Optional: user feedback loop ("conditions were actually good/bad") |
+| MVP | Hard-coded heuristic weights per beach type. Manual gates. Rule-based scorer. |
+| Phase 2 | Calibration — compare algorithm output against real conditions (surf reports, personal observation). Adjust `beach.weights` and thresholds per beach. |
+| Phase 3 | Statistical tuning — use historical forecast + observed quality pairs to optimise weights. Minimise prediction error across the beach dataset. |
+| Phase 4 | Confidence scoring — weight predictions by forecast horizon and historical accuracy per beach. |
+| Phase 5 (optional) | User feedback loop — "conditions were actually good/bad" signal feeds back into weight adjustment. |
+| Phase 6 (optional) | ML — learn weight relationships automatically from accumulated data. Do NOT start here. |
 
-Do NOT start with machine learning or a universal algorithm. The beach profile approach is the correct foundation.
+**What calibration looks like in practice:**
+- Run algorithm on a past date you know was good/bad at a specific beach
+- Compare output label to reality
+- Adjust the weight that caused the mismatch
+- Re-run, iterate
+
+**Wave energy as a future scoring dimension:**
+`wave_energy ∝ height² × period`
+Long-period swell carries exponentially more energy than short-period. This can be a standalone subscore or a bonus modifier once baseline weights are calibrated. Add it when you observe that the scorer underrates long-period swell windows.
 
 ---
 
