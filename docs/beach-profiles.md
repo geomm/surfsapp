@@ -30,12 +30,23 @@ interface BeachProfile {
   minSwellPeriodS: number;
   idealSwellPeriodS: [number, number];
   maxOnshoreWindKmh: number;
-  idealWindDescription: "offshore-or-light" | "any-light" | "offshore-only";
+  idealWindDescription: "offshore-or-light" | "any-light" | "offshore-only" | "wave-generating-onshore";
+  windScoringLogic?: WindScoringLogic; // Required when idealWindDescription == "wave-generating-onshore"
+  weights: ScoringWeights;             // Per-beach scoring weights — must sum to 1.0
   sheltered: boolean;                  // Protected from direct ocean exposure
   longPeriodSwellRefracts: boolean;    // Long-period swell wraps into the beach
   skillLevel: "beginner" | "intermediate" | "advanced";
   tags: string[];                      // e.g. ["beach-break", "right-hander", "rocky"]
   notes?: string;                      // Freeform local knowledge
+}
+
+interface ScoringWeights {
+  swellDirection: number;  // How critical is swell direction for this beach
+  swellPeriod: number;     // How much does period/energy matter
+  swellHeight: number;     // How much does wave size matter
+  wind: number;            // How much does wind quality matter
+  tide: number;            // Tide influence (use 0.05 default until tide data added)
+  // Must sum to 1.0
 }
 ```
 
