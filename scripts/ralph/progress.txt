@@ -1,62 +1,18 @@
 # Ralph Progress Log
-Started: Fri Mar 27 04:09:52 EET 2026
+Started: Fri Mar 27 EET 2026
 ---
 
 ## Codebase Patterns
 - Backend uses `tsx` for running TypeScript directly (no compile step needed for scripts)
 - Backend typecheck: `cd backend && npm run typecheck`
 - Beach profile JSON data lives in `backend/src/data/`; docs/beach-profiles.md is the source of truth for profile values
-- Langouvardos weights: { swellDirection: 0.35, swellPeriod: 0.25, swellHeight: 0.20, wind: 0.15, tide: 0.05 } (open beach break standard)
-- Wave-generating-onshore beach default weights: { swellDirection: 0.20, swellPeriod: 0.20, swellHeight: 0.25, wind: 0.30, tide: 0.05 }
-- windScoringLogic block is only present on beaches with idealWindDescription == "wave-generating-onshore"
-
-## 2026-03-27 - US-001
-- Created `backend/src/data/beach_profiles.json` with all 8 curated Greek beach profiles
-- Copied all field values verbatim from `docs/beach-profiles.md`
-- Added weights to each beach: Langouvardos uses open-beach-break defaults; all wave-generating-onshore beaches use onshore defaults
-- Files changed: `backend/src/data/beach_profiles.json`
-- **Learnings for future iterations:**
-  - docs/beach-profiles.md contains the canonical JSON for all 8 beaches — copy values from there exactly
-  - Swell direction ranges crossing 360° (e.g. [340, 20]) are intentional — do not alter them
-  - windScoringLogic is only on wave-generating-onshore beaches (7 of 8; Langouvardos is offshore-or-light and has no windScoringLogic)
-  - backend/src/db/connection.ts exports `connectDB()` — needed by seed script
----
-
-## 2026-03-27 - US-002
-- Created `backend/src/models/Beach.ts` with IBeach interface, BeachSchema, and Beach model
-- Created `backend/src/models/ForecastSnapshot.ts` with IHourlyForecast, IDailySummary, IForecastSnapshot interfaces, ForecastSnapshotSchema, and ForecastSnapshot model
-- ForecastSnapshotSchema has indexes on beachId (lookup) and fetchedAt:-1 (latest-first)
-- Files changed: `backend/src/models/Beach.ts`, `backend/src/models/ForecastSnapshot.ts`
-- **Learnings for future iterations:**
-  - idealWindDescription union values: 'wave-generating-onshore' | 'offshore-or-light'
-  - skillLevel union values: 'beginner' | 'intermediate' | 'advanced'
-  - label/overallLabel union values: 'poor' | 'maybe' | 'good' | 'very-good'
-  - Sub-document schemas (HourlyForecast, DailySummary) use `_id: false` to avoid unnecessary _id generation
-  - module: "commonjs" in tsconfig — no .js extensions needed in imports
----
-
-## 2026-03-27 - US-003
-- Created `backend/src/scripts/seed.ts` — reads beach_profiles.json, upserts all 8 beaches, creates one stub ForecastSnapshot per beach (idempotent)
-- Added `"seed": "tsx src/scripts/seed.ts"` to `backend/package.json` scripts
-- Files changed: `backend/src/scripts/seed.ts`, `backend/package.json`
-- **Learnings for future iterations:**
-  - Seed script must call `process.exit(0)` explicitly — tsx hangs waiting for the Mongoose connection to close otherwise
-  - Idempotency for snapshots: use `findOne({ beachId })` check before insert (not upsert) so stub data is not overwritten by real data in future runs
-  - beach_profiles.json is imported as a JSON module — cast entries as `{ id: string }` when accessing typed fields
-  - STUB_SCORES map uses beachId strings as keys for deterministic score/label lookup
----
-
-## 2026-03-27 - US-004 / US-005 / US-006
-- Created `backend/src/routes/beaches.ts` with Express Router implementing all three endpoints
-- Mounted router in `backend/src/index.ts` with `app.use('/', beachesRouter)`
-- GET /beaches: fetches all beaches + latest snapshot in parallel (Promise.all), sorts by currentScore desc, nulls last
-- GET /beaches/:id: returns full beach profile + currentScore/currentLabel/lastUpdated from latest snapshot, 404 if not found
-- GET /beaches/:id/forecast: checks beach exists first, then fetches latest ForecastSnapshot, 404 with distinct messages
-- All endpoints use `.lean().select('-_id -__v')` to strip MongoDB internals
-- Files changed: `backend/src/routes/beaches.ts`, `backend/src/index.ts`
-- **Learnings for future iterations:**
-  - All three beach endpoints live in a single router file — keeps routes.ts compact
-  - Use `.lean()` before `.select()` for plain JS objects without Mongoose methods
-  - Check beach existence before snapshot lookup so error messages are accurate (US-006 pattern)
-  - `res.json(...)` after `return`-less guard blocks: add explicit `return` before `res.status(404)` calls to prevent "headers already sent" errors in Express async handlers
----
+- module: "commonjs" in tsconfig — no .js extensions needed in imports
+- idealWindDescription union values: 'wave-generating-onshore' | 'offshore-or-light'
+- skillLevel union values: 'beginner' | 'intermediate' | 'advanced'
+- label/overallLabel union values: 'poor' | 'maybe' | 'good' | 'very-good'
+- Sub-document schemas (HourlyForecast, DailySummary) use `_id: false` to avoid unnecessary _id generation
+- Use `.lean().select('-_id -__v')` to strip MongoDB internals from responses
+- Check beach existence before snapshot lookup so error messages are accurate
+- Add explicit `return` before `res.status(404)` calls in Express async handlers to prevent "headers already sent" errors
+- backend/src/db/connection.ts exports connectDB() — needed by any script that talks to MongoDB
+- Seed script must call process.exit(0) explicitly — tsx hangs waiting for the Mongoose connection to close otherwise

@@ -1,113 +1,94 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-3-beach-api",
-  "description": "Phase 3 — Backend: Beach Profiles + API Skeleton. Seed MongoDB with 8 curated Greek beach profiles, create Mongoose models, and expose GET /beaches, GET /beaches/:id, and GET /beaches/:id/forecast endpoints with stub forecast data.",
+  "branchName": "ralph/phase-4-forecast-fetching",
+  "description": "Phase 4 — Backend: Forecast Fetching. Integrate Open-Meteo Marine API to fetch hourly forecast data for all 8 beaches, persist raw data as ForecastSnapshot documents with placeholder scores, schedule fetches on startup and every N hours via cron, and expose a manual trigger endpoint.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "beach_profiles.json",
-      "description": "As a developer, I want the curated beach profiles stored as a JSON file in the backend so that the seed script and any future tooling can read them without hitting the database.",
+      "title": "Open-Meteo fetch service",
+      "description": "As a developer, I want a service module that fetches hourly marine forecast data for a single beach from Open-Meteo so that it can be called by the scheduler.",
       "acceptanceCriteria": [
-        "backend/src/data/beach_profiles.json created containing a JSON array of exactly 8 beach objects",
-        "The 8 beaches in order: vouliagmeni-athens, mesachti-ikaria, langouvardos-filiatra, falasarna-crete, palaiohora-crete, agios-georgios-naxos, kokkino-limanaki-rafina, kolimpithra-tinos",
-        "Each beach object matches the schema in docs/beach-profiles.md exactly — field names, types, and values copied verbatim from the profiles documented there (including windScoringLogic blocks for wave-generating-onshore beaches)",
-        "Langouvardos weights: { swellDirection: 0.35, swellPeriod: 0.25, swellHeight: 0.20, wind: 0.15, tide: 0.05 } — standard open beach break defaults for beaches without explicit weights in docs",
-        "All other beaches without explicit weights use: { swellDirection: 0.20, swellPeriod: 0.20, swellHeight: 0.25, wind: 0.30, tide: 0.05 } (wave-generating-onshore defaults)",
-        "The file is valid JSON parseable with JSON.parse",
-        "Typecheck passes (npm run typecheck)"
+        "backend/src/services/forecastFetcher.ts created",
+        "Exports fetchForecastForBeach(beach: IBeach): Promise<IHourlyForecast[]> function",
+        "Uses native fetch (no axios or node-fetch) to call Open-Meteo Marine API at https://marine-api.open-meteo.com/v1/marine",
+        "Uses beach.offshoreCoords if present, otherwise falls back to beach.coords for latitude/longitude",
+        "hourly param includes all 8 variables: swell_wave_height,swell_wave_period,swell_wave_direction,swell_wave_height_2,swell_wave_direction_2,wind_speed_10m,wind_direction_10m,wave_height",
+        "URL also includes &forecast_days=10&timezone=UTC",
+        "Maps each hourly time slot to IHourlyForecast: timestamp (Date from ISO string with Z appended), rawData (object with all 8 variable values keyed by variable name), surfScore: 0, label: 'poor', reasons: ['Placeholder — scoring not yet implemented']",
+        "Returns array of IHourlyForecast objects (up to 240 entries)",
+        "Throws a descriptive error including beach id and HTTP status if the Open-Meteo request fails",
+        "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Copy field values verbatim from docs/beach-profiles.md. Swell direction ranges that cross 360° (e.g. [340, 20]) are intentional — do not alter them. windScoringLogic is present only on wave-generating-onshore beaches."
+      "passes": false,
+      "notes": "Open-Meteo response shape: { hourly: { time: string[], swell_wave_height: number[], swell_wave_period: number[], ... } } where all arrays are the same length and index corresponds to the same hour. Open-Meteo time strings are ISO 8601 without Z suffix (e.g. '2026-03-27T00:00') — append 'Z' when constructing Date objects so they parse as UTC."
     },
     {
       "id": "US-002",
-      "title": "Mongoose models — Beach and ForecastSnapshot",
-      "description": "As a developer, I want Mongoose schemas and TypeScript interfaces for Beach and ForecastSnapshot so that all database operations are type-safe.",
+      "title": "ForecastSnapshot persistence",
+      "description": "As a developer, I want a service function that saves a new ForecastSnapshot for a beach so that the latest forecast is always available via the API.",
       "acceptanceCriteria": [
-        "backend/src/models/Beach.ts created, exporting IBeach TypeScript interface, BeachSchema Mongoose schema, and Beach Mongoose model (mongoose.model<IBeach>('Beach', BeachSchema))",
-        "IBeach interface includes: id (string), name (string), coords ({lat, lon}), offshoreCoords? ({lat, lon}), region (string), description (string), shorelineNormalDeg (number), idealSwellDirection ([number,number]), acceptableSwellDirection ([number,number]), minSwellHeightM (number), idealSwellHeightM ([number,number]), minSwellPeriodS (number), idealSwellPeriodS ([number,number]), maxOnshoreWindKmh (number), idealWindDescription (union), windScoringLogic? (Record<string,unknown>), weights ({swellDirection,swellPeriod,swellHeight,wind,tide}: all number), sheltered (boolean), longPeriodSwellRefracts (boolean), skillLevel (union), tags (string[]), notes? (string)",
-        "BeachSchema uses id (string, required, unique) as the primary business key",
-        "backend/src/models/ForecastSnapshot.ts created, exporting IHourlyForecast, IDailySummary, IForecastSnapshot interfaces, ForecastSnapshotSchema, and ForecastSnapshot Mongoose model",
-        "IForecastSnapshot: beachId (string), fetchedAt (Date), hourlyForecasts (IHourlyForecast[]), dailySummaries (IDailySummary[])",
-        "IHourlyForecast: timestamp (Date), rawData (Record<string,unknown>), surfScore (number), label ('poor'|'maybe'|'good'|'very-good'), reasons (string[])",
-        "IDailySummary: date (string), bestWindowStart (string), bestWindowEnd (string), peakScore (number), overallLabel ('poor'|'maybe'|'good'|'very-good')",
-        "ForecastSnapshotSchema indexes beachId (for lookup) and fetchedAt descending (for latest-first queries)",
+        "backend/src/services/forecastFetcher.ts exports saveForecastSnapshot(beachId: string, hourlyForecasts: IHourlyForecast[]): Promise<void> function",
+        "Creates a new ForecastSnapshot document with beachId, fetchedAt: new Date(), hourlyForecasts (the full array), and dailySummaries: [] (empty — computed in Phase 5)",
+        "Saves the document using ForecastSnapshot.create()",
+        "Does NOT delete or replace previous snapshots — each fetch run appends a new document",
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Do not import from index.ts in model files (no circular dependencies). Use mongoose.model() not mongoose.Model. The id field is the string business key — Mongoose adds _id automatically."
+      "notes": "Previous snapshots are never deleted — the API always finds the latest by sorting fetchedAt: -1. This is intentional for Phase 4."
     },
     {
       "id": "US-003",
-      "title": "Seed script — upsert beaches and stub forecasts",
-      "description": "As a developer, I want an npm run seed script that populates MongoDB with all 8 beach profiles and one stub ForecastSnapshot per beach so that the API returns meaningful data immediately after setup.",
+      "title": "fetchAllBeaches orchestrator",
+      "description": "As a developer, I want an orchestrator function that fetches and saves forecasts for all 8 beaches so that the scheduler and manual trigger can call a single function.",
       "acceptanceCriteria": [
-        "backend/src/scripts/seed.ts created",
-        "Script reads backend/src/data/beach_profiles.json and upserts all 8 beaches using Beach.findOneAndUpdate({ id: beach.id }, beach, { upsert: true, new: true, setDefaultsOnInsert: true })",
-        "Script creates one stub ForecastSnapshot per beach using these deterministic scores — vouliagmeni-athens: 42/maybe, mesachti-ikaria: 71/good, langouvardos-filiatra: 58/maybe, falasarna-crete: 83/very-good, palaiohora-crete: 35/poor, agios-georgios-naxos: 61/good, kokkino-limanaki-rafina: 48/maybe, kolimpithra-tinos: 77/good",
-        "Each stub ForecastSnapshot has fetchedAt set to new Date(), one hourlyForecast entry at that timestamp with rawData: {}, reasons: ['Stub data — real forecast available after Phase 4'], and one dailySummary for today's ISO date string",
-        "Snapshot creation is idempotent: skip if a ForecastSnapshot for that beachId already exists (use findOne check before insert)",
-        "Script logs 'Seeded N beaches' and 'Created M snapshots (K already existed)' to stdout",
-        "Script calls connectDB() from backend/src/db/connection.ts before operations and calls process.exit(0) after completion",
-        "'seed': 'tsx src/scripts/seed.ts' added to backend/package.json scripts",
+        "backend/src/services/forecastFetcher.ts exports fetchAllBeaches(): Promise<void> function",
+        "Loads all beaches from MongoDB using Beach.find({})",
+        "Fetches each beach sequentially (not Promise.all) to avoid rate limiting Open-Meteo",
+        "For each beach: calls fetchForecastForBeach(beach), then saveForecastSnapshot(beach.id, hourlyForecasts)",
+        "Logs 'Fetched forecast for [beach.id]' after each successful beach",
+        "Catches and logs per-beach errors without aborting remaining beaches: console.error('Failed to fetch [beach.id]:', err)",
+        "Logs 'Forecast fetch complete: N/8 beaches updated' at the end (N = successfully updated count)",
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "The seed script connects to MongoDB using MONGO_URI from process.env — requires the .env file or Docker environment. It must call process.exit(0) explicitly or the tsx process will hang waiting for the Mongoose connection to close."
+      "passes": false,
+      "notes": "Sequential fetching is intentional — Open-Meteo is a free API and we should be polite. Per-beach error isolation is critical so one failure doesn't block the rest."
     },
     {
       "id": "US-004",
-      "title": "GET /beaches endpoint",
-      "description": "As a developer, I want a GET /beaches endpoint that returns all beaches with their current surf score so that the frontend beach listing has data to display.",
+      "title": "Scheduler — startup fetch + recurring cron",
+      "description": "As a developer, I want the backend to automatically fetch forecasts on startup and then on a recurring interval so that forecast data is always fresh without manual intervention.",
       "acceptanceCriteria": [
-        "backend/src/routes/beaches.ts created with an Express Router",
-        "GET /beaches implemented: fetches all beaches from MongoDB, for each beach finds the latest ForecastSnapshot (sort fetchedAt: -1, limit 1), assembles response with fields: id, name, region, coords, skillLevel, tags, currentScore (first hourlyForecast surfScore or null), currentLabel (first hourlyForecast label or null), lastUpdated (snapshot fetchedAt or null)",
-        "Response array is sorted by currentScore descending — beaches with null score sort to the end",
-        "Router mounted in backend/src/index.ts: app.use('/', beachesRouter) — full endpoint path is GET /beaches",
-        "curl http://localhost:3000/beaches returns HTTP 200 with Content-Type: application/json and an array of 8 objects after npm run seed",
-        "Response omits MongoDB _id and __v fields",
+        "node-cron package installed (npm install node-cron) and @types/node-cron installed as devDependency in backend/",
+        "backend/src/scheduler.ts created, exporting startScheduler(): void",
+        "Reads FORECAST_INTERVAL_HOURS from process.env, defaults to 6 if absent or not a valid positive integer",
+        "Constructs cron expression for every N hours: 0 */${hours} * * *",
+        "Schedules fetchAllBeaches() using node-cron.schedule()",
+        "startScheduler() also calls fetchAllBeaches() immediately on invocation",
+        "startScheduler() is called in backend/src/index.ts after connectDB() resolves successfully",
+        "Logs 'Scheduler started — fetching every ${hours}h' on startup",
+        "FORECAST_INTERVAL_HOURS=6 added to .env.example with comment: # How often to fetch forecasts (hours, default 6)",
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Use Promise.all() to fetch latest snapshots for all beaches in parallel rather than sequentially. Omit _id/__v using .lean() and manual field selection or .select('-_id -__v')."
+      "passes": false,
+      "notes": "IMPORTANT: connectDB() in index.ts currently uses .catch() — refactor so startScheduler() is called inside .then() or after await, NOT at module top level. The immediate call on startup means the Docker container fetches real data within seconds of starting, replacing stub snapshots."
     },
     {
       "id": "US-005",
-      "title": "GET /beaches/:id endpoint",
-      "description": "As a developer, I want a GET /beaches/:id endpoint that returns a single beach's full profile plus current score so that the frontend detail view has all the data it needs.",
+      "title": "POST /admin/fetch-forecasts manual trigger endpoint",
+      "description": "As a developer, I want a manual trigger endpoint so that I can force a forecast refresh during development without restarting the server.",
       "acceptanceCriteria": [
-        "GET /beaches/:id implemented in backend/src/routes/beaches.ts",
-        "Returns the full beach document (all profile fields from IBeach) plus currentScore, currentLabel, lastUpdated from the latest ForecastSnapshot",
-        "Returns HTTP 404 { error: 'Beach not found' } if :id does not match any beach in the beaches collection",
-        "Response omits _id and __v fields",
-        "curl http://localhost:3000/beaches/mesachti-ikaria returns HTTP 200 with the full Mesachti profile including currentScore: 71 and currentLabel: 'good'",
-        "curl http://localhost:3000/beaches/nonexistent-id returns HTTP 404 with { error: 'Beach not found' }",
+        "backend/src/routes/admin.ts created with an Express Router",
+        "POST /admin/fetch-forecasts implemented: calls fetchAllBeaches() in a fire-and-forget pattern (do not await), returns { message: 'Forecast fetch triggered' } immediately with HTTP 200",
+        "Router mounted in backend/src/index.ts: app.use('/admin', adminRouter) — full endpoint path is POST /admin/fetch-forecasts",
+        "curl -X POST http://localhost:3000/admin/fetch-forecasts returns HTTP 200 with { \"message\": \"Forecast fetch triggered\" } immediately while the background fetch runs",
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-006",
-      "title": "GET /beaches/:id/forecast endpoint",
-      "description": "As a developer, I want a GET /beaches/:id/forecast endpoint that returns the latest ForecastSnapshot for a beach so that the frontend can display forecast data.",
-      "acceptanceCriteria": [
-        "GET /beaches/:id/forecast implemented in backend/src/routes/beaches.ts",
-        "First checks if the beach exists in the beaches collection — returns HTTP 404 { error: 'Beach not found' } if not",
-        "Fetches the latest ForecastSnapshot for the beachId (sort fetchedAt: -1, limit 1) — returns HTTP 404 { error: 'No forecast data for this beach' } if none exists",
-        "Returns the ForecastSnapshot document with _id and __v omitted",
-        "curl http://localhost:3000/beaches/mesachti-ikaria/forecast returns HTTP 200 with a ForecastSnapshot containing one hourlyForecast entry and one dailySummary",
-        "curl http://localhost:3000/beaches/nonexistent-id/forecast returns HTTP 404 with { error: 'Beach not found' }",
-        "Typecheck passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Check beach existence before querying snapshots so the error message is accurate. All three endpoints share the same beaches.ts router file."
+      "passes": false,
+      "notes": "Fire-and-forget pattern: call fetchAllBeaches() without await and without .catch() blocking — let it run in the background. Log errors inside fetchAllBeaches() itself (already handled in US-003). No authentication on this endpoint for Phase 4."
     }
   ]
 }
