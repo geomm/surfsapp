@@ -1,0 +1,21 @@
+# Ralph Progress Log
+Started: Fri Mar 27 02:17:23 EET 2026
+---
+
+## Codebase Patterns
+- UI uses yarn (not npm); backend uses npm
+- ui/ uses ESM ("type": "module" in package.json); backend uses CommonJS (tsc with module: commonjs)
+- vue-tsc --noEmit for UI typecheck; tsc --noEmit for backend typecheck
+- vite.config.ts must set server.host: '0.0.0.0' and server.watch.usePolling: true for Docker HMR
+
+---
+
+## 2026-03-27 - US-001
+- Created monorepo structure: ui/ (Vue 3 + Vite + TS), backend/ (Express + TS)
+- Created docker-compose.yml placeholder, .gitignore, .env.example
+- Files changed: .gitignore, .env.example, docker-compose.yml, ui/package.json, ui/tsconfig.json, ui/vite.config.ts, ui/index.html, ui/src/main.ts, ui/src/App.vue, backend/package.json, backend/tsconfig.json, backend/src/index.ts
+- **Learnings for future iterations:**
+  - UI tsconfig uses moduleResolution: "bundler" (Vite-specific); backend uses "node"
+  - index.html must be at ui/ root (not src/) for Vite to work
+  - backend/src/index.ts includes basic /health endpoint and SIGTERM handler as skeleton for US-003
+---
