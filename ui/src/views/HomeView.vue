@@ -1,7 +1,6 @@
 <template>
   <div>
     <div>Home</div>
-    <surf-card>Non-clickable card</surf-card>
-    <surf-card :clickable="true">Clickable card</surf-card>
+    <surf-bottom-sheet open title="Filters">Sample sheet content</surf-bottom-sheet>
   </div>
 </template>
