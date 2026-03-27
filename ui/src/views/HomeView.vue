@@ -1,6 +1,8 @@
 <template>
   <div>
     <div>Home</div>
-    <surf-icon name="waves" :size="32"></surf-icon>
+    <surf-button variant="primary">Primary</surf-button>
+    <surf-button variant="secondary">Secondary</surf-button>
+    <surf-button variant="ghost">Ghost</surf-button>
   </div>
 </template>
