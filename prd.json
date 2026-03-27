@@ -73,7 +73,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "IMPORTANT: connectDB() in index.ts currently uses .catch() — refactor so startScheduler() is called inside .then() or after await, NOT at module top level. The immediate call on startup means the Docker container fetches real data within seconds of starting, replacing stub snapshots."
     },
     {
@@ -88,7 +88,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Fire-and-forget pattern: call fetchAllBeaches() without await and without .catch() blocking — let it run in the background. Log errors inside fetchAllBeaches() itself (already handled in US-003). No authentication on this endpoint for Phase 4."
     }
   ]

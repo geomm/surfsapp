@@ -32,3 +32,24 @@ Started: Fri Mar 27 EET 2026
   - Use URLSearchParams to build query string cleanly
   - IHourlyForecast and ForecastSnapshot types are already defined in backend/src/models/ForecastSnapshot.ts
 ---
+
+## 2026-03-27 - US-004
+- Created backend/src/scheduler.ts exporting startScheduler()
+- Reads FORECAST_INTERVAL_HOURS from env (defaults to 6), constructs cron expression, schedules fetchAllBeaches()
+- startScheduler() also fires fetchAllBeaches() immediately on invocation
+- Refactored index.ts: connectDB().then(() => startScheduler()) so scheduler only starts after DB is ready
+- Created backend/.env.example with FORECAST_INTERVAL_HOURS=6 entry
+- Files changed: backend/src/scheduler.ts (created), backend/src/index.ts (modified), backend/.env.example (created)
+- **Learnings for future iterations:**
+  - connectDB() in index.ts was .catch()-only; refactored to .then()/.catch() chain so startScheduler() runs post-connect
+  - node-cron cron expression for every N hours: `0 */${hours} * * *`
+---
+
+## 2026-03-27 - US-005
+- Created backend/src/routes/admin.ts with POST /fetch-forecasts (fire-and-forget, returns 200 immediately)
+- Mounted adminRouter at /admin in index.ts
+- Files changed: backend/src/routes/admin.ts (created), backend/src/index.ts (modified)
+- **Learnings for future iterations:**
+  - Fire-and-forget: call fetchAllBeaches() without await, no .catch() at call site — errors handled inside the function
+  - No authentication on admin endpoints in Phase 4
+---
