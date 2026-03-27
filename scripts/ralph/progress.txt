@@ -40,3 +40,13 @@ Started: Fri Mar 27 02:57:51 EET 2026
   - Base files reference token CSS custom properties (var(--...)) directly — no SCSS @use needed since custom properties are global at runtime
   - Element-level defaults only — no component-specific selectors in base/
 ---
+
+## 2026-03-27 - US-004
+- Created ui/src/styles/mixins/_breakpoints.scss with a breakpoint($size) mixin using $breakpoints SCSS map and mobile-first min-width media queries (sm=480px, md=768px, lg=1024px, xl=1280px); @error thrown for unknown size names
+- Created ui/src/styles/mixins/_focus.scss with a focus-visible-ring mixin applying outline on :focus-visible and removing it on :focus:not(:focus-visible)
+- Files changed: ui/src/styles/mixins/_breakpoints.scss, ui/src/styles/mixins/_focus.scss
+- **Learnings for future iterations:**
+  - Breakpoint values must use SCSS $variables (not CSS custom properties) — CSS custom properties cannot be used inside @media queries
+  - Mixin files produce no CSS on import — CSS is only output when @include'd in a selector context
+  - The focus-visible-ring mixin uses & parent selector, so it must be @include'd inside a selector
+---
