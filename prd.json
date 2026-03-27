@@ -32,7 +32,7 @@
         "yarn typecheck passes with zero errors"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Bind-mount strategy: source code mounted from host, node_modules in a named Docker volume."
     },
     {

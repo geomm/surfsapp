@@ -19,3 +19,15 @@ Started: Fri Mar 27 02:17:23 EET 2026
   - index.html must be at ui/ root (not src/) for Vite to work
   - backend/src/index.ts includes basic /health endpoint and SIGTERM handler as skeleton for US-003
 ---
+
+## 2026-03-27 - US-002
+- Created ui/Dockerfile (single-stage Node.js 20 alpine, yarn install, exposes 5173, CMD yarn dev)
+- vite.config.ts already had server.host: '0.0.0.0' and server.watch.usePolling: true from US-001
+- App.vue already rendered 'surfsapp' and tsconfig.json already had strict: true from US-001
+- yarn typecheck passes with zero errors
+- Files changed: ui/Dockerfile
+- **Learnings for future iterations:**
+  - Most of US-002 was already satisfied by US-001 implementation
+  - Dockerfile uses bind-mount strategy: source mounted from host, node_modules in named volume (configured in docker-compose later)
+  - yarn.lock* (with glob) handles case where lockfile doesn't exist yet in Docker build context
+---
