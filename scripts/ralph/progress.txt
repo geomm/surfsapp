@@ -50,3 +50,14 @@ Started: Fri Mar 27 02:57:51 EET 2026
   - Mixin files produce no CSS on import — CSS is only output when @include'd in a selector context
   - The focus-visible-ring mixin uses & parent selector, so it must be @include'd inside a selector
 ---
+
+## 2026-03-27 - US-005
+- Created ui/src/styles/main.scss importing all token and base files in order (colors, spacing, typography, z-index, reset, base) using @use syntax
+- Updated ui/src/main.ts to import './styles/main.scss' as the design system entry point
+- Files changed: ui/src/styles/main.scss, ui/src/main.ts
+- **Learnings for future iterations:**
+  - @use 'tokens/colors' correctly resolves to tokens/_colors.scss (underscore prefix and .scss extension are implicit)
+  - Token files are purely CSS custom properties in :root {} — @use works fine for generating CSS output from them
+  - vue-tsc does not type-check SCSS imports in main.ts — typecheck passes regardless of SCSS content
+  - Manual browser verification needed for CSS custom property presence in DevTools (no browser testing tools configured)
+---

@@ -71,7 +71,7 @@
         "Verify in browser using dev-browser skill: open DevTools → Elements → :root and confirm --color-primary, --space-4, and --font-size-md are present as CSS custom properties"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Use @use syntax (not deprecated @import). Order matters: tokens before base, as base files reference token custom properties."
     },
     {
