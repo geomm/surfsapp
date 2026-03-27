@@ -3,6 +3,7 @@ import cors from 'cors'
 import mongoose from 'mongoose'
 import { connectDB } from './db/connection.js'
 import { beachesRouter } from './routes/beaches'
+import { startScheduler } from './scheduler'
 
 const app = express()
 const port = process.env.PORT ?? 3000
@@ -18,9 +19,13 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', mongo, timestamp: new Date().toISOString() })
 })
 
-connectDB().catch((err: unknown) => {
-  console.error('MongoDB connection error:', err)
-})
+connectDB()
+  .then(() => {
+    startScheduler()
+  })
+  .catch((err: unknown) => {
+    console.error('MongoDB connection error:', err)
+  })
 
 const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`)
