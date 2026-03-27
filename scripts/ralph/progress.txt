@@ -7,6 +7,16 @@
 Started: Fri Mar 27 03:30:40 EET 2026
 ---
 
+## 2026-03-27 - US-002
+- Created ui/src/components/lit/surf-badge.ts with variant (very-good|good|maybe|poor|neutral) and size (sm|md) properties
+- Uses CSS custom properties from Phase 1 design system for all colours — no hard-coded hex values
+- Added surf-badge to index.ts barrel; added all 5 variants to HomeView.vue temporarily for browser verification
+- Files changed: ui/src/components/lit/surf-badge.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Lit Shadow DOM uses CSS custom properties from the host document fine — they pierce the shadow boundary
+  - Static `styles = css\`...\`` is how Lit components define scoped styles without decorators
+---
+
 ## 2026-03-27 - US-001
 - Installed lit@3.3.2 and lucide@1.7.0 via yarn in ui/
 - Created ui/src/components/lit/ directory

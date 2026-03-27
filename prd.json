@@ -38,7 +38,7 @@
         "Verify in browser using dev-browser skill: add all 5 badge variants to HomeView.vue temporarily and confirm each renders with the correct background colour"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "surf-test.ts can remain on disk but must be removed from index.ts exports. Clean it up fully in US-007."
     },
     {
