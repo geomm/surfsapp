@@ -18,7 +18,7 @@
         "Verify in browser using dev-browser skill: navigate to http://localhost:5173/ and confirm <surf-test> renders 'Lit works'"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "If using Lit decorators (@property, @customElement), add experimentalDecorators: true and useDefineForClassFields: false to ui/tsconfig.json. Alternatively use the static properties object approach to avoid tsconfig changes."
     },
     {
