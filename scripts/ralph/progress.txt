@@ -20,6 +20,18 @@ Started: Fri Mar 27 02:17:23 EET 2026
   - backend/src/index.ts includes basic /health endpoint and SIGTERM handler as skeleton for US-003
 ---
 
+## 2026-03-27 - US-005
+- Replaced docker-compose.yml placeholder with full orchestration: ui, backend, mongo services
+- ui: bind-mount ./ui, named volume ui-node-modules, port 5173:5173, surfsapp-network
+- backend: bind-mount ./backend, named volume backend-node-modules, port 3000:3000, depends_on: mongo
+- mongo: mongo:7 image, port 27017:27017, named volume mongo-data, mounts mongo-init.js to /docker-entrypoint-initdb.d/
+- All services share surfsapp-network bridge; env_file: .env for all services
+- Files changed: docker-compose.yml, prd.json
+- **Learnings for future iterations:**
+  - Named volume override pattern: mount source dir + separate named volume at node_modules path prevents host node_modules from shadowing container's installed modules
+  - docker-entrypoint-initdb.d/ only runs init scripts on first container start (empty data dir); use :ro for read-only mount
+---
+
 ## 2026-03-27 - US-004
 - Created backend/src/db/connection.ts exporting connectDB() using mongoose + MONGO_URI env var
 - Wired connectDB() call into index.ts startup (non-blocking, errors logged)

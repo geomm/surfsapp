@@ -82,7 +82,7 @@
         "docker compose down stops and removes containers cleanly"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Bind-mount for source + named volume for node_modules is the hot-reload strategy for both ui and backend."
     },
     {
