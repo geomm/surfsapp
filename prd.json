@@ -72,7 +72,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Use Promise.all() to fetch latest snapshots for all beaches in parallel rather than sequentially. Omit _id/__v using .lean() and manual field selection or .select('-_id -__v')."
     },
     {
@@ -89,7 +89,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -106,7 +106,7 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Check beach existence before querying snapshots so the error message is accurate. All three endpoints share the same beaches.ts router file."
     }
   ]
