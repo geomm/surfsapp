@@ -7,6 +7,44 @@
 Started: Fri Mar 27 03:30:40 EET 2026
 ---
 
+## 2026-03-27 - US-007
+- Created ui/src/views/ComponentsPreview.vue with sections for all 5 components
+- Added /components route to ui/src/router.ts
+- Cleaned up HomeView.vue to render only <div>Home</div>
+- Deleted ui/src/components/lit/surf-test.ts
+- Removed surf-test import from index.ts barrel
+- Files changed: ui/src/views/ComponentsPreview.vue, ui/src/router.ts, ui/src/views/HomeView.vue, ui/src/components/lit/index.ts, (deleted) surf-test.ts
+- **Learnings for future iterations:**
+  - Vue templates can use custom elements directly (no import needed) as long as they're registered globally via main.ts → index.ts
+  - Custom element events (e.g. @sheet-close) work in Vue templates via @ binding
+  - :open, :disabled, :clickable bind boolean props correctly to Lit components
+---
+
+## 2026-03-27 - US-006
+- Created ui/src/components/lit/surf-bottom-sheet.ts with open and title properties
+- CSS transform: translateY(100%/0) drives open/close animation at 250ms
+- Escape key handler added to document on open, removed on close and in disconnectedCallback
+- Backdrop click dispatches sheet-close CustomEvent (bubbles: true, composed: true)
+- Files changed: ui/src/components/lit/surf-bottom-sheet.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Use updated() lifecycle with changed.has('open') to add/remove document event listeners
+  - Always clean up document-level listeners in disconnectedCallback to prevent memory leaks
+---
+
+## 2026-03-27 - US-005
+- Created ui/src/components/lit/surf-card.ts with clickable and padding properties
+- Base styles: surface background, border, 12px radius, subtle shadow
+- Clickable mode: pointer cursor, hover shadow via CSS class, dispatches card-click event
+- Files changed: ui/src/components/lit/surf-card.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+---
+
+## 2026-03-27 - US-004
+- Created ui/src/components/lit/surf-button.ts with variant (primary|secondary|ghost), size (sm|md|lg), disabled, type properties
+- Inner <button> handles native disabled with pointer-events:none and opacity:0.5
+- All colours use CSS custom properties — no hard-coded hex values
+- Files changed: ui/src/components/lit/surf-button.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+---
+
 ## 2026-03-27 - US-003
 - Created ui/src/components/lit/surf-icon.ts with name, size, color properties
 - Uses unsafeSVG directive from lit/directives/unsafe-svg.js to render Lucide icon nodes

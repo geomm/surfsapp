@@ -81,7 +81,7 @@
         "Verify in browser using dev-browser skill: add all 3 variants to HomeView.vue temporarily, confirm primary has ocean blue background, secondary has border, ghost has no border"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Inner <button> element handles native disabled behaviour. All custom events from Lit components must set bubbles: true, composed: true."
     },
     {
@@ -100,7 +100,7 @@
         "Verify in browser using dev-browser skill: add a clickable and non-clickable surf-card to HomeView.vue temporarily, confirm border and shadow render, clickable card shows pointer cursor on hover"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -123,7 +123,7 @@
         "Verify in browser using dev-browser skill: add <surf-bottom-sheet open title=\"Filters\">Content</surf-bottom-sheet> to HomeView.vue temporarily, confirm sheet renders from bottom with backdrop, handle bar, and title visible"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Remove the document keydown listener in disconnectedCallback() to avoid memory leaks. No focus trapping required in Phase 2."
     },
     {
@@ -145,7 +145,7 @@
         "Verify in browser using dev-browser skill: navigate to /components, confirm all five component sections are visible and the bottom sheet opens and closes when the toggle button is clicked"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "ComponentsPreview.vue uses <script setup lang='ts'>. Custom elements are used directly in Vue templates — no need to import individual component files since all are registered globally via main.ts → index.ts."
     }
   ]
