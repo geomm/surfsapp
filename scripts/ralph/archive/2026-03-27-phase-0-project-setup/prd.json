@@ -1,0 +1,106 @@
+{
+  "project": "surfsapp",
+  "branchName": "ralph/phase-0-project-setup",
+  "description": "Phase 0 — Bootstrap monorepo with Docker Compose: Vue 3 + TypeScript frontend (Vite HMR), Node.js + TypeScript backend (Express + tsx --watch), and MongoDB container with empty collections. Single command docker compose up starts the full stack.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Monorepo folder structure and base files",
+      "description": "As a developer, I want a clean monorepo layout so that frontend, backend, and infrastructure are clearly separated.",
+      "acceptanceCriteria": [
+        "Root contains: docker-compose.yml (empty placeholder), ui/, backend/, .gitignore, .env.example",
+        "ui/ contains a Vite + Vue 3 + TypeScript scaffold created with yarn (package.json, vite.config.ts, tsconfig.json, src/main.ts, src/App.vue)",
+        "backend/ contains a Node.js + TypeScript + Express skeleton (package.json, tsconfig.json, src/index.ts)",
+        "Root .gitignore covers node_modules, dist, .env, .DS_Store",
+        ".env.example documents: MONGO_URI=mongodb://mongo:27017/surfsapp, PORT=3000, NODE_ENV=development",
+        "Typecheck passes in ui/ (yarn typecheck)",
+        "Typecheck passes in backend/ (npm run typecheck)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "This is the foundation — all other stories depend on this structure existing."
+    },
+    {
+      "id": "US-002",
+      "title": "Frontend Dockerfile and Vite HMR configuration",
+      "description": "As a developer, I want the Vue 3 frontend to reflect code changes instantly inside Docker so I don't need to rebuild the container.",
+      "acceptanceCriteria": [
+        "ui/Dockerfile exists using a Node.js base image (single-stage)",
+        "vite.config.ts sets server.host: '0.0.0.0' and server.watch: { usePolling: true } for Docker bind-mount compatibility",
+        "App.vue renders a minimal placeholder page with the text 'surfsapp'",
+        "TypeScript strict mode enabled in ui/tsconfig.json",
+        "yarn typecheck passes with zero errors"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Bind-mount strategy: source code mounted from host, node_modules in a named Docker volume."
+    },
+    {
+      "id": "US-003",
+      "title": "Backend Dockerfile, Express skeleton, and health endpoint",
+      "description": "As a developer, I want the Express backend to reload on file changes inside Docker so I can iterate without rebuilding.",
+      "acceptanceCriteria": [
+        "backend/Dockerfile exists using a Node.js base image (single-stage)",
+        "backend/src/index.ts starts an Express server on the port from process.env.PORT (default 3000)",
+        "GET /health returns { status: 'ok', timestamp: '<ISO string>' } with HTTP 200",
+        "tsx --watch src/index.ts is the dev start command (npm run dev)",
+        "CORS configured to allow requests from http://localhost:5173",
+        "TypeScript strict mode enabled in backend/tsconfig.json",
+        "npm run typecheck passes with zero errors"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Mongoose installed as a dependency ready for Phase 3 models. Graceful SIGTERM shutdown included."
+    },
+    {
+      "id": "US-004",
+      "title": "MongoDB connection and init script",
+      "description": "As a developer, I want MongoDB to start with the required empty collections already created so Phase 3 can begin seeding immediately.",
+      "acceptanceCriteria": [
+        "backend/src/db/connection.ts exports a connectDB() function that connects via MONGO_URI env var using mongoose",
+        "connectDB() is called on server startup in index.ts and logs 'MongoDB connected' on success",
+        "backend/src/db/mongo-init.js creates three empty collections on first run: beaches, forecastsnapshots, settings",
+        "Init script is idempotent — running twice does not throw errors",
+        "npm run typecheck passes with zero errors"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "mongo-init.js is plain JS (not TS) — it runs inside the MongoDB container via /docker-entrypoint-initdb.d/."
+    },
+    {
+      "id": "US-005",
+      "title": "Docker Compose orchestration with networking and volumes",
+      "description": "As a developer, I want docker compose up to start all three services so I don't need to manage them individually.",
+      "acceptanceCriteria": [
+        "docker-compose.yml defines three services: ui, backend, mongo",
+        "ui service: builds from ui/Dockerfile, bind-mounts ui/ source, node_modules in named volume, port 5173:5173",
+        "backend service: builds from backend/Dockerfile, bind-mounts backend/ source, node_modules in named volume, port 3000:3000, depends_on: mongo",
+        "mongo service: uses mongo:7 image, port 27017:27017, named volume mongo-data for persistence, mounts backend/src/db/mongo-init.js to /docker-entrypoint-initdb.d/",
+        "All three services share a bridge network named surfsapp-network",
+        "Environment variables loaded from .env file",
+        "docker compose up starts all three services without errors",
+        "docker compose down stops and removes containers cleanly"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Bind-mount for source + named volume for node_modules is the hot-reload strategy for both ui and backend."
+    },
+    {
+      "id": "US-006",
+      "title": "Inter-service connectivity verification",
+      "description": "As a developer, I want to confirm all services can reach each other so I know the network is wired correctly before building features.",
+      "acceptanceCriteria": [
+        "Backend GET /health response includes { status: 'ok', mongo: 'connected', timestamp: '<ISO string>' } when MongoDB is running",
+        "Backend GET /health response includes { status: 'ok', mongo: 'disconnected' } when MongoDB is not available (graceful degradation)",
+        "curl http://localhost:3000/health returns HTTP 200 with the expected JSON",
+        "curl http://localhost:5173 returns HTTP 200 (Vite dev server responding)",
+        "No CORS errors when frontend fetch('http://localhost:3000/health') is called from the browser",
+        "Typecheck passes in backend/ (npm run typecheck)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "This is the final verification story. All previous stories must pass before this one is attempted."
+    }
+  ]
+}

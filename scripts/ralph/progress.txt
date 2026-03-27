@@ -1,77 +1,78 @@
 # Ralph Progress Log
-Started: Fri Mar 27 02:17:23 EET 2026
+Started: Fri Mar 27 02:57:51 EET 2026
 ---
 
 ## Codebase Patterns
-- UI uses yarn (not npm); backend uses npm
-- ui/ uses ESM ("type": "module" in package.json); backend uses CommonJS (tsc with module: commonjs)
-- vue-tsc --noEmit for UI typecheck; tsc --noEmit for backend typecheck
-- vite.config.ts must set server.host: '0.0.0.0' and server.watch.usePolling: true for Docker HMR
+- UI package manager is yarn (use `yarn add` / `yarn add -D`, run scripts with `yarn <script>`)
+- Typecheck command is `yarn typecheck` (runs vue-tsc --noEmit)
+- SCSS files live in ui/src/styles/ with subdirectories: tokens/, mixins/, base/, utilities/
+- All color hex values must live exclusively in _colors.scss — no hard-coded hex values elsewhere
 
 ---
 
 ## 2026-03-27 - US-001
-- Created monorepo structure: ui/ (Vue 3 + Vite + TS), backend/ (Express + TS)
-- Created docker-compose.yml placeholder, .gitignore, .env.example
-- Files changed: .gitignore, .env.example, docker-compose.yml, ui/package.json, ui/tsconfig.json, ui/vite.config.ts, ui/index.html, ui/src/main.ts, ui/src/App.vue, backend/package.json, backend/tsconfig.json, backend/src/index.ts
+- Installed sass as devDependency in ui/ via `yarn add -D sass`
+- Created ui/src/styles/ directory with subdirectories: tokens/, mixins/, base/, utilities/
+- Created ui/src/styles/tokens/_colors.scss with full palette (ocean 50–900, sand 50–900, neutral 0–900), surf score semantics, and UI aliases using var() references
+- Files changed: ui/package.json, ui/yarn.lock, ui/src/styles/tokens/_colors.scss
 - **Learnings for future iterations:**
-  - UI tsconfig uses moduleResolution: "bundler" (Vite-specific); backend uses "node"
-  - index.html must be at ui/ root (not src/) for Vite to work
-  - backend/src/index.ts includes basic /health endpoint and SIGTERM handler as skeleton for US-003
----
-
-## 2026-03-27 - US-006
-- Updated GET /health to include mongo field: 'connected' when mongoose.connection.readyState === 1, else 'disconnected'
-- CORS already configured for http://localhost:5173 from US-003
-- Browser verification not available in this environment — manual verification needed via docker compose up
-- Files changed: backend/src/index.ts, prd.json
-- **Learnings for future iterations:**
-  - mongoose.connection.readyState: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
-  - /health endpoint now provides graceful degradation: works whether mongo is up or not
----
-
-## 2026-03-27 - US-005
-- Replaced docker-compose.yml placeholder with full orchestration: ui, backend, mongo services
-- ui: bind-mount ./ui, named volume ui-node-modules, port 5173:5173, surfsapp-network
-- backend: bind-mount ./backend, named volume backend-node-modules, port 3000:3000, depends_on: mongo
-- mongo: mongo:7 image, port 27017:27017, named volume mongo-data, mounts mongo-init.js to /docker-entrypoint-initdb.d/
-- All services share surfsapp-network bridge; env_file: .env for all services
-- Files changed: docker-compose.yml, prd.json
-- **Learnings for future iterations:**
-  - Named volume override pattern: mount source dir + separate named volume at node_modules path prevents host node_modules from shadowing container's installed modules
-  - docker-entrypoint-initdb.d/ only runs init scripts on first container start (empty data dir); use :ro for read-only mount
----
-
-## 2026-03-27 - US-004
-- Created backend/src/db/connection.ts exporting connectDB() using mongoose + MONGO_URI env var
-- Wired connectDB() call into index.ts startup (non-blocking, errors logged)
-- Created backend/src/db/mongo-init.js — idempotent script to create beaches, forecastsnapshots, settings collections in MongoDB container
-- Files changed: backend/src/db/connection.ts, backend/src/db/mongo-init.js, backend/src/index.ts, prd.json
-- **Learnings for future iterations:**
-  - mongo-init.js is plain JS (not TS), runs in Mongo container via /docker-entrypoint-initdb.d/
-  - Use db.getSiblingDB('surfsapp') to target the correct database from init script
-  - connectDB() is non-blocking at startup: errors are caught and logged without crashing the server
----
-
-## 2026-03-27 - US-003
-- Created backend/Dockerfile (Node.js 20 alpine, npm install, exposes 3000, CMD npm run dev)
-- Added cors package (@types/cors) and configured CORS for http://localhost:5173 in index.ts
-- GET /health, tsx --watch dev command, strict mode, and mongoose were already in place from US-001
-- Files changed: backend/Dockerfile, backend/src/index.ts, backend/package.json, backend/package-lock.json
-- **Learnings for future iterations:**
-  - backend/Dockerfile uses bind-mount strategy: source mounted from host, node_modules in named volume (same pattern as ui/)
-  - cors package needed explicit install; @types/cors required as well for TS strict mode
-  - Most US-003 acceptance criteria were already satisfied by the US-001 skeleton
+  - The UI uses yarn (not npm) — always use yarn commands
+  - Typecheck passes without needing to import SCSS files — vue-tsc only checks TS/Vue
+  - Surf score colours (--color-surf-*) are standalone hex values, NOT aliased to the palette tokens — per PRD notes
+  - UI aliases (--color-background, --color-surface, etc.) reference palette tokens via var()
 ---
 
 ## 2026-03-27 - US-002
-- Created ui/Dockerfile (single-stage Node.js 20 alpine, yarn install, exposes 5173, CMD yarn dev)
-- vite.config.ts already had server.host: '0.0.0.0' and server.watch.usePolling: true from US-001
-- App.vue already rendered 'surfsapp' and tsconfig.json already had strict: true from US-001
-- yarn typecheck passes with zero errors
-- Files changed: ui/Dockerfile
+- Created ui/src/styles/tokens/_spacing.scss with --space-1 (4px) through --space-12 (48px) in 4px increments
+- Created ui/src/styles/tokens/_typography.scss with --font-family-base, --font-size-xs through --font-size-4xl, --font-weight-regular through --font-weight-bold, and --line-height-* variants
+- Created ui/src/styles/tokens/_z-index.scss with --z-below through --z-toast scale
+- Files changed: ui/src/styles/tokens/_spacing.scss, ui/src/styles/tokens/_typography.scss, ui/src/styles/tokens/_z-index.scss
 - **Learnings for future iterations:**
-  - Most of US-002 was already satisfied by US-001 implementation
-  - Dockerfile uses bind-mount strategy: source mounted from host, node_modules in named volume (configured in docker-compose later)
-  - yarn.lock* (with glob) handles case where lockfile doesn't exist yet in Docker build context
+  - Typecheck passes without importing SCSS — vue-tsc only checks TypeScript/Vue files
+  - Token files are pure :root {} declarations with no selectors or mixins — no output until referenced
+---
+
+## 2026-03-27 - US-003
+- Created ui/src/styles/base/_reset.scss: box-sizing border-box, zeroed margin/padding on all elements, img/video set to display:block and max-width:100%
+- Created ui/src/styles/base/_base.scss: html font-size:16px, body uses --font-family-base/--font-size-md/--line-height-normal/--color-background/--color-text-primary, a inherits color
+- Files changed: ui/src/styles/base/_reset.scss, ui/src/styles/base/_base.scss
+- **Learnings for future iterations:**
+  - Base files reference token CSS custom properties (var(--...)) directly — no SCSS @use needed since custom properties are global at runtime
+  - Element-level defaults only — no component-specific selectors in base/
+---
+
+## 2026-03-27 - US-004
+- Created ui/src/styles/mixins/_breakpoints.scss with a breakpoint($size) mixin using $breakpoints SCSS map and mobile-first min-width media queries (sm=480px, md=768px, lg=1024px, xl=1280px); @error thrown for unknown size names
+- Created ui/src/styles/mixins/_focus.scss with a focus-visible-ring mixin applying outline on :focus-visible and removing it on :focus:not(:focus-visible)
+- Files changed: ui/src/styles/mixins/_breakpoints.scss, ui/src/styles/mixins/_focus.scss
+- **Learnings for future iterations:**
+  - Breakpoint values must use SCSS $variables (not CSS custom properties) — CSS custom properties cannot be used inside @media queries
+  - Mixin files produce no CSS on import — CSS is only output when @include'd in a selector context
+  - The focus-visible-ring mixin uses & parent selector, so it must be @include'd inside a selector
+---
+
+## 2026-03-27 - US-005
+- Created ui/src/styles/main.scss importing all token and base files in order (colors, spacing, typography, z-index, reset, base) using @use syntax
+- Updated ui/src/main.ts to import './styles/main.scss' as the design system entry point
+- Files changed: ui/src/styles/main.scss, ui/src/main.ts
+- **Learnings for future iterations:**
+  - @use 'tokens/colors' correctly resolves to tokens/_colors.scss (underscore prefix and .scss extension are implicit)
+  - Token files are purely CSS custom properties in :root {} — @use works fine for generating CSS output from them
+  - vue-tsc does not type-check SCSS imports in main.ts — typecheck passes regardless of SCSS content
+  - Manual browser verification needed for CSS custom property presence in DevTools (no browser testing tools configured)
+---
+
+## 2026-03-27 - US-006
+- Installed vue-router@5.0.4 via `yarn add vue-router` in ui/
+- Created ui/src/router.ts with two routes: / → HomeView, /design → DesignPreview
+- Created ui/src/views/HomeView.vue (renders <div>Home</div>)
+- Created ui/src/views/DesignPreview.vue with four sections: colour palette (ocean/sand/neutral/surf-score/UI aliases), spacing scale (horizontal bars), typography (sample text per size token), z-index (table)
+- Updated ui/src/main.ts to import router and register via app.use(router)
+- Updated ui/src/App.vue to render <RouterView />
+- Files changed: ui/src/router.ts, ui/src/views/HomeView.vue, ui/src/views/DesignPreview.vue, ui/src/main.ts, ui/src/App.vue, ui/package.json, ui/yarn.lock
+- **Learnings for future iterations:**
+  - vue-router@5.x is Vue 3 compatible (PRD said v4 but v5 was installed — both work with Vue 3)
+  - App.vue was updated from <div>surfsapp</div> to <RouterView /> — future routes should work automatically
+  - DesignPreview uses inline styles with `var(--token-name)` syntax to render CSS custom properties — this works at runtime without SCSS imports in the component
+  - Manual browser verification needed for /design route (no browser testing tools configured)
 ---

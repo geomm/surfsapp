@@ -1,0 +1,77 @@
+# Ralph Progress Log
+Started: Fri Mar 27 02:17:23 EET 2026
+---
+
+## Codebase Patterns
+- UI uses yarn (not npm); backend uses npm
+- ui/ uses ESM ("type": "module" in package.json); backend uses CommonJS (tsc with module: commonjs)
+- vue-tsc --noEmit for UI typecheck; tsc --noEmit for backend typecheck
+- vite.config.ts must set server.host: '0.0.0.0' and server.watch.usePolling: true for Docker HMR
+
+---
+
+## 2026-03-27 - US-001
+- Created monorepo structure: ui/ (Vue 3 + Vite + TS), backend/ (Express + TS)
+- Created docker-compose.yml placeholder, .gitignore, .env.example
+- Files changed: .gitignore, .env.example, docker-compose.yml, ui/package.json, ui/tsconfig.json, ui/vite.config.ts, ui/index.html, ui/src/main.ts, ui/src/App.vue, backend/package.json, backend/tsconfig.json, backend/src/index.ts
+- **Learnings for future iterations:**
+  - UI tsconfig uses moduleResolution: "bundler" (Vite-specific); backend uses "node"
+  - index.html must be at ui/ root (not src/) for Vite to work
+  - backend/src/index.ts includes basic /health endpoint and SIGTERM handler as skeleton for US-003
+---
+
+## 2026-03-27 - US-006
+- Updated GET /health to include mongo field: 'connected' when mongoose.connection.readyState === 1, else 'disconnected'
+- CORS already configured for http://localhost:5173 from US-003
+- Browser verification not available in this environment — manual verification needed via docker compose up
+- Files changed: backend/src/index.ts, prd.json
+- **Learnings for future iterations:**
+  - mongoose.connection.readyState: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  - /health endpoint now provides graceful degradation: works whether mongo is up or not
+---
+
+## 2026-03-27 - US-005
+- Replaced docker-compose.yml placeholder with full orchestration: ui, backend, mongo services
+- ui: bind-mount ./ui, named volume ui-node-modules, port 5173:5173, surfsapp-network
+- backend: bind-mount ./backend, named volume backend-node-modules, port 3000:3000, depends_on: mongo
+- mongo: mongo:7 image, port 27017:27017, named volume mongo-data, mounts mongo-init.js to /docker-entrypoint-initdb.d/
+- All services share surfsapp-network bridge; env_file: .env for all services
+- Files changed: docker-compose.yml, prd.json
+- **Learnings for future iterations:**
+  - Named volume override pattern: mount source dir + separate named volume at node_modules path prevents host node_modules from shadowing container's installed modules
+  - docker-entrypoint-initdb.d/ only runs init scripts on first container start (empty data dir); use :ro for read-only mount
+---
+
+## 2026-03-27 - US-004
+- Created backend/src/db/connection.ts exporting connectDB() using mongoose + MONGO_URI env var
+- Wired connectDB() call into index.ts startup (non-blocking, errors logged)
+- Created backend/src/db/mongo-init.js — idempotent script to create beaches, forecastsnapshots, settings collections in MongoDB container
+- Files changed: backend/src/db/connection.ts, backend/src/db/mongo-init.js, backend/src/index.ts, prd.json
+- **Learnings for future iterations:**
+  - mongo-init.js is plain JS (not TS), runs in Mongo container via /docker-entrypoint-initdb.d/
+  - Use db.getSiblingDB('surfsapp') to target the correct database from init script
+  - connectDB() is non-blocking at startup: errors are caught and logged without crashing the server
+---
+
+## 2026-03-27 - US-003
+- Created backend/Dockerfile (Node.js 20 alpine, npm install, exposes 3000, CMD npm run dev)
+- Added cors package (@types/cors) and configured CORS for http://localhost:5173 in index.ts
+- GET /health, tsx --watch dev command, strict mode, and mongoose were already in place from US-001
+- Files changed: backend/Dockerfile, backend/src/index.ts, backend/package.json, backend/package-lock.json
+- **Learnings for future iterations:**
+  - backend/Dockerfile uses bind-mount strategy: source mounted from host, node_modules in named volume (same pattern as ui/)
+  - cors package needed explicit install; @types/cors required as well for TS strict mode
+  - Most US-003 acceptance criteria were already satisfied by the US-001 skeleton
+---
+
+## 2026-03-27 - US-002
+- Created ui/Dockerfile (single-stage Node.js 20 alpine, yarn install, exposes 5173, CMD yarn dev)
+- vite.config.ts already had server.host: '0.0.0.0' and server.watch.usePolling: true from US-001
+- App.vue already rendered 'surfsapp' and tsconfig.json already had strict: true from US-001
+- yarn typecheck passes with zero errors
+- Files changed: ui/Dockerfile
+- **Learnings for future iterations:**
+  - Most of US-002 was already satisfied by US-001 implementation
+  - Dockerfile uses bind-mount strategy: source mounted from host, node_modules in named volume (configured in docker-compose later)
+  - yarn.lock* (with glob) handles case where lockfile doesn't exist yet in Docker build context
+---
