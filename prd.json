@@ -20,7 +20,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Open-Meteo response shape: { hourly: { time: string[], swell_wave_height: number[], swell_wave_period: number[], ... } } where all arrays are the same length and index corresponds to the same hour. Open-Meteo time strings are ISO 8601 without Z suffix (e.g. '2026-03-27T00:00') — append 'Z' when constructing Date objects so they parse as UTC."
     },
     {
@@ -35,6 +35,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
+      "passes": true,
       "notes": "Previous snapshots are never deleted — the API always finds the latest by sorting fetchedAt: -1. This is intentional for Phase 4."
     },
     {
@@ -52,7 +53,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Sequential fetching is intentional — Open-Meteo is a free API and we should be polite. Per-beach error isolation is critical so one failure doesn't block the rest."
     },
     {

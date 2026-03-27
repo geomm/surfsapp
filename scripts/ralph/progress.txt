@@ -16,3 +16,19 @@ Started: Fri Mar 27 EET 2026
 - Add explicit `return` before `res.status(404)` calls in Express async handlers to prevent "headers already sent" errors
 - backend/src/db/connection.ts exports connectDB() — needed by any script that talks to MongoDB
 - Seed script must call process.exit(0) explicitly — tsx hangs waiting for the Mongoose connection to close otherwise
+- Open-Meteo time strings lack a Z suffix (e.g. '2026-03-27T00:00') — append 'Z' when constructing Date objects so they parse as UTC
+- Use `beach.offshoreCoords ?? beach.coords` for Open-Meteo API coords (offshore preferred)
+- fetchForecastForBeach, saveForecastSnapshot, and fetchAllBeaches all live in backend/src/services/forecastFetcher.ts
+
+## 2026-03-27 - US-001, US-002, US-003
+- Implemented Open-Meteo fetch service, ForecastSnapshot persistence, and fetchAllBeaches orchestrator in a single file: backend/src/services/forecastFetcher.ts
+- fetchForecastForBeach: uses native fetch, URLSearchParams, maps time array to IHourlyForecast with placeholder scores
+- saveForecastSnapshot: creates new ForecastSnapshot document, never deletes previous ones
+- fetchAllBeaches: sequential fetch loop over Beach.find({}), per-beach error isolation, logs success count
+- Files changed: backend/src/services/forecastFetcher.ts (created)
+- **Learnings for future iterations:**
+  - US-001/002/003 naturally coexist in the same file — implemented together
+  - Open-Meteo response: { hourly: { time: string[], variable: number[], ... } }, all arrays same length
+  - Use URLSearchParams to build query string cleanly
+  - IHourlyForecast and ForecastSnapshot types are already defined in backend/src/models/ForecastSnapshot.ts
+---
