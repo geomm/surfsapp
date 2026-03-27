@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import { connectDB } from './db/connection.js'
 
 const app = express()
 const port = process.env.PORT ?? 3000
@@ -9,6 +10,10 @@ app.use(express.json())
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+connectDB().catch((err: unknown) => {
+  console.error('MongoDB connection error:', err)
 })
 
 const server = app.listen(port, () => {

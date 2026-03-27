@@ -64,7 +64,7 @@
         "npm run typecheck passes with zero errors"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "mongo-init.js is plain JS (not TS) — it runs inside the MongoDB container via /docker-entrypoint-initdb.d/."
     },
     {

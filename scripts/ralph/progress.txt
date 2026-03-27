@@ -20,6 +20,17 @@ Started: Fri Mar 27 02:17:23 EET 2026
   - backend/src/index.ts includes basic /health endpoint and SIGTERM handler as skeleton for US-003
 ---
 
+## 2026-03-27 - US-004
+- Created backend/src/db/connection.ts exporting connectDB() using mongoose + MONGO_URI env var
+- Wired connectDB() call into index.ts startup (non-blocking, errors logged)
+- Created backend/src/db/mongo-init.js — idempotent script to create beaches, forecastsnapshots, settings collections in MongoDB container
+- Files changed: backend/src/db/connection.ts, backend/src/db/mongo-init.js, backend/src/index.ts, prd.json
+- **Learnings for future iterations:**
+  - mongo-init.js is plain JS (not TS), runs in Mongo container via /docker-entrypoint-initdb.d/
+  - Use db.getSiblingDB('surfsapp') to target the correct database from init script
+  - connectDB() is non-blocking at startup: errors are caught and logged without crashing the server
+---
+
 ## 2026-03-27 - US-003
 - Created backend/Dockerfile (Node.js 20 alpine, npm install, exposes 3000, CMD npm run dev)
 - Added cors package (@types/cors) and configured CORS for http://localhost:5173 in index.ts
