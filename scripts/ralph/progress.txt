@@ -21,3 +21,13 @@ Started: Fri Mar 27 02:57:51 EET 2026
   - Surf score colours (--color-surf-*) are standalone hex values, NOT aliased to the palette tokens — per PRD notes
   - UI aliases (--color-background, --color-surface, etc.) reference palette tokens via var()
 ---
+
+## 2026-03-27 - US-002
+- Created ui/src/styles/tokens/_spacing.scss with --space-1 (4px) through --space-12 (48px) in 4px increments
+- Created ui/src/styles/tokens/_typography.scss with --font-family-base, --font-size-xs through --font-size-4xl, --font-weight-regular through --font-weight-bold, and --line-height-* variants
+- Created ui/src/styles/tokens/_z-index.scss with --z-below through --z-toast scale
+- Files changed: ui/src/styles/tokens/_spacing.scss, ui/src/styles/tokens/_typography.scss, ui/src/styles/tokens/_z-index.scss
+- **Learnings for future iterations:**
+  - Typecheck passes without importing SCSS — vue-tsc only checks TypeScript/Vue files
+  - Token files are pure :root {} declarations with no selectors or mixins — no output until referenced
+---
