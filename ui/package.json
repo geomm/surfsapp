@@ -9,6 +9,8 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "lit": "^3.3.2",
+    "lucide": "^1.7.0",
     "vue": "^3.4.0",
     "vue-router": "^5.0.4"
   },

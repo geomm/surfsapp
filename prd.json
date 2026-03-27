@@ -1,95 +1,152 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-1-scss-design-system",
-  "description": "Phase 1 — Establish the token-based SCSS design system: ocean/sand colour palette as CSS custom properties, 4px spacing grid, system font stack, z-index scale, base reset, breakpoint and focus-visible mixins, main.scss entry point, and a /design preview route via Vue Router.",
+  "branchName": "ralph/phase-2-lit-component-library",
+  "description": "Phase 2 — Build five Lit Web Components (surf-badge, surf-icon, surf-button, surf-card, surf-bottom-sheet) registered as global custom elements, consuming Phase 1 CSS custom properties for theming, with a /components preview route for visual verification.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "SCSS scaffolding and colour tokens",
-      "description": "As a developer, I want the SCSS directory structure created and all colour tokens defined as CSS custom properties so that every subsequent token and component file has a consistent home and palette to reference.",
+      "title": "Install Lit and Lucide, scaffold components directory",
+      "description": "As a developer, I want Lit and Lucide installed and the components directory scaffolded so that subsequent stories have a consistent location and working imports.",
       "acceptanceCriteria": [
-        "sass installed as a devDependency in ui/ via yarn",
-        "ui/src/styles/ directory created with subdirectories: tokens/, mixins/, base/, utilities/",
-        "ui/src/styles/tokens/_colors.scss created with all palette tokens inside :root {}: ocean (50–900), sand (50–900), neutral (0–900), surf score semantics (--color-surf-very-good: #2d9e5f, --color-surf-good: #1a72c4, --color-surf-maybe: #d4a017, --color-surf-poor: #c0392b), and UI aliases (--color-background, --color-surface, --color-text-primary, --color-text-secondary, --color-border, --color-primary, --color-accent) referencing palette tokens via var()",
-        "No hard-coded hex values appear outside _colors.scss",
-        "Typecheck passes (yarn typecheck)"
+        "lit installed as a dependency in ui/ via yarn (yarn add lit)",
+        "lucide installed as a dependency in ui/ via yarn (yarn add lucide)",
+        "ui/src/components/lit/ directory created",
+        "ui/src/components/lit/index.ts created as an empty barrel file",
+        "ui/src/main.ts imports './components/lit/index.ts'",
+        "A minimal smoke-test Lit component surf-test.ts created in ui/src/components/lit/, registered as <surf-test>, renders <p>Lit works</p>, added to index.ts, and used temporarily in HomeView.vue to confirm Lit + Vite integration",
+        "Typecheck passes (yarn typecheck)",
+        "Verify in browser using dev-browser skill: navigate to http://localhost:5173/ and confirm <surf-test> renders 'Lit works'"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Exact hex values are specified in the PRD — use them verbatim. Surf score colours are standalone hex values, not aliased to the palette."
+      "notes": "If using Lit decorators (@property, @customElement), add experimentalDecorators: true and useDefineForClassFields: false to ui/tsconfig.json. Alternatively use the static properties object approach to avoid tsconfig changes."
     },
     {
       "id": "US-002",
-      "title": "Spacing, typography, and z-index tokens",
-      "description": "As a developer, I want spacing, typography, and z-index values available as CSS custom properties so that all layout and text decisions reference a shared scale.",
+      "title": "surf-badge component",
+      "description": "As a developer, I want a <surf-badge> custom element that displays surf score labels with the correct tier colour so that beach cards and detail views can show surfability at a glance.",
       "acceptanceCriteria": [
-        "ui/src/styles/tokens/_spacing.scss created, defining --space-1 (4px) through --space-12 (48px) in 4px increments inside :root {}",
-        "ui/src/styles/tokens/_typography.scss created, defining --font-family-base (-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif), --font-size-xs (0.75rem) through --font-size-4xl (2.25rem), --font-weight-regular (400) through --font-weight-bold (700), --line-height-tight (1.2), --line-height-normal (1.5), --line-height-relaxed (1.75) inside :root {}",
-        "ui/src/styles/tokens/_z-index.scss created, defining --z-below (-1), --z-base (0), --z-raised (10), --z-dropdown (100), --z-overlay (200), --z-modal (300), --z-toast (400) inside :root {}",
-        "Typecheck passes"
+        "ui/src/components/lit/surf-badge.ts created, defining and registering <surf-badge> as a LitElement",
+        "variant property implemented: 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral' (default 'neutral')",
+        "size property implemented: 'sm' | 'md' (default 'md')",
+        "Colour mapping: very-good → background var(--color-surf-very-good) white text; good → var(--color-surf-good) white text; maybe → var(--color-surf-maybe) dark text (--color-neutral-900); poor → var(--color-surf-poor) white text; neutral → var(--color-neutral-200) var(--color-text-secondary)",
+        "Size mapping: sm → font-size var(--font-size-xs), padding var(--space-1) var(--space-2), border-radius 4px; md → var(--font-size-sm), padding var(--space-1) var(--space-3), border-radius 6px",
+        "Default slot renders label text",
+        "No hard-coded hex values in component styles",
+        "surf-badge.ts exported from ui/src/components/lit/index.ts; surf-test.ts removed from index.ts exports",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add all 5 badge variants to HomeView.vue temporarily and confirm each renders with the correct background colour"
       ],
       "priority": 2,
       "passes": true,
-      "notes": ""
+      "notes": "surf-test.ts can remain on disk but must be removed from index.ts exports. Clean it up fully in US-007."
     },
     {
       "id": "US-003",
-      "title": "Base reset and global styles",
-      "description": "As a developer, I want a CSS reset and sensible global defaults applied so that the browser's user-agent stylesheet does not interfere with the design system.",
+      "title": "surf-icon component",
+      "description": "As a developer, I want a <surf-icon> custom element that renders Lucide icons as inline SVG so that icons can be used throughout the app without external image assets.",
       "acceptanceCriteria": [
-        "ui/src/styles/base/_reset.scss created: *, *::before, *::after { box-sizing: border-box }, margin and padding zeroed on all elements, img and video set to max-width: 100% and display: block",
-        "ui/src/styles/base/_base.scss created: html sets font-size: 16px; body uses --font-family-base, --font-size-md, --line-height-normal, background-color: var(--color-background), color: var(--color-text-primary); a elements inherit color by default",
-        "No component-specific styles in these files — element-level defaults only",
-        "Typecheck passes"
+        "ui/src/components/lit/surf-icon.ts created, defining and registering <surf-icon> as a LitElement",
+        "name property implemented (string, required) — maps kebab-case name to a Lucide icon",
+        "size property implemented (number, default 24) — sets SVG width and height in pixels",
+        "color property implemented (string, default 'currentColor') — sets SVG stroke colour",
+        "These icons are importable by name and render correctly: waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw",
+        "Unknown icon name renders nothing and logs console.warn('surf-icon: unknown icon \"<name>\"')",
+        "surf-icon.ts exported from ui/src/components/lit/index.ts",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add <surf-icon name=\"waves\" size=\"32\"></surf-icon> to HomeView.vue temporarily and confirm a waves SVG icon renders at 32px"
       ],
       "priority": 3,
+      "passes": true,
+      "notes": "Import individual Lucide icons by PascalCase name from 'lucide' (e.g. import { Waves, Heart, MapPin } from 'lucide'). Each is an IconNode (recursive tuple). Use Lit's svg template tag to render. Do NOT use lucide-react or @lucide/vue-next."
+    },
+    {
+      "id": "US-004",
+      "title": "surf-button component",
+      "description": "As a developer, I want a <surf-button> custom element with primary, secondary, and ghost variants so that consistent action buttons are available across all views.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-button.ts created, defining and registering <surf-button> as a LitElement",
+        "variant property: 'primary' | 'secondary' | 'ghost' (default 'primary')",
+        "size property: 'sm' | 'md' | 'lg' (default 'md')",
+        "disabled property: boolean (default false) — inner <button> carries native disabled attribute, pointer-events none, opacity 0.5",
+        "type property: 'button' | 'submit' (default 'button') — passed to inner <button>",
+        "Primary: background var(--color-primary), white text, hover opacity 0.9",
+        "Secondary: transparent background, border 1px solid var(--color-primary), text var(--color-primary), hover background var(--color-ocean-50)",
+        "Ghost: transparent background, no border, text var(--color-text-secondary), hover background var(--color-neutral-100)",
+        "Size sm: height var(--space-8), font var(--font-size-sm), padding 0 var(--space-3); md: height var(--space-10), font var(--font-size-md), padding 0 var(--space-4); lg: height var(--space-12), font var(--font-size-lg), padding 0 var(--space-6)",
+        "Default slot renders button label content",
+        "No hard-coded hex values in component styles",
+        "surf-button.ts exported from ui/src/components/lit/index.ts",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add all 3 variants to HomeView.vue temporarily, confirm primary has ocean blue background, secondary has border, ghost has no border"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Inner <button> element handles native disabled behaviour. All custom events from Lit components must set bubbles: true, composed: true."
+    },
+    {
+      "id": "US-005",
+      "title": "surf-card component",
+      "description": "As a developer, I want a <surf-card> custom element that provides a consistent surface container so that beach listing cards and detail panels share the same visual shell.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-card.ts created, defining and registering <surf-card> as a LitElement",
+        "clickable property: boolean (default false) — when true, cursor pointer, dispatches card-click CustomEvent (bubbles: true, composed: true) on click",
+        "padding property: 'sm' | 'md' | 'lg' (default 'md') — maps to var(--space-3), var(--space-4), var(--space-6)",
+        "Base styles: background var(--color-surface), border 1px solid var(--color-border), border-radius 12px, box-shadow 0 1px 3px rgba(0,0,0,0.08)",
+        "When clickable=true: hover box-shadow 0 4px 12px rgba(0,0,0,0.12), transition box-shadow 150ms ease",
+        "Default slot renders any content",
+        "surf-card.ts exported from ui/src/components/lit/index.ts",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add a clickable and non-clickable surf-card to HomeView.vue temporarily, confirm border and shadow render, clickable card shows pointer cursor on hover"
+      ],
+      "priority": 5,
       "passes": true,
       "notes": ""
     },
     {
-      "id": "US-004",
-      "title": "Utility mixins — breakpoints and focus-visible",
-      "description": "As a developer, I want reusable SCSS mixins for responsive breakpoints and focus states so I can apply them consistently without repeating media query values.",
-      "acceptanceCriteria": [
-        "ui/src/styles/mixins/_breakpoints.scss created with a breakpoint($size) mixin using mobile-first min-width media queries: sm=480px, md=768px, lg=1024px, xl=1280px; @error thrown for unknown size names",
-        "ui/src/styles/mixins/_focus.scss created with a focus-visible-ring mixin that applies outline: 2px solid var(--color-primary) with outline-offset: 2px on :focus-visible and removes outline on :focus:not(:focus-visible)",
-        "Both files output no CSS when imported — only when @included",
-        "Typecheck passes"
-      ],
-      "priority": 4,
-      "passes": true,
-      "notes": "Use SCSS $variables for breakpoint values (not CSS custom properties) — custom properties cannot be used inside @media queries."
-    },
-    {
-      "id": "US-005",
-      "title": "main.scss entry point",
-      "description": "As a developer, I want a single main.scss that imports all token and base files so that one import in main.ts loads the entire design system.",
-      "acceptanceCriteria": [
-        "ui/src/styles/main.scss created, importing in order: tokens/_colors, tokens/_spacing, tokens/_typography, tokens/_z-index, base/_reset, base/_base using @use or @forward",
-        "ui/src/main.ts imports './styles/main.scss'",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill: open DevTools → Elements → :root and confirm --color-primary, --space-4, and --font-size-md are present as CSS custom properties"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Use @use syntax (not deprecated @import). Order matters: tokens before base, as base files reference token custom properties."
-    },
-    {
       "id": "US-006",
-      "title": "Vue Router setup and /design preview route",
-      "description": "As a developer, I want a /design route that renders all design tokens visually so I can verify the system is wired correctly at a glance.",
+      "title": "surf-bottom-sheet component",
+      "description": "As a developer, I want a <surf-bottom-sheet> custom element that slides up from the bottom of the screen so that filter panels and contextual actions have a consistent mobile-friendly container.",
       "acceptanceCriteria": [
-        "vue-router installed as a dependency in ui/ via yarn add vue-router",
-        "ui/src/router.ts created with two routes: / → HomeView (src/views/HomeView.vue, renders <div>Home</div>), /design → DesignPreview (src/views/DesignPreview.vue)",
-        "ui/src/main.ts registers the router via app.use(router)",
-        "App.vue updated to render <RouterView />",
-        "DesignPreview.vue contains four clearly labelled sections: (1) Colour palette — one swatch per token group (ocean, sand, neutral, surf score, UI aliases) showing token name and a filled colour box; (2) Spacing scale — a horizontal bar per step --space-1 through --space-12 with token name and pixel value; (3) Typography — each --font-size-* rendered as sample text 'The quick brown fox' labelled with its token name; (4) Z-index — a table of token name and value",
+        "ui/src/components/lit/surf-bottom-sheet.ts created, defining and registering <surf-bottom-sheet> as a LitElement",
+        "open property: boolean (default false) — controls visibility; when false, sheet and backdrop are hidden",
+        "title property: string (default '') — renders as a heading (font-size var(--font-size-lg), font-weight var(--font-weight-semibold)) in sheet header when non-empty",
+        "Sheet slides in from bottom when open becomes true via CSS transition: transform 250ms ease",
+        "Semi-transparent backdrop rgba(0,0,0,0.4) covers screen when open",
+        "Clicking backdrop dispatches sheet-close CustomEvent (bubbles: true, composed: true)",
+        "Pressing Escape while open dispatches sheet-close — keydown listener added to document when open=true, removed when open=false",
+        "Handle bar: 32px wide, 4px tall, background var(--color-neutral-300), border-radius 2px, centered at top of sheet",
+        "Sheet: background var(--color-surface), border-radius 16px 16px 0 0, max-height 85vh, overflow-y auto, padding var(--space-4)",
+        "Default slot renders body content",
+        "surf-bottom-sheet.ts exported from ui/src/components/lit/index.ts",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill: navigate to http://localhost:5173/design and confirm all four sections (colours, spacing, typography, z-index) render correctly"
+        "Verify in browser using dev-browser skill: add <surf-bottom-sheet open title=\"Filters\">Content</surf-bottom-sheet> to HomeView.vue temporarily, confirm sheet renders from bottom with backdrop, handle bar, and title visible"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "vue-router v4 required (Vue 3 compatible). The /design route is a developer tool — no auth guard needed."
+      "notes": "Remove the document keydown listener in disconnectedCallback() to avoid memory leaks. No focus trapping required in Phase 2."
+    },
+    {
+      "id": "US-007",
+      "title": "/components preview route",
+      "description": "As a developer, I want a /components route that shows every component and its variants in isolation so I can verify the component library at a glance without building a full view.",
+      "acceptanceCriteria": [
+        "ui/src/views/ComponentsPreview.vue created",
+        "Route /components added to ui/src/router.ts pointing to ComponentsPreview",
+        "HomeView.vue cleaned up — all temporary test code removed, renders only <div>Home</div>",
+        "surf-test.ts deleted from ui/src/components/lit/",
+        "ComponentsPreview.vue surf-badge section: all 5 variants × 2 sizes (sm, md), each labelled",
+        "ComponentsPreview.vue surf-icon section: all 8 icons (waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw) at size 24 and 32, each labelled with icon name",
+        "ComponentsPreview.vue surf-button section: all 3 variants × 3 sizes, plus a disabled primary button",
+        "ComponentsPreview.vue surf-card section: one non-clickable and one clickable card with sample text content",
+        "ComponentsPreview.vue surf-bottom-sheet section: a surf-button labelled 'Open Sheet' that toggles the sheet open/closed, sheet contains sample content inside",
+        "Navigating to http://localhost:5173/components renders all sections without console errors",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: navigate to /components, confirm all five component sections are visible and the bottom sheet opens and closes when the toggle button is clicked"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "ComponentsPreview.vue uses <script setup lang='ts'>. Custom elements are used directly in Vue templates — no need to import individual component files since all are registered globally via main.ts → index.ts."
     }
   ]
 }
