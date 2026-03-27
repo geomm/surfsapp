@@ -42,9 +42,16 @@ class SurfIcon extends LitElement {
     color: { type: String },
   }
 
-  name = ''
-  size = 24
-  color = 'currentColor'
+  declare name: string
+  declare size: number
+  declare color: string
+
+  constructor() {
+    super()
+    this.name = ''
+    this.size = 24
+    this.color = 'currentColor'
+  }
 
   static styles = css`
     :host {

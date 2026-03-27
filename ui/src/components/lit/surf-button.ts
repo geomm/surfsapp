@@ -8,10 +8,18 @@ class SurfButton extends LitElement {
     type: { type: String },
   }
 
-  variant: 'primary' | 'secondary' | 'ghost' = 'primary'
-  size: 'sm' | 'md' | 'lg' = 'md'
-  disabled = false
-  type: 'button' | 'submit' = 'button'
+  declare variant: 'primary' | 'secondary' | 'ghost'
+  declare size: 'sm' | 'md' | 'lg'
+  declare disabled: boolean
+  declare type: 'button' | 'submit'
+
+  constructor() {
+    super()
+    this.variant = 'primary'
+    this.size = 'md'
+    this.disabled = false
+    this.type = 'button'
+  }
 
   static styles = css`
     :host {

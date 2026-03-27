@@ -6,8 +6,14 @@ class SurfCard extends LitElement {
     padding: { type: String },
   }
 
-  clickable = false
-  padding: 'sm' | 'md' | 'lg' = 'md'
+  declare clickable: boolean
+  declare padding: 'sm' | 'md' | 'lg'
+
+  constructor() {
+    super()
+    this.clickable = false
+    this.padding = 'md'
+  }
 
   static styles = css`
     :host {

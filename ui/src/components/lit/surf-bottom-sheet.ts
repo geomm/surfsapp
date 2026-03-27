@@ -6,8 +6,14 @@ class SurfBottomSheet extends LitElement {
     title: { type: String },
   }
 
-  open = false
-  title = ''
+  declare open: boolean
+  declare title: string
+
+  constructor() {
+    super()
+    this.open = false
+    this.title = ''
+  }
 
   private _keydownHandler: ((e: KeyboardEvent) => void) | null = null
 

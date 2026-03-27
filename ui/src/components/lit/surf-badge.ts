@@ -6,8 +6,14 @@ class SurfBadge extends LitElement {
     size: { type: String },
   }
 
-  variant: 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral' = 'neutral'
-  size: 'sm' | 'md' = 'md'
+  declare variant: 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral'
+  declare size: 'sm' | 'md'
+
+  constructor() {
+    super()
+    this.variant = 'neutral'
+    this.size = 'md'
+  }
 
   static styles = css`
     :host {
