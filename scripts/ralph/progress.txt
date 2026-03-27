@@ -34,3 +34,14 @@ Started: Fri Mar 27 04:09:52 EET 2026
   - Sub-document schemas (HourlyForecast, DailySummary) use `_id: false` to avoid unnecessary _id generation
   - module: "commonjs" in tsconfig — no .js extensions needed in imports
 ---
+
+## 2026-03-27 - US-003
+- Created `backend/src/scripts/seed.ts` — reads beach_profiles.json, upserts all 8 beaches, creates one stub ForecastSnapshot per beach (idempotent)
+- Added `"seed": "tsx src/scripts/seed.ts"` to `backend/package.json` scripts
+- Files changed: `backend/src/scripts/seed.ts`, `backend/package.json`
+- **Learnings for future iterations:**
+  - Seed script must call `process.exit(0)` explicitly — tsx hangs waiting for the Mongoose connection to close otherwise
+  - Idempotency for snapshots: use `findOne({ beachId })` check before insert (not upsert) so stub data is not overwritten by real data in future runs
+  - beach_profiles.json is imported as a JSON module — cast entries as `{ id: string }` when accessing typed fields
+  - STUB_SCORES map uses beachId strings as keys for deterministic score/label lookup
+---

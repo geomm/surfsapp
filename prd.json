@@ -55,7 +55,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "The seed script connects to MongoDB using MONGO_URI from process.env — requires the .env file or Docker environment. It must call process.exit(0) explicitly or the tsx process will hang waiting for the Mongoose connection to close."
     },
     {
