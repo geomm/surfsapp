@@ -1,0 +1,53 @@
+:root {
+  // Ocean palette (50–900)
+  --color-ocean-50: #e6f4fb;
+  --color-ocean-100: #bde2f5;
+  --color-ocean-200: #90ceee;
+  --color-ocean-300: #61bae7;
+  --color-ocean-400: #3aabe2;
+  --color-ocean-500: #0f9bdd;
+  --color-ocean-600: #0d8bca;
+  --color-ocean-700: #0a76ad;
+  --color-ocean-800: #076291;
+  --color-ocean-900: #044266;
+
+  // Sand palette (50–900)
+  --color-sand-50: #fdf8f0;
+  --color-sand-100: #f9eed8;
+  --color-sand-200: #f4e0ba;
+  --color-sand-300: #eed29b;
+  --color-sand-400: #e8c57e;
+  --color-sand-500: #e2b862;
+  --color-sand-600: #c9a357;
+  --color-sand-700: #a8894a;
+  --color-sand-800: #886f3c;
+  --color-sand-900: #5e4d2a;
+
+  // Neutral palette (0–900)
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8f9fa;
+  --color-neutral-100: #f1f3f5;
+  --color-neutral-200: #e9ecef;
+  --color-neutral-300: #dee2e6;
+  --color-neutral-400: #ced4da;
+  --color-neutral-500: #adb5bd;
+  --color-neutral-600: #868e96;
+  --color-neutral-700: #495057;
+  --color-neutral-800: #343a40;
+  --color-neutral-900: #212529;
+
+  // Surf score semantics (standalone hex values)
+  --color-surf-very-good: #2d9e5f;
+  --color-surf-good: #1a72c4;
+  --color-surf-maybe: #d4a017;
+  --color-surf-poor: #c0392b;
+
+  // UI aliases (referencing palette tokens)
+  --color-background: var(--color-neutral-50);
+  --color-surface: var(--color-neutral-0);
+  --color-text-primary: var(--color-neutral-900);
+  --color-text-secondary: var(--color-neutral-600);
+  --color-border: var(--color-neutral-300);
+  --color-primary: var(--color-ocean-500);
+  --color-accent: var(--color-sand-500);
+}

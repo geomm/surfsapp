@@ -1,106 +1,95 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-0-project-setup",
-  "description": "Phase 0 — Bootstrap monorepo with Docker Compose: Vue 3 + TypeScript frontend (Vite HMR), Node.js + TypeScript backend (Express + tsx --watch), and MongoDB container with empty collections. Single command docker compose up starts the full stack.",
+  "branchName": "ralph/phase-1-scss-design-system",
+  "description": "Phase 1 — Establish the token-based SCSS design system: ocean/sand colour palette as CSS custom properties, 4px spacing grid, system font stack, z-index scale, base reset, breakpoint and focus-visible mixins, main.scss entry point, and a /design preview route via Vue Router.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Monorepo folder structure and base files",
-      "description": "As a developer, I want a clean monorepo layout so that frontend, backend, and infrastructure are clearly separated.",
+      "title": "SCSS scaffolding and colour tokens",
+      "description": "As a developer, I want the SCSS directory structure created and all colour tokens defined as CSS custom properties so that every subsequent token and component file has a consistent home and palette to reference.",
       "acceptanceCriteria": [
-        "Root contains: docker-compose.yml (empty placeholder), ui/, backend/, .gitignore, .env.example",
-        "ui/ contains a Vite + Vue 3 + TypeScript scaffold created with yarn (package.json, vite.config.ts, tsconfig.json, src/main.ts, src/App.vue)",
-        "backend/ contains a Node.js + TypeScript + Express skeleton (package.json, tsconfig.json, src/index.ts)",
-        "Root .gitignore covers node_modules, dist, .env, .DS_Store",
-        ".env.example documents: MONGO_URI=mongodb://mongo:27017/surfsapp, PORT=3000, NODE_ENV=development",
-        "Typecheck passes in ui/ (yarn typecheck)",
-        "Typecheck passes in backend/ (npm run typecheck)"
+        "sass installed as a devDependency in ui/ via yarn",
+        "ui/src/styles/ directory created with subdirectories: tokens/, mixins/, base/, utilities/",
+        "ui/src/styles/tokens/_colors.scss created with all palette tokens inside :root {}: ocean (50–900), sand (50–900), neutral (0–900), surf score semantics (--color-surf-very-good: #2d9e5f, --color-surf-good: #1a72c4, --color-surf-maybe: #d4a017, --color-surf-poor: #c0392b), and UI aliases (--color-background, --color-surface, --color-text-primary, --color-text-secondary, --color-border, --color-primary, --color-accent) referencing palette tokens via var()",
+        "No hard-coded hex values appear outside _colors.scss",
+        "Typecheck passes (yarn typecheck)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "This is the foundation — all other stories depend on this structure existing."
+      "notes": "Exact hex values are specified in the PRD — use them verbatim. Surf score colours are standalone hex values, not aliased to the palette."
     },
     {
       "id": "US-002",
-      "title": "Frontend Dockerfile and Vite HMR configuration",
-      "description": "As a developer, I want the Vue 3 frontend to reflect code changes instantly inside Docker so I don't need to rebuild the container.",
+      "title": "Spacing, typography, and z-index tokens",
+      "description": "As a developer, I want spacing, typography, and z-index values available as CSS custom properties so that all layout and text decisions reference a shared scale.",
       "acceptanceCriteria": [
-        "ui/Dockerfile exists using a Node.js base image (single-stage)",
-        "vite.config.ts sets server.host: '0.0.0.0' and server.watch: { usePolling: true } for Docker bind-mount compatibility",
-        "App.vue renders a minimal placeholder page with the text 'surfsapp'",
-        "TypeScript strict mode enabled in ui/tsconfig.json",
-        "yarn typecheck passes with zero errors"
+        "ui/src/styles/tokens/_spacing.scss created, defining --space-1 (4px) through --space-12 (48px) in 4px increments inside :root {}",
+        "ui/src/styles/tokens/_typography.scss created, defining --font-family-base (-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif), --font-size-xs (0.75rem) through --font-size-4xl (2.25rem), --font-weight-regular (400) through --font-weight-bold (700), --line-height-tight (1.2), --line-height-normal (1.5), --line-height-relaxed (1.75) inside :root {}",
+        "ui/src/styles/tokens/_z-index.scss created, defining --z-below (-1), --z-base (0), --z-raised (10), --z-dropdown (100), --z-overlay (200), --z-modal (300), --z-toast (400) inside :root {}",
+        "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Bind-mount strategy: source code mounted from host, node_modules in a named Docker volume."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Backend Dockerfile, Express skeleton, and health endpoint",
-      "description": "As a developer, I want the Express backend to reload on file changes inside Docker so I can iterate without rebuilding.",
+      "title": "Base reset and global styles",
+      "description": "As a developer, I want a CSS reset and sensible global defaults applied so that the browser's user-agent stylesheet does not interfere with the design system.",
       "acceptanceCriteria": [
-        "backend/Dockerfile exists using a Node.js base image (single-stage)",
-        "backend/src/index.ts starts an Express server on the port from process.env.PORT (default 3000)",
-        "GET /health returns { status: 'ok', timestamp: '<ISO string>' } with HTTP 200",
-        "tsx --watch src/index.ts is the dev start command (npm run dev)",
-        "CORS configured to allow requests from http://localhost:5173",
-        "TypeScript strict mode enabled in backend/tsconfig.json",
-        "npm run typecheck passes with zero errors"
+        "ui/src/styles/base/_reset.scss created: *, *::before, *::after { box-sizing: border-box }, margin and padding zeroed on all elements, img and video set to max-width: 100% and display: block",
+        "ui/src/styles/base/_base.scss created: html sets font-size: 16px; body uses --font-family-base, --font-size-md, --line-height-normal, background-color: var(--color-background), color: var(--color-text-primary); a elements inherit color by default",
+        "No component-specific styles in these files — element-level defaults only",
+        "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Mongoose installed as a dependency ready for Phase 3 models. Graceful SIGTERM shutdown included."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "MongoDB connection and init script",
-      "description": "As a developer, I want MongoDB to start with the required empty collections already created so Phase 3 can begin seeding immediately.",
+      "title": "Utility mixins — breakpoints and focus-visible",
+      "description": "As a developer, I want reusable SCSS mixins for responsive breakpoints and focus states so I can apply them consistently without repeating media query values.",
       "acceptanceCriteria": [
-        "backend/src/db/connection.ts exports a connectDB() function that connects via MONGO_URI env var using mongoose",
-        "connectDB() is called on server startup in index.ts and logs 'MongoDB connected' on success",
-        "backend/src/db/mongo-init.js creates three empty collections on first run: beaches, forecastsnapshots, settings",
-        "Init script is idempotent — running twice does not throw errors",
-        "npm run typecheck passes with zero errors"
+        "ui/src/styles/mixins/_breakpoints.scss created with a breakpoint($size) mixin using mobile-first min-width media queries: sm=480px, md=768px, lg=1024px, xl=1280px; @error thrown for unknown size names",
+        "ui/src/styles/mixins/_focus.scss created with a focus-visible-ring mixin that applies outline: 2px solid var(--color-primary) with outline-offset: 2px on :focus-visible and removes outline on :focus:not(:focus-visible)",
+        "Both files output no CSS when imported — only when @included",
+        "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "mongo-init.js is plain JS (not TS) — it runs inside the MongoDB container via /docker-entrypoint-initdb.d/."
+      "passes": false,
+      "notes": "Use SCSS $variables for breakpoint values (not CSS custom properties) — custom properties cannot be used inside @media queries."
     },
     {
       "id": "US-005",
-      "title": "Docker Compose orchestration with networking and volumes",
-      "description": "As a developer, I want docker compose up to start all three services so I don't need to manage them individually.",
+      "title": "main.scss entry point",
+      "description": "As a developer, I want a single main.scss that imports all token and base files so that one import in main.ts loads the entire design system.",
       "acceptanceCriteria": [
-        "docker-compose.yml defines three services: ui, backend, mongo",
-        "ui service: builds from ui/Dockerfile, bind-mounts ui/ source, node_modules in named volume, port 5173:5173",
-        "backend service: builds from backend/Dockerfile, bind-mounts backend/ source, node_modules in named volume, port 3000:3000, depends_on: mongo",
-        "mongo service: uses mongo:7 image, port 27017:27017, named volume mongo-data for persistence, mounts backend/src/db/mongo-init.js to /docker-entrypoint-initdb.d/",
-        "All three services share a bridge network named surfsapp-network",
-        "Environment variables loaded from .env file",
-        "docker compose up starts all three services without errors",
-        "docker compose down stops and removes containers cleanly"
+        "ui/src/styles/main.scss created, importing in order: tokens/_colors, tokens/_spacing, tokens/_typography, tokens/_z-index, base/_reset, base/_base using @use or @forward",
+        "ui/src/main.ts imports './styles/main.scss'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: open DevTools → Elements → :root and confirm --color-primary, --space-4, and --font-size-md are present as CSS custom properties"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Bind-mount for source + named volume for node_modules is the hot-reload strategy for both ui and backend."
+      "passes": false,
+      "notes": "Use @use syntax (not deprecated @import). Order matters: tokens before base, as base files reference token custom properties."
     },
     {
       "id": "US-006",
-      "title": "Inter-service connectivity verification",
-      "description": "As a developer, I want to confirm all services can reach each other so I know the network is wired correctly before building features.",
+      "title": "Vue Router setup and /design preview route",
+      "description": "As a developer, I want a /design route that renders all design tokens visually so I can verify the system is wired correctly at a glance.",
       "acceptanceCriteria": [
-        "Backend GET /health response includes { status: 'ok', mongo: 'connected', timestamp: '<ISO string>' } when MongoDB is running",
-        "Backend GET /health response includes { status: 'ok', mongo: 'disconnected' } when MongoDB is not available (graceful degradation)",
-        "curl http://localhost:3000/health returns HTTP 200 with the expected JSON",
-        "curl http://localhost:5173 returns HTTP 200 (Vite dev server responding)",
-        "No CORS errors when frontend fetch('http://localhost:3000/health') is called from the browser",
-        "Typecheck passes in backend/ (npm run typecheck)",
-        "Verify in browser using dev-browser skill"
+        "vue-router installed as a dependency in ui/ via yarn add vue-router",
+        "ui/src/router.ts created with two routes: / → HomeView (src/views/HomeView.vue, renders <div>Home</div>), /design → DesignPreview (src/views/DesignPreview.vue)",
+        "ui/src/main.ts registers the router via app.use(router)",
+        "App.vue updated to render <RouterView />",
+        "DesignPreview.vue contains four clearly labelled sections: (1) Colour palette — one swatch per token group (ocean, sand, neutral, surf score, UI aliases) showing token name and a filled colour box; (2) Spacing scale — a horizontal bar per step --space-1 through --space-12 with token name and pixel value; (3) Typography — each --font-size-* rendered as sample text 'The quick brown fox' labelled with its token name; (4) Z-index — a table of token name and value",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: navigate to http://localhost:5173/design and confirm all four sections (colours, spacing, typography, z-index) render correctly"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "This is the final verification story. All previous stories must pass before this one is attempted."
+      "passes": false,
+      "notes": "vue-router v4 required (Vue 3 compatible). The /design route is a developer tool — no auth guard needed."
     }
   ]
 }
