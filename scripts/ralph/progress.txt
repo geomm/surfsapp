@@ -20,6 +20,16 @@ Started: Fri Mar 27 02:17:23 EET 2026
   - backend/src/index.ts includes basic /health endpoint and SIGTERM handler as skeleton for US-003
 ---
 
+## 2026-03-27 - US-006
+- Updated GET /health to include mongo field: 'connected' when mongoose.connection.readyState === 1, else 'disconnected'
+- CORS already configured for http://localhost:5173 from US-003
+- Browser verification not available in this environment — manual verification needed via docker compose up
+- Files changed: backend/src/index.ts, prd.json
+- **Learnings for future iterations:**
+  - mongoose.connection.readyState: 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  - /health endpoint now provides graceful degradation: works whether mongo is up or not
+---
+
 ## 2026-03-27 - US-005
 - Replaced docker-compose.yml placeholder with full orchestration: ui, backend, mongo services
 - ui: bind-mount ./ui, named volume ui-node-modules, port 5173:5173, surfsapp-network
