@@ -36,7 +36,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Do not import from index.ts in model files (no circular dependencies). Use mongoose.model() not mongoose.Model. The id field is the string business key — Mongoose adds _id automatically."
     },
     {

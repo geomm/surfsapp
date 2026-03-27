@@ -21,3 +21,16 @@ Started: Fri Mar 27 04:09:52 EET 2026
   - windScoringLogic is only on wave-generating-onshore beaches (7 of 8; Langouvardos is offshore-or-light and has no windScoringLogic)
   - backend/src/db/connection.ts exports `connectDB()` — needed by seed script
 ---
+
+## 2026-03-27 - US-002
+- Created `backend/src/models/Beach.ts` with IBeach interface, BeachSchema, and Beach model
+- Created `backend/src/models/ForecastSnapshot.ts` with IHourlyForecast, IDailySummary, IForecastSnapshot interfaces, ForecastSnapshotSchema, and ForecastSnapshot model
+- ForecastSnapshotSchema has indexes on beachId (lookup) and fetchedAt:-1 (latest-first)
+- Files changed: `backend/src/models/Beach.ts`, `backend/src/models/ForecastSnapshot.ts`
+- **Learnings for future iterations:**
+  - idealWindDescription union values: 'wave-generating-onshore' | 'offshore-or-light'
+  - skillLevel union values: 'beginner' | 'intermediate' | 'advanced'
+  - label/overallLabel union values: 'poor' | 'maybe' | 'good' | 'very-good'
+  - Sub-document schemas (HourlyForecast, DailySummary) use `_id: false` to avoid unnecessary _id generation
+  - module: "commonjs" in tsconfig — no .js extensions needed in imports
+---
