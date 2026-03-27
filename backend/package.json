@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
