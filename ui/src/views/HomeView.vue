@@ -1,8 +1,7 @@
 <template>
   <div>
     <div>Home</div>
-    <surf-button variant="primary">Primary</surf-button>
-    <surf-button variant="secondary">Secondary</surf-button>
-    <surf-button variant="ghost">Ghost</surf-button>
+    <surf-card>Non-clickable card</surf-card>
+    <surf-card :clickable="true">Clickable card</surf-card>
   </div>
 </template>
