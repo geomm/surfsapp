@@ -1,4 +1,3 @@
-import './surf-test'
 import './surf-badge'
 import './surf-icon'
 import './surf-button'
