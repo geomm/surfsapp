@@ -88,7 +88,7 @@
         "Verify in browser using dev-browser skill: navigate to http://localhost:5173/design and confirm all four sections (colours, spacing, typography, z-index) render correctly"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "vue-router v4 required (Vue 3 compatible). The /design route is a developer tool — no auth guard needed."
     }
   ]

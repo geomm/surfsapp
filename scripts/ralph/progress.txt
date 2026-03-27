@@ -61,3 +61,18 @@ Started: Fri Mar 27 02:57:51 EET 2026
   - vue-tsc does not type-check SCSS imports in main.ts — typecheck passes regardless of SCSS content
   - Manual browser verification needed for CSS custom property presence in DevTools (no browser testing tools configured)
 ---
+
+## 2026-03-27 - US-006
+- Installed vue-router@5.0.4 via `yarn add vue-router` in ui/
+- Created ui/src/router.ts with two routes: / → HomeView, /design → DesignPreview
+- Created ui/src/views/HomeView.vue (renders <div>Home</div>)
+- Created ui/src/views/DesignPreview.vue with four sections: colour palette (ocean/sand/neutral/surf-score/UI aliases), spacing scale (horizontal bars), typography (sample text per size token), z-index (table)
+- Updated ui/src/main.ts to import router and register via app.use(router)
+- Updated ui/src/App.vue to render <RouterView />
+- Files changed: ui/src/router.ts, ui/src/views/HomeView.vue, ui/src/views/DesignPreview.vue, ui/src/main.ts, ui/src/App.vue, ui/package.json, ui/yarn.lock
+- **Learnings for future iterations:**
+  - vue-router@5.x is Vue 3 compatible (PRD said v4 but v5 was installed — both work with Vue 3)
+  - App.vue was updated from <div>surfsapp</div> to <RouterView /> — future routes should work automatically
+  - DesignPreview uses inline styles with `var(--token-name)` syntax to render CSS custom properties — this works at runtime without SCSS imports in the component
+  - Manual browser verification needed for /design route (no browser testing tools configured)
+---
