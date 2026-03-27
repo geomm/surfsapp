@@ -2,12 +2,15 @@ import express from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
 import { connectDB } from './db/connection.js'
+import { beachesRouter } from './routes/beaches'
 
 const app = express()
 const port = process.env.PORT ?? 3000
 
 app.use(cors({ origin: 'http://localhost:5173' }))
 app.use(express.json())
+
+app.use('/', beachesRouter)
 
 app.get('/health', (_req, res) => {
   const mongoState = mongoose.connection.readyState

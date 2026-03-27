@@ -1,0 +1,152 @@
+{
+  "project": "surfsapp",
+  "branchName": "ralph/phase-2-lit-component-library",
+  "description": "Phase 2 — Build five Lit Web Components (surf-badge, surf-icon, surf-button, surf-card, surf-bottom-sheet) registered as global custom elements, consuming Phase 1 CSS custom properties for theming, with a /components preview route for visual verification.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install Lit and Lucide, scaffold components directory",
+      "description": "As a developer, I want Lit and Lucide installed and the components directory scaffolded so that subsequent stories have a consistent location and working imports.",
+      "acceptanceCriteria": [
+        "lit installed as a dependency in ui/ via yarn (yarn add lit)",
+        "lucide installed as a dependency in ui/ via yarn (yarn add lucide)",
+        "ui/src/components/lit/ directory created",
+        "ui/src/components/lit/index.ts created as an empty barrel file",
+        "ui/src/main.ts imports './components/lit/index.ts'",
+        "A minimal smoke-test Lit component surf-test.ts created in ui/src/components/lit/, registered as <surf-test>, renders <p>Lit works</p>, added to index.ts, and used temporarily in HomeView.vue to confirm Lit + Vite integration",
+        "Typecheck passes (yarn typecheck)",
+        "Verify in browser using dev-browser skill: navigate to http://localhost:5173/ and confirm <surf-test> renders 'Lit works'"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "If using Lit decorators (@property, @customElement), add experimentalDecorators: true and useDefineForClassFields: false to ui/tsconfig.json. Alternatively use the static properties object approach to avoid tsconfig changes."
+    },
+    {
+      "id": "US-002",
+      "title": "surf-badge component",
+      "description": "As a developer, I want a <surf-badge> custom element that displays surf score labels with the correct tier colour so that beach cards and detail views can show surfability at a glance.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-badge.ts created, defining and registering <surf-badge> as a LitElement",
+        "variant property implemented: 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral' (default 'neutral')",
+        "size property implemented: 'sm' | 'md' (default 'md')",
+        "Colour mapping: very-good → background var(--color-surf-very-good) white text; good → var(--color-surf-good) white text; maybe → var(--color-surf-maybe) dark text (--color-neutral-900); poor → var(--color-surf-poor) white text; neutral → var(--color-neutral-200) var(--color-text-secondary)",
+        "Size mapping: sm → font-size var(--font-size-xs), padding var(--space-1) var(--space-2), border-radius 4px; md → var(--font-size-sm), padding var(--space-1) var(--space-3), border-radius 6px",
+        "Default slot renders label text",
+        "No hard-coded hex values in component styles",
+        "surf-badge.ts exported from ui/src/components/lit/index.ts; surf-test.ts removed from index.ts exports",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add all 5 badge variants to HomeView.vue temporarily and confirm each renders with the correct background colour"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "surf-test.ts can remain on disk but must be removed from index.ts exports. Clean it up fully in US-007."
+    },
+    {
+      "id": "US-003",
+      "title": "surf-icon component",
+      "description": "As a developer, I want a <surf-icon> custom element that renders Lucide icons as inline SVG so that icons can be used throughout the app without external image assets.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-icon.ts created, defining and registering <surf-icon> as a LitElement",
+        "name property implemented (string, required) — maps kebab-case name to a Lucide icon",
+        "size property implemented (number, default 24) — sets SVG width and height in pixels",
+        "color property implemented (string, default 'currentColor') — sets SVG stroke colour",
+        "These icons are importable by name and render correctly: waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw",
+        "Unknown icon name renders nothing and logs console.warn('surf-icon: unknown icon \"<name>\"')",
+        "surf-icon.ts exported from ui/src/components/lit/index.ts",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add <surf-icon name=\"waves\" size=\"32\"></surf-icon> to HomeView.vue temporarily and confirm a waves SVG icon renders at 32px"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Import individual Lucide icons by PascalCase name from 'lucide' (e.g. import { Waves, Heart, MapPin } from 'lucide'). Each is an IconNode (recursive tuple). Use Lit's svg template tag to render. Do NOT use lucide-react or @lucide/vue-next."
+    },
+    {
+      "id": "US-004",
+      "title": "surf-button component",
+      "description": "As a developer, I want a <surf-button> custom element with primary, secondary, and ghost variants so that consistent action buttons are available across all views.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-button.ts created, defining and registering <surf-button> as a LitElement",
+        "variant property: 'primary' | 'secondary' | 'ghost' (default 'primary')",
+        "size property: 'sm' | 'md' | 'lg' (default 'md')",
+        "disabled property: boolean (default false) — inner <button> carries native disabled attribute, pointer-events none, opacity 0.5",
+        "type property: 'button' | 'submit' (default 'button') — passed to inner <button>",
+        "Primary: background var(--color-primary), white text, hover opacity 0.9",
+        "Secondary: transparent background, border 1px solid var(--color-primary), text var(--color-primary), hover background var(--color-ocean-50)",
+        "Ghost: transparent background, no border, text var(--color-text-secondary), hover background var(--color-neutral-100)",
+        "Size sm: height var(--space-8), font var(--font-size-sm), padding 0 var(--space-3); md: height var(--space-10), font var(--font-size-md), padding 0 var(--space-4); lg: height var(--space-12), font var(--font-size-lg), padding 0 var(--space-6)",
+        "Default slot renders button label content",
+        "No hard-coded hex values in component styles",
+        "surf-button.ts exported from ui/src/components/lit/index.ts",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add all 3 variants to HomeView.vue temporarily, confirm primary has ocean blue background, secondary has border, ghost has no border"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Inner <button> element handles native disabled behaviour. All custom events from Lit components must set bubbles: true, composed: true."
+    },
+    {
+      "id": "US-005",
+      "title": "surf-card component",
+      "description": "As a developer, I want a <surf-card> custom element that provides a consistent surface container so that beach listing cards and detail panels share the same visual shell.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-card.ts created, defining and registering <surf-card> as a LitElement",
+        "clickable property: boolean (default false) — when true, cursor pointer, dispatches card-click CustomEvent (bubbles: true, composed: true) on click",
+        "padding property: 'sm' | 'md' | 'lg' (default 'md') — maps to var(--space-3), var(--space-4), var(--space-6)",
+        "Base styles: background var(--color-surface), border 1px solid var(--color-border), border-radius 12px, box-shadow 0 1px 3px rgba(0,0,0,0.08)",
+        "When clickable=true: hover box-shadow 0 4px 12px rgba(0,0,0,0.12), transition box-shadow 150ms ease",
+        "Default slot renders any content",
+        "surf-card.ts exported from ui/src/components/lit/index.ts",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add a clickable and non-clickable surf-card to HomeView.vue temporarily, confirm border and shadow render, clickable card shows pointer cursor on hover"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "surf-bottom-sheet component",
+      "description": "As a developer, I want a <surf-bottom-sheet> custom element that slides up from the bottom of the screen so that filter panels and contextual actions have a consistent mobile-friendly container.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-bottom-sheet.ts created, defining and registering <surf-bottom-sheet> as a LitElement",
+        "open property: boolean (default false) — controls visibility; when false, sheet and backdrop are hidden",
+        "title property: string (default '') — renders as a heading (font-size var(--font-size-lg), font-weight var(--font-weight-semibold)) in sheet header when non-empty",
+        "Sheet slides in from bottom when open becomes true via CSS transition: transform 250ms ease",
+        "Semi-transparent backdrop rgba(0,0,0,0.4) covers screen when open",
+        "Clicking backdrop dispatches sheet-close CustomEvent (bubbles: true, composed: true)",
+        "Pressing Escape while open dispatches sheet-close — keydown listener added to document when open=true, removed when open=false",
+        "Handle bar: 32px wide, 4px tall, background var(--color-neutral-300), border-radius 2px, centered at top of sheet",
+        "Sheet: background var(--color-surface), border-radius 16px 16px 0 0, max-height 85vh, overflow-y auto, padding var(--space-4)",
+        "Default slot renders body content",
+        "surf-bottom-sheet.ts exported from ui/src/components/lit/index.ts",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: add <surf-bottom-sheet open title=\"Filters\">Content</surf-bottom-sheet> to HomeView.vue temporarily, confirm sheet renders from bottom with backdrop, handle bar, and title visible"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Remove the document keydown listener in disconnectedCallback() to avoid memory leaks. No focus trapping required in Phase 2."
+    },
+    {
+      "id": "US-007",
+      "title": "/components preview route",
+      "description": "As a developer, I want a /components route that shows every component and its variants in isolation so I can verify the component library at a glance without building a full view.",
+      "acceptanceCriteria": [
+        "ui/src/views/ComponentsPreview.vue created",
+        "Route /components added to ui/src/router.ts pointing to ComponentsPreview",
+        "HomeView.vue cleaned up — all temporary test code removed, renders only <div>Home</div>",
+        "surf-test.ts deleted from ui/src/components/lit/",
+        "ComponentsPreview.vue surf-badge section: all 5 variants × 2 sizes (sm, md), each labelled",
+        "ComponentsPreview.vue surf-icon section: all 8 icons (waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw) at size 24 and 32, each labelled with icon name",
+        "ComponentsPreview.vue surf-button section: all 3 variants × 3 sizes, plus a disabled primary button",
+        "ComponentsPreview.vue surf-card section: one non-clickable and one clickable card with sample text content",
+        "ComponentsPreview.vue surf-bottom-sheet section: a surf-button labelled 'Open Sheet' that toggles the sheet open/closed, sheet contains sample content inside",
+        "Navigating to http://localhost:5173/components renders all sections without console errors",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: navigate to /components, confirm all five component sections are visible and the bottom sheet opens and closes when the toggle button is clicked"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "ComponentsPreview.vue uses <script setup lang='ts'>. Custom elements are used directly in Vue templates — no need to import individual component files since all are registered globally via main.ts → index.ts."
+    }
+  ]
+}

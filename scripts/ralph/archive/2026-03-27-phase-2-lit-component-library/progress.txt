@@ -1,0 +1,84 @@
+## Codebase Patterns
+- Use static properties object approach for Lit components (no decorators) — tsconfig has useDefineForClassFields: true which conflicts with Lit decorators
+- Always add HTMLElementTagNameMap declaration in Lit component files for TypeScript awareness
+- All Lit components registered via customElements.define(), imported by side-effect in ui/src/components/lit/index.ts
+
+# Ralph Progress Log
+Started: Fri Mar 27 03:30:40 EET 2026
+---
+
+## 2026-03-27 - US-007
+- Created ui/src/views/ComponentsPreview.vue with sections for all 5 components
+- Added /components route to ui/src/router.ts
+- Cleaned up HomeView.vue to render only <div>Home</div>
+- Deleted ui/src/components/lit/surf-test.ts
+- Removed surf-test import from index.ts barrel
+- Files changed: ui/src/views/ComponentsPreview.vue, ui/src/router.ts, ui/src/views/HomeView.vue, ui/src/components/lit/index.ts, (deleted) surf-test.ts
+- **Learnings for future iterations:**
+  - Vue templates can use custom elements directly (no import needed) as long as they're registered globally via main.ts → index.ts
+  - Custom element events (e.g. @sheet-close) work in Vue templates via @ binding
+  - :open, :disabled, :clickable bind boolean props correctly to Lit components
+---
+
+## 2026-03-27 - US-006
+- Created ui/src/components/lit/surf-bottom-sheet.ts with open and title properties
+- CSS transform: translateY(100%/0) drives open/close animation at 250ms
+- Escape key handler added to document on open, removed on close and in disconnectedCallback
+- Backdrop click dispatches sheet-close CustomEvent (bubbles: true, composed: true)
+- Files changed: ui/src/components/lit/surf-bottom-sheet.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Use updated() lifecycle with changed.has('open') to add/remove document event listeners
+  - Always clean up document-level listeners in disconnectedCallback to prevent memory leaks
+---
+
+## 2026-03-27 - US-005
+- Created ui/src/components/lit/surf-card.ts with clickable and padding properties
+- Base styles: surface background, border, 12px radius, subtle shadow
+- Clickable mode: pointer cursor, hover shadow via CSS class, dispatches card-click event
+- Files changed: ui/src/components/lit/surf-card.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+---
+
+## 2026-03-27 - US-004
+- Created ui/src/components/lit/surf-button.ts with variant (primary|secondary|ghost), size (sm|md|lg), disabled, type properties
+- Inner <button> handles native disabled with pointer-events:none and opacity:0.5
+- All colours use CSS custom properties — no hard-coded hex values
+- Files changed: ui/src/components/lit/surf-button.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+---
+
+## 2026-03-27 - US-003
+- Created ui/src/components/lit/surf-icon.ts with name, size, color properties
+- Uses unsafeSVG directive from lit/directives/unsafe-svg.js to render Lucide icon nodes
+- Lucide icons are imported by PascalCase name (e.g. Waves, Heart, MapPin) and are arrays of [tagName, attrs] tuples
+- buildSvgChildren() converts the tuple array to SVG string, rendered via unsafeSVG inside <svg> wrapper
+- Unknown icon names render nothing and log console.warn
+- Files changed: ui/src/components/lit/surf-icon.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Lucide icon nodes are IconNode[] = [tagName, attrs][] — use unsafeSVG to render them
+  - import from 'lucide' (not 'lucide-react' or '@lucide/vue-next')
+  - lit/directives/unsafe-svg.js is the correct import path for unsafeSVG
+---
+
+## 2026-03-27 - US-002
+- Created ui/src/components/lit/surf-badge.ts with variant (very-good|good|maybe|poor|neutral) and size (sm|md) properties
+- Uses CSS custom properties from Phase 1 design system for all colours — no hard-coded hex values
+- Added surf-badge to index.ts barrel; added all 5 variants to HomeView.vue temporarily for browser verification
+- Files changed: ui/src/components/lit/surf-badge.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Lit Shadow DOM uses CSS custom properties from the host document fine — they pierce the shadow boundary
+  - Static `styles = css\`...\`` is how Lit components define scoped styles without decorators
+---
+
+## 2026-03-27 - US-001
+- Installed lit@3.3.2 and lucide@1.7.0 via yarn in ui/
+- Created ui/src/components/lit/ directory
+- Created ui/src/components/lit/index.ts (barrel file importing surf-test)
+- Created ui/src/components/lit/surf-test.ts (smoke-test Lit component rendering <p>Lit works</p>)
+- Added import of './components/lit/index' to ui/src/main.ts
+- Added <surf-test> temporarily to HomeView.vue
+- Files changed: ui/package.json, ui/yarn.lock, ui/src/main.ts, ui/src/components/lit/index.ts, ui/src/components/lit/surf-test.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Use static class properties (not decorators) for Lit — tsconfig has useDefineForClassFields: true which breaks @customElement and @property decorators
+  - Pattern: `static properties = { propName: { type: String } }` and `customElements.define('surf-x', SurfX)`
+  - Always add `declare global { interface HTMLElementTagNameMap { 'surf-x': SurfX } }` for TS type safety in Vue templates
+  - Vue templates accept custom elements without any special config — they just work once registered globally
+---

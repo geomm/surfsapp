@@ -1,103 +1,92 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-2-lit-component-library",
-  "description": "Phase 2 — Build five Lit Web Components (surf-badge, surf-icon, surf-button, surf-card, surf-bottom-sheet) registered as global custom elements, consuming Phase 1 CSS custom properties for theming, with a /components preview route for visual verification.",
+  "branchName": "ralph/phase-3-beach-api",
+  "description": "Phase 3 — Backend: Beach Profiles + API Skeleton. Seed MongoDB with 8 curated Greek beach profiles, create Mongoose models, and expose GET /beaches, GET /beaches/:id, and GET /beaches/:id/forecast endpoints with stub forecast data.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Install Lit and Lucide, scaffold components directory",
-      "description": "As a developer, I want Lit and Lucide installed and the components directory scaffolded so that subsequent stories have a consistent location and working imports.",
+      "title": "beach_profiles.json",
+      "description": "As a developer, I want the curated beach profiles stored as a JSON file in the backend so that the seed script and any future tooling can read them without hitting the database.",
       "acceptanceCriteria": [
-        "lit installed as a dependency in ui/ via yarn (yarn add lit)",
-        "lucide installed as a dependency in ui/ via yarn (yarn add lucide)",
-        "ui/src/components/lit/ directory created",
-        "ui/src/components/lit/index.ts created as an empty barrel file",
-        "ui/src/main.ts imports './components/lit/index.ts'",
-        "A minimal smoke-test Lit component surf-test.ts created in ui/src/components/lit/, registered as <surf-test>, renders <p>Lit works</p>, added to index.ts, and used temporarily in HomeView.vue to confirm Lit + Vite integration",
-        "Typecheck passes (yarn typecheck)",
-        "Verify in browser using dev-browser skill: navigate to http://localhost:5173/ and confirm <surf-test> renders 'Lit works'"
+        "backend/src/data/beach_profiles.json created containing a JSON array of exactly 8 beach objects",
+        "The 8 beaches in order: vouliagmeni-athens, mesachti-ikaria, langouvardos-filiatra, falasarna-crete, palaiohora-crete, agios-georgios-naxos, kokkino-limanaki-rafina, kolimpithra-tinos",
+        "Each beach object matches the schema in docs/beach-profiles.md exactly — field names, types, and values copied verbatim from the profiles documented there (including windScoringLogic blocks for wave-generating-onshore beaches)",
+        "Langouvardos weights: { swellDirection: 0.35, swellPeriod: 0.25, swellHeight: 0.20, wind: 0.15, tide: 0.05 } — standard open beach break defaults for beaches without explicit weights in docs",
+        "All other beaches without explicit weights use: { swellDirection: 0.20, swellPeriod: 0.20, swellHeight: 0.25, wind: 0.30, tide: 0.05 } (wave-generating-onshore defaults)",
+        "The file is valid JSON parseable with JSON.parse",
+        "Typecheck passes (npm run typecheck)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "If using Lit decorators (@property, @customElement), add experimentalDecorators: true and useDefineForClassFields: false to ui/tsconfig.json. Alternatively use the static properties object approach to avoid tsconfig changes."
+      "notes": "Copy field values verbatim from docs/beach-profiles.md. Swell direction ranges that cross 360° (e.g. [340, 20]) are intentional — do not alter them. windScoringLogic is present only on wave-generating-onshore beaches."
     },
     {
       "id": "US-002",
-      "title": "surf-badge component",
-      "description": "As a developer, I want a <surf-badge> custom element that displays surf score labels with the correct tier colour so that beach cards and detail views can show surfability at a glance.",
+      "title": "Mongoose models — Beach and ForecastSnapshot",
+      "description": "As a developer, I want Mongoose schemas and TypeScript interfaces for Beach and ForecastSnapshot so that all database operations are type-safe.",
       "acceptanceCriteria": [
-        "ui/src/components/lit/surf-badge.ts created, defining and registering <surf-badge> as a LitElement",
-        "variant property implemented: 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral' (default 'neutral')",
-        "size property implemented: 'sm' | 'md' (default 'md')",
-        "Colour mapping: very-good → background var(--color-surf-very-good) white text; good → var(--color-surf-good) white text; maybe → var(--color-surf-maybe) dark text (--color-neutral-900); poor → var(--color-surf-poor) white text; neutral → var(--color-neutral-200) var(--color-text-secondary)",
-        "Size mapping: sm → font-size var(--font-size-xs), padding var(--space-1) var(--space-2), border-radius 4px; md → var(--font-size-sm), padding var(--space-1) var(--space-3), border-radius 6px",
-        "Default slot renders label text",
-        "No hard-coded hex values in component styles",
-        "surf-badge.ts exported from ui/src/components/lit/index.ts; surf-test.ts removed from index.ts exports",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill: add all 5 badge variants to HomeView.vue temporarily and confirm each renders with the correct background colour"
+        "backend/src/models/Beach.ts created, exporting IBeach TypeScript interface, BeachSchema Mongoose schema, and Beach Mongoose model (mongoose.model<IBeach>('Beach', BeachSchema))",
+        "IBeach interface includes: id (string), name (string), coords ({lat, lon}), offshoreCoords? ({lat, lon}), region (string), description (string), shorelineNormalDeg (number), idealSwellDirection ([number,number]), acceptableSwellDirection ([number,number]), minSwellHeightM (number), idealSwellHeightM ([number,number]), minSwellPeriodS (number), idealSwellPeriodS ([number,number]), maxOnshoreWindKmh (number), idealWindDescription (union), windScoringLogic? (Record<string,unknown>), weights ({swellDirection,swellPeriod,swellHeight,wind,tide}: all number), sheltered (boolean), longPeriodSwellRefracts (boolean), skillLevel (union), tags (string[]), notes? (string)",
+        "BeachSchema uses id (string, required, unique) as the primary business key",
+        "backend/src/models/ForecastSnapshot.ts created, exporting IHourlyForecast, IDailySummary, IForecastSnapshot interfaces, ForecastSnapshotSchema, and ForecastSnapshot Mongoose model",
+        "IForecastSnapshot: beachId (string), fetchedAt (Date), hourlyForecasts (IHourlyForecast[]), dailySummaries (IDailySummary[])",
+        "IHourlyForecast: timestamp (Date), rawData (Record<string,unknown>), surfScore (number), label ('poor'|'maybe'|'good'|'very-good'), reasons (string[])",
+        "IDailySummary: date (string), bestWindowStart (string), bestWindowEnd (string), peakScore (number), overallLabel ('poor'|'maybe'|'good'|'very-good')",
+        "ForecastSnapshotSchema indexes beachId (for lookup) and fetchedAt descending (for latest-first queries)",
+        "Typecheck passes"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "surf-test.ts can remain on disk but must be removed from index.ts exports. Clean it up fully in US-007."
+      "notes": "Do not import from index.ts in model files (no circular dependencies). Use mongoose.model() not mongoose.Model. The id field is the string business key — Mongoose adds _id automatically."
     },
     {
       "id": "US-003",
-      "title": "surf-icon component",
-      "description": "As a developer, I want a <surf-icon> custom element that renders Lucide icons as inline SVG so that icons can be used throughout the app without external image assets.",
+      "title": "Seed script — upsert beaches and stub forecasts",
+      "description": "As a developer, I want an npm run seed script that populates MongoDB with all 8 beach profiles and one stub ForecastSnapshot per beach so that the API returns meaningful data immediately after setup.",
       "acceptanceCriteria": [
-        "ui/src/components/lit/surf-icon.ts created, defining and registering <surf-icon> as a LitElement",
-        "name property implemented (string, required) — maps kebab-case name to a Lucide icon",
-        "size property implemented (number, default 24) — sets SVG width and height in pixels",
-        "color property implemented (string, default 'currentColor') — sets SVG stroke colour",
-        "These icons are importable by name and render correctly: waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw",
-        "Unknown icon name renders nothing and logs console.warn('surf-icon: unknown icon \"<name>\"')",
-        "surf-icon.ts exported from ui/src/components/lit/index.ts",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill: add <surf-icon name=\"waves\" size=\"32\"></surf-icon> to HomeView.vue temporarily and confirm a waves SVG icon renders at 32px"
+        "backend/src/scripts/seed.ts created",
+        "Script reads backend/src/data/beach_profiles.json and upserts all 8 beaches using Beach.findOneAndUpdate({ id: beach.id }, beach, { upsert: true, new: true, setDefaultsOnInsert: true })",
+        "Script creates one stub ForecastSnapshot per beach using these deterministic scores — vouliagmeni-athens: 42/maybe, mesachti-ikaria: 71/good, langouvardos-filiatra: 58/maybe, falasarna-crete: 83/very-good, palaiohora-crete: 35/poor, agios-georgios-naxos: 61/good, kokkino-limanaki-rafina: 48/maybe, kolimpithra-tinos: 77/good",
+        "Each stub ForecastSnapshot has fetchedAt set to new Date(), one hourlyForecast entry at that timestamp with rawData: {}, reasons: ['Stub data — real forecast available after Phase 4'], and one dailySummary for today's ISO date string",
+        "Snapshot creation is idempotent: skip if a ForecastSnapshot for that beachId already exists (use findOne check before insert)",
+        "Script logs 'Seeded N beaches' and 'Created M snapshots (K already existed)' to stdout",
+        "Script calls connectDB() from backend/src/db/connection.ts before operations and calls process.exit(0) after completion",
+        "'seed': 'tsx src/scripts/seed.ts' added to backend/package.json scripts",
+        "Typecheck passes"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Import individual Lucide icons by PascalCase name from 'lucide' (e.g. import { Waves, Heart, MapPin } from 'lucide'). Each is an IconNode (recursive tuple). Use Lit's svg template tag to render. Do NOT use lucide-react or @lucide/vue-next."
+      "notes": "The seed script connects to MongoDB using MONGO_URI from process.env — requires the .env file or Docker environment. It must call process.exit(0) explicitly or the tsx process will hang waiting for the Mongoose connection to close."
     },
     {
       "id": "US-004",
-      "title": "surf-button component",
-      "description": "As a developer, I want a <surf-button> custom element with primary, secondary, and ghost variants so that consistent action buttons are available across all views.",
+      "title": "GET /beaches endpoint",
+      "description": "As a developer, I want a GET /beaches endpoint that returns all beaches with their current surf score so that the frontend beach listing has data to display.",
       "acceptanceCriteria": [
-        "ui/src/components/lit/surf-button.ts created, defining and registering <surf-button> as a LitElement",
-        "variant property: 'primary' | 'secondary' | 'ghost' (default 'primary')",
-        "size property: 'sm' | 'md' | 'lg' (default 'md')",
-        "disabled property: boolean (default false) — inner <button> carries native disabled attribute, pointer-events none, opacity 0.5",
-        "type property: 'button' | 'submit' (default 'button') — passed to inner <button>",
-        "Primary: background var(--color-primary), white text, hover opacity 0.9",
-        "Secondary: transparent background, border 1px solid var(--color-primary), text var(--color-primary), hover background var(--color-ocean-50)",
-        "Ghost: transparent background, no border, text var(--color-text-secondary), hover background var(--color-neutral-100)",
-        "Size sm: height var(--space-8), font var(--font-size-sm), padding 0 var(--space-3); md: height var(--space-10), font var(--font-size-md), padding 0 var(--space-4); lg: height var(--space-12), font var(--font-size-lg), padding 0 var(--space-6)",
-        "Default slot renders button label content",
-        "No hard-coded hex values in component styles",
-        "surf-button.ts exported from ui/src/components/lit/index.ts",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill: add all 3 variants to HomeView.vue temporarily, confirm primary has ocean blue background, secondary has border, ghost has no border"
+        "backend/src/routes/beaches.ts created with an Express Router",
+        "GET /beaches implemented: fetches all beaches from MongoDB, for each beach finds the latest ForecastSnapshot (sort fetchedAt: -1, limit 1), assembles response with fields: id, name, region, coords, skillLevel, tags, currentScore (first hourlyForecast surfScore or null), currentLabel (first hourlyForecast label or null), lastUpdated (snapshot fetchedAt or null)",
+        "Response array is sorted by currentScore descending — beaches with null score sort to the end",
+        "Router mounted in backend/src/index.ts: app.use('/', beachesRouter) — full endpoint path is GET /beaches",
+        "curl http://localhost:3000/beaches returns HTTP 200 with Content-Type: application/json and an array of 8 objects after npm run seed",
+        "Response omits MongoDB _id and __v fields",
+        "Typecheck passes"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Inner <button> element handles native disabled behaviour. All custom events from Lit components must set bubbles: true, composed: true."
+      "notes": "Use Promise.all() to fetch latest snapshots for all beaches in parallel rather than sequentially. Omit _id/__v using .lean() and manual field selection or .select('-_id -__v')."
     },
     {
       "id": "US-005",
-      "title": "surf-card component",
-      "description": "As a developer, I want a <surf-card> custom element that provides a consistent surface container so that beach listing cards and detail panels share the same visual shell.",
+      "title": "GET /beaches/:id endpoint",
+      "description": "As a developer, I want a GET /beaches/:id endpoint that returns a single beach's full profile plus current score so that the frontend detail view has all the data it needs.",
       "acceptanceCriteria": [
-        "ui/src/components/lit/surf-card.ts created, defining and registering <surf-card> as a LitElement",
-        "clickable property: boolean (default false) — when true, cursor pointer, dispatches card-click CustomEvent (bubbles: true, composed: true) on click",
-        "padding property: 'sm' | 'md' | 'lg' (default 'md') — maps to var(--space-3), var(--space-4), var(--space-6)",
-        "Base styles: background var(--color-surface), border 1px solid var(--color-border), border-radius 12px, box-shadow 0 1px 3px rgba(0,0,0,0.08)",
-        "When clickable=true: hover box-shadow 0 4px 12px rgba(0,0,0,0.12), transition box-shadow 150ms ease",
-        "Default slot renders any content",
-        "surf-card.ts exported from ui/src/components/lit/index.ts",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill: add a clickable and non-clickable surf-card to HomeView.vue temporarily, confirm border and shadow render, clickable card shows pointer cursor on hover"
+        "GET /beaches/:id implemented in backend/src/routes/beaches.ts",
+        "Returns the full beach document (all profile fields from IBeach) plus currentScore, currentLabel, lastUpdated from the latest ForecastSnapshot",
+        "Returns HTTP 404 { error: 'Beach not found' } if :id does not match any beach in the beaches collection",
+        "Response omits _id and __v fields",
+        "curl http://localhost:3000/beaches/mesachti-ikaria returns HTTP 200 with the full Mesachti profile including currentScore: 71 and currentLabel: 'good'",
+        "curl http://localhost:3000/beaches/nonexistent-id returns HTTP 404 with { error: 'Beach not found' }",
+        "Typecheck passes"
       ],
       "priority": 5,
       "passes": true,
@@ -105,48 +94,20 @@
     },
     {
       "id": "US-006",
-      "title": "surf-bottom-sheet component",
-      "description": "As a developer, I want a <surf-bottom-sheet> custom element that slides up from the bottom of the screen so that filter panels and contextual actions have a consistent mobile-friendly container.",
+      "title": "GET /beaches/:id/forecast endpoint",
+      "description": "As a developer, I want a GET /beaches/:id/forecast endpoint that returns the latest ForecastSnapshot for a beach so that the frontend can display forecast data.",
       "acceptanceCriteria": [
-        "ui/src/components/lit/surf-bottom-sheet.ts created, defining and registering <surf-bottom-sheet> as a LitElement",
-        "open property: boolean (default false) — controls visibility; when false, sheet and backdrop are hidden",
-        "title property: string (default '') — renders as a heading (font-size var(--font-size-lg), font-weight var(--font-weight-semibold)) in sheet header when non-empty",
-        "Sheet slides in from bottom when open becomes true via CSS transition: transform 250ms ease",
-        "Semi-transparent backdrop rgba(0,0,0,0.4) covers screen when open",
-        "Clicking backdrop dispatches sheet-close CustomEvent (bubbles: true, composed: true)",
-        "Pressing Escape while open dispatches sheet-close — keydown listener added to document when open=true, removed when open=false",
-        "Handle bar: 32px wide, 4px tall, background var(--color-neutral-300), border-radius 2px, centered at top of sheet",
-        "Sheet: background var(--color-surface), border-radius 16px 16px 0 0, max-height 85vh, overflow-y auto, padding var(--space-4)",
-        "Default slot renders body content",
-        "surf-bottom-sheet.ts exported from ui/src/components/lit/index.ts",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill: add <surf-bottom-sheet open title=\"Filters\">Content</surf-bottom-sheet> to HomeView.vue temporarily, confirm sheet renders from bottom with backdrop, handle bar, and title visible"
+        "GET /beaches/:id/forecast implemented in backend/src/routes/beaches.ts",
+        "First checks if the beach exists in the beaches collection — returns HTTP 404 { error: 'Beach not found' } if not",
+        "Fetches the latest ForecastSnapshot for the beachId (sort fetchedAt: -1, limit 1) — returns HTTP 404 { error: 'No forecast data for this beach' } if none exists",
+        "Returns the ForecastSnapshot document with _id and __v omitted",
+        "curl http://localhost:3000/beaches/mesachti-ikaria/forecast returns HTTP 200 with a ForecastSnapshot containing one hourlyForecast entry and one dailySummary",
+        "curl http://localhost:3000/beaches/nonexistent-id/forecast returns HTTP 404 with { error: 'Beach not found' }",
+        "Typecheck passes"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Remove the document keydown listener in disconnectedCallback() to avoid memory leaks. No focus trapping required in Phase 2."
-    },
-    {
-      "id": "US-007",
-      "title": "/components preview route",
-      "description": "As a developer, I want a /components route that shows every component and its variants in isolation so I can verify the component library at a glance without building a full view.",
-      "acceptanceCriteria": [
-        "ui/src/views/ComponentsPreview.vue created",
-        "Route /components added to ui/src/router.ts pointing to ComponentsPreview",
-        "HomeView.vue cleaned up — all temporary test code removed, renders only <div>Home</div>",
-        "surf-test.ts deleted from ui/src/components/lit/",
-        "ComponentsPreview.vue surf-badge section: all 5 variants × 2 sizes (sm, md), each labelled",
-        "ComponentsPreview.vue surf-icon section: all 8 icons (waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw) at size 24 and 32, each labelled with icon name",
-        "ComponentsPreview.vue surf-button section: all 3 variants × 3 sizes, plus a disabled primary button",
-        "ComponentsPreview.vue surf-card section: one non-clickable and one clickable card with sample text content",
-        "ComponentsPreview.vue surf-bottom-sheet section: a surf-button labelled 'Open Sheet' that toggles the sheet open/closed, sheet contains sample content inside",
-        "Navigating to http://localhost:5173/components renders all sections without console errors",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill: navigate to /components, confirm all five component sections are visible and the bottom sheet opens and closes when the toggle button is clicked"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "ComponentsPreview.vue uses <script setup lang='ts'>. Custom elements are used directly in Vue templates — no need to import individual component files since all are registered globally via main.ts → index.ts."
+      "notes": "Check beach existence before querying snapshots so the error message is accurate. All three endpoints share the same beaches.ts router file."
     }
   ]
 }
