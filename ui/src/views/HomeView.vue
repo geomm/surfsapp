@@ -1,3 +1,6 @@
 <template>
-  <div>Home</div>
+  <div>
+    <div>Home</div>
+    <surf-test></surf-test>
+  </div>
 </template>
