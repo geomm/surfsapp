@@ -3,5 +3,8 @@
     "allow": [
       "WebSearch"
     ]
+  },
+  "enabledPlugins": {
+    "ralph-skills@ralph-marketplace": true
   }
 }
