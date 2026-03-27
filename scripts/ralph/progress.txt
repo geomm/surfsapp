@@ -31,3 +31,12 @@ Started: Fri Mar 27 02:57:51 EET 2026
   - Typecheck passes without importing SCSS — vue-tsc only checks TypeScript/Vue files
   - Token files are pure :root {} declarations with no selectors or mixins — no output until referenced
 ---
+
+## 2026-03-27 - US-003
+- Created ui/src/styles/base/_reset.scss: box-sizing border-box, zeroed margin/padding on all elements, img/video set to display:block and max-width:100%
+- Created ui/src/styles/base/_base.scss: html font-size:16px, body uses --font-family-base/--font-size-md/--line-height-normal/--color-background/--color-text-primary, a inherits color
+- Files changed: ui/src/styles/base/_reset.scss, ui/src/styles/base/_base.scss
+- **Learnings for future iterations:**
+  - Base files reference token CSS custom properties (var(--...)) directly — no SCSS @use needed since custom properties are global at runtime
+  - Element-level defaults only — no component-specific selectors in base/
+---
