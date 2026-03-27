@@ -57,7 +57,7 @@
         "Verify in browser using dev-browser skill: add <surf-icon name=\"waves\" size=\"32\"></surf-icon> to HomeView.vue temporarily and confirm a waves SVG icon renders at 32px"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Import individual Lucide icons by PascalCase name from 'lucide' (e.g. import { Waves, Heart, MapPin } from 'lucide'). Each is an IconNode (recursive tuple). Use Lit's svg template tag to render. Do NOT use lucide-react or @lucide/vue-next."
     },
     {

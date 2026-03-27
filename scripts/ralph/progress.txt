@@ -7,6 +7,19 @@
 Started: Fri Mar 27 03:30:40 EET 2026
 ---
 
+## 2026-03-27 - US-003
+- Created ui/src/components/lit/surf-icon.ts with name, size, color properties
+- Uses unsafeSVG directive from lit/directives/unsafe-svg.js to render Lucide icon nodes
+- Lucide icons are imported by PascalCase name (e.g. Waves, Heart, MapPin) and are arrays of [tagName, attrs] tuples
+- buildSvgChildren() converts the tuple array to SVG string, rendered via unsafeSVG inside <svg> wrapper
+- Unknown icon names render nothing and log console.warn
+- Files changed: ui/src/components/lit/surf-icon.ts, ui/src/components/lit/index.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Lucide icon nodes are IconNode[] = [tagName, attrs][] — use unsafeSVG to render them
+  - import from 'lucide' (not 'lucide-react' or '@lucide/vue-next')
+  - lit/directives/unsafe-svg.js is the correct import path for unsafeSVG
+---
+
 ## 2026-03-27 - US-002
 - Created ui/src/components/lit/surf-badge.ts with variant (very-good|good|maybe|poor|neutral) and size (sm|md) properties
 - Uses CSS custom properties from Phase 1 design system for all colours — no hard-coded hex values
