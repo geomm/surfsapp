@@ -1,5 +1,14 @@
 import { IBeach } from '../models/Beach'
 
+type Label = 'poor' | 'maybe' | 'good' | 'very-good'
+
+interface ScoreHourResult {
+  surfScore: number
+  label: string
+  reasons: string[]
+  confidence: number
+}
+
 /**
  * Returns the shortest angular distance between two compass bearings (0–180).
  * Handles 360° wraparound.
@@ -300,6 +309,149 @@ function scoreWindWaveGenerating(beach: IBeach, windDir: number, windSpeed: numb
   }
 
   return Math.max(0, Math.min(100, score))
+}
+
+function mapLabel(score: number): Label {
+  if (score >= 80) return 'very-good'
+  if (score >= 60) return 'good'
+  if (score >= 40) return 'maybe'
+  return 'poor'
+}
+
+/**
+ * Scores a single forecast hour for a beach.
+ * Combines hard gates, subscores, secondary swell modifier, weighted sum, label, reasons, and confidence.
+ */
+export function scoreHour(
+  beach: IBeach,
+  rawData: Record<string, unknown>,
+  forecastTimestamp: Date,
+  fetchedAt: Date
+): ScoreHourResult {
+  const hoursFromNow = (forecastTimestamp.getTime() - fetchedAt.getTime()) / (1000 * 60 * 60)
+  const confidence = Math.max(0, 1.0 - hoursFromNow / 240)
+
+  // Hard gates
+  const gate = applyHardGates(beach, rawData)
+  if (gate) {
+    return {
+      surfScore: gate.score,
+      label: gate.label,
+      reasons: [gate.reason],
+      confidence,
+    }
+  }
+
+  // Extract raw values
+  const swellDir = Number(rawData.swell_wave_direction)
+  const swellPeriod = Number(rawData.swell_wave_period)
+  const swellHeight = Number(rawData.swell_wave_height)
+  const windDir = Number(rawData.wind_direction_10m)
+  const windSpeed = Number(rawData.wind_speed_10m)
+
+  // Compute subscores
+  const swellDirScore = scoreSwellDirection(beach, swellDir)
+  const swellPeriodScore = scoreSwellPeriod(beach, swellPeriod)
+  const swellHeightScore = scoreSwellHeight(beach, swellHeight)
+  const windScore = scoreWind(beach, windDir, windSpeed)
+
+  // Secondary swell modifier
+  let secondaryModifier = 0
+  const secondaryHeight = Number(rawData.swell_wave_height_2)
+  const secondaryDir = Number(rawData.swell_wave_direction_2)
+  if (secondaryHeight && !isNaN(secondaryHeight) && secondaryHeight > 0 && !isNaN(secondaryDir)) {
+    if (isAngleInRange(secondaryDir, beach.acceptableSwellDirection)) {
+      secondaryModifier = 5
+    } else if (angularDistance(secondaryDir, swellDir) >= 150) {
+      secondaryModifier = -10
+    }
+  }
+
+  // Weighted final score
+  const w = beach.weights
+  const rawScore =
+    swellDirScore * w.swellDirection +
+    swellPeriodScore * w.swellPeriod +
+    swellHeightScore * w.swellHeight +
+    windScore * w.wind +
+    0 * w.tide +
+    secondaryModifier
+  const surfScore = Math.round(Math.max(0, Math.min(100, rawScore)))
+
+  // Label
+  const label = mapLabel(surfScore)
+
+  // Reasons
+  const reasons = buildReasons(beach, swellDir, swellPeriod, swellHeight, windDir, windSpeed, secondaryModifier)
+
+  return { surfScore, label, reasons, confidence }
+}
+
+function buildReasons(
+  beach: IBeach,
+  swellDir: number,
+  swellPeriod: number,
+  swellHeight: number,
+  windDir: number,
+  windSpeed: number,
+  secondaryModifier: number
+): string[] {
+  const reasons: string[] = []
+  const idealDirMid = rangeMidpoint(beach.idealSwellDirection)
+
+  // Direction reason
+  const dirDist = angularDistance(swellDir, idealDirMid)
+  const idealHalfWidth = angularDistance(idealDirMid, beach.idealSwellDirection[0])
+  if (dirDist <= idealHalfWidth) {
+    reasons.push('Swell direction matches beach exposure')
+  } else {
+    reasons.push('Swell direction is marginal for this beach')
+  }
+
+  // Period reason
+  const [idealPeriodLow, idealPeriodHigh] = beach.idealSwellPeriodS
+  if (swellPeriod >= idealPeriodLow && swellPeriod <= idealPeriodHigh) {
+    reasons.push(`Swell period is solid (${swellPeriod}s)`)
+  } else if (swellPeriod < beach.minSwellPeriodS) {
+    reasons.push(`Swell too short (${swellPeriod}s, ideal ${idealPeriodLow}–${idealPeriodHigh}s)`)
+  } else if (swellPeriod < idealPeriodLow) {
+    reasons.push(`Swell period below ideal (${swellPeriod}s, ideal ${idealPeriodLow}–${idealPeriodHigh}s)`)
+  } else {
+    reasons.push(`Long-period swell (${swellPeriod}s) — powerful but may exceed tolerance`)
+  }
+
+  // Height reason
+  const [idealHeightLow, idealHeightHigh] = beach.idealSwellHeightM
+  if (swellHeight >= idealHeightLow && swellHeight <= idealHeightHigh) {
+    reasons.push(`Swell height in ideal range (${swellHeight}m)`)
+  } else if (swellHeight < idealHeightLow) {
+    reasons.push(`Swell on the small side (${swellHeight}m, ideal ${idealHeightLow}–${idealHeightHigh}m)`)
+  } else {
+    reasons.push(`Large swell (${swellHeight}m) — ${beach.skillLevel === 'advanced' ? 'manageable for experienced surfers' : 'may be challenging'}`)
+  }
+
+  // Wind reason
+  const windAngle = angularDistance(windDir, beach.shorelineNormalDeg)
+  if (windSpeed < 5) {
+    reasons.push('Glassy conditions — virtually no wind')
+  } else if (windAngle < 30 && windSpeed < 15) {
+    reasons.push('Wind is light offshore — clean conditions')
+  } else if (windAngle < 30) {
+    reasons.push(`Offshore wind at ${windSpeed} km/h — ${windSpeed > 35 ? 'strong but keeping face clean' : 'good surface conditions'}`)
+  } else if (windAngle <= 70) {
+    reasons.push(`Cross-shore wind (${windSpeed} km/h) — variable surface`)
+  } else {
+    reasons.push(`Onshore wind (${windSpeed} km/h) is reducing quality`)
+  }
+
+  // Secondary swell
+  if (secondaryModifier > 0) {
+    reasons.push('Secondary swell reinforcing from a good direction')
+  } else if (secondaryModifier < 0) {
+    reasons.push('Secondary swell from opposing direction — confused seas')
+  }
+
+  return reasons
 }
 
 export function scoreSwellHeight(beach: IBeach, height: number): number {
