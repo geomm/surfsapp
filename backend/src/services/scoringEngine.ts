@@ -1,4 +1,5 @@
 import { IBeach } from '../models/Beach'
+import { IDailySummary } from '../models/ForecastSnapshot'
 
 type Label = 'poor' | 'maybe' | 'good' | 'very-good'
 
@@ -452,6 +453,74 @@ function buildReasons(
   }
 
   return reasons
+}
+
+/**
+ * Computes daily summaries from hourly forecasts.
+ * Groups by calendar date (UTC), finds best window (sizes 2–4), returns one summary per day.
+ */
+export function computeDailySummaries(
+  hourlyForecasts: Array<{ timestamp: Date; surfScore: number; label: string }>
+): IDailySummary[] {
+  // Group by UTC date
+  const byDate = new Map<string, Array<{ timestamp: Date; surfScore: number; label: string }>>()
+  for (const hf of hourlyForecasts) {
+    const dateStr = hf.timestamp.toISOString().slice(0, 10)
+    if (!byDate.has(dateStr)) byDate.set(dateStr, [])
+    byDate.get(dateStr)!.push(hf)
+  }
+
+  const summaries: IDailySummary[] = []
+
+  for (const [date, hours] of byDate) {
+    // Sort by timestamp
+    hours.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+    const peakScore = Math.max(...hours.map((h) => h.surfScore))
+
+    let bestAvg = -1
+    let bestStart = 0
+    let bestEnd = 0
+
+    if (hours.length < 2) {
+      // Single hour as the window
+      bestAvg = hours[0].surfScore
+      bestStart = 0
+      bestEnd = 0
+    } else {
+      // Try window sizes 2, 3, 4
+      for (const size of [2, 3, 4]) {
+        if (size > hours.length) continue
+        for (let i = 0; i <= hours.length - size; i++) {
+          let sum = 0
+          for (let j = i; j < i + size; j++) {
+            sum += hours[j].surfScore
+          }
+          const avg = sum / size
+          if (avg > bestAvg) {
+            bestAvg = avg
+            bestStart = i
+            bestEnd = i + size - 1
+          }
+        }
+      }
+    }
+
+    const overallLabel = mapLabel(Math.round(bestAvg))
+
+    summaries.push({
+      date,
+      bestWindowStart: hours[bestStart].timestamp.toISOString(),
+      bestWindowEnd: hours[bestEnd].timestamp.toISOString(),
+      peakScore,
+      overallLabel,
+    })
+  }
+
+  // Sort by date
+  summaries.sort((a, b) => a.date.localeCompare(b.date))
+
+  return summaries
 }
 
 export function scoreSwellHeight(beach: IBeach, height: number): number {
