@@ -50,6 +50,7 @@ export async function fetchForecastForBeach(beach: IBeach): Promise<IHourlyForec
       surfScore: 0,
       label: 'poor',
       reasons: ['Placeholder — scoring not yet implemented'],
+      confidence: 0,
     }
   })
 }
