@@ -7,8 +7,8 @@ const HOURLY_VARIABLES = [
   'swell_wave_height',
   'swell_wave_period',
   'swell_wave_direction',
-  'swell_wave_height_2',
-  'swell_wave_direction_2',
+  // 'swell_wave_height_2',
+  // 'swell_wave_direction_2',
   'wind_speed_10m',
   'wind_direction_10m',
   'wave_height',
@@ -24,7 +24,8 @@ export async function fetchForecastForBeach(beach: IBeach): Promise<IHourlyForec
     timezone: 'UTC',
   })
 
-  const url = `https://marine-api.open-meteo.com/v1/marine?${params.toString()}`
+  // const url = `https://marine-api.open-meteo.com/v1/marine?${params.toString()}`
+  const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`
   const response = await fetch(url)
 
   if (!response.ok) {
