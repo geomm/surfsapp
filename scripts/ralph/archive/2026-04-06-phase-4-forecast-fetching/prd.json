@@ -1,0 +1,95 @@
+{
+  "project": "surfsapp",
+  "branchName": "ralph/phase-4-forecast-fetching",
+  "description": "Phase 4 — Backend: Forecast Fetching. Integrate Open-Meteo Marine API to fetch hourly forecast data for all 8 beaches, persist raw data as ForecastSnapshot documents with placeholder scores, schedule fetches on startup and every N hours via cron, and expose a manual trigger endpoint.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Open-Meteo fetch service",
+      "description": "As a developer, I want a service module that fetches hourly marine forecast data for a single beach from Open-Meteo so that it can be called by the scheduler.",
+      "acceptanceCriteria": [
+        "backend/src/services/forecastFetcher.ts created",
+        "Exports fetchForecastForBeach(beach: IBeach): Promise<IHourlyForecast[]> function",
+        "Uses native fetch (no axios or node-fetch) to call Open-Meteo Marine API at https://marine-api.open-meteo.com/v1/marine",
+        "Uses beach.offshoreCoords if present, otherwise falls back to beach.coords for latitude/longitude",
+        "hourly param includes all 8 variables: swell_wave_height,swell_wave_period,swell_wave_direction,swell_wave_height_2,swell_wave_direction_2,wind_speed_10m,wind_direction_10m,wave_height",
+        "URL also includes &forecast_days=10&timezone=UTC",
+        "Maps each hourly time slot to IHourlyForecast: timestamp (Date from ISO string with Z appended), rawData (object with all 8 variable values keyed by variable name), surfScore: 0, label: 'poor', reasons: ['Placeholder — scoring not yet implemented']",
+        "Returns array of IHourlyForecast objects (up to 240 entries)",
+        "Throws a descriptive error including beach id and HTTP status if the Open-Meteo request fails",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Open-Meteo response shape: { hourly: { time: string[], swell_wave_height: number[], swell_wave_period: number[], ... } } where all arrays are the same length and index corresponds to the same hour. Open-Meteo time strings are ISO 8601 without Z suffix (e.g. '2026-03-27T00:00') — append 'Z' when constructing Date objects so they parse as UTC."
+    },
+    {
+      "id": "US-002",
+      "title": "ForecastSnapshot persistence",
+      "description": "As a developer, I want a service function that saves a new ForecastSnapshot for a beach so that the latest forecast is always available via the API.",
+      "acceptanceCriteria": [
+        "backend/src/services/forecastFetcher.ts exports saveForecastSnapshot(beachId: string, hourlyForecasts: IHourlyForecast[]): Promise<void> function",
+        "Creates a new ForecastSnapshot document with beachId, fetchedAt: new Date(), hourlyForecasts (the full array), and dailySummaries: [] (empty — computed in Phase 5)",
+        "Saves the document using ForecastSnapshot.create()",
+        "Does NOT delete or replace previous snapshots — each fetch run appends a new document",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Previous snapshots are never deleted — the API always finds the latest by sorting fetchedAt: -1. This is intentional for Phase 4."
+    },
+    {
+      "id": "US-003",
+      "title": "fetchAllBeaches orchestrator",
+      "description": "As a developer, I want an orchestrator function that fetches and saves forecasts for all 8 beaches so that the scheduler and manual trigger can call a single function.",
+      "acceptanceCriteria": [
+        "backend/src/services/forecastFetcher.ts exports fetchAllBeaches(): Promise<void> function",
+        "Loads all beaches from MongoDB using Beach.find({})",
+        "Fetches each beach sequentially (not Promise.all) to avoid rate limiting Open-Meteo",
+        "For each beach: calls fetchForecastForBeach(beach), then saveForecastSnapshot(beach.id, hourlyForecasts)",
+        "Logs 'Fetched forecast for [beach.id]' after each successful beach",
+        "Catches and logs per-beach errors without aborting remaining beaches: console.error('Failed to fetch [beach.id]:', err)",
+        "Logs 'Forecast fetch complete: N/8 beaches updated' at the end (N = successfully updated count)",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Sequential fetching is intentional — Open-Meteo is a free API and we should be polite. Per-beach error isolation is critical so one failure doesn't block the rest."
+    },
+    {
+      "id": "US-004",
+      "title": "Scheduler — startup fetch + recurring cron",
+      "description": "As a developer, I want the backend to automatically fetch forecasts on startup and then on a recurring interval so that forecast data is always fresh without manual intervention.",
+      "acceptanceCriteria": [
+        "node-cron package installed (npm install node-cron) and @types/node-cron installed as devDependency in backend/",
+        "backend/src/scheduler.ts created, exporting startScheduler(): void",
+        "Reads FORECAST_INTERVAL_HOURS from process.env, defaults to 6 if absent or not a valid positive integer",
+        "Constructs cron expression for every N hours: 0 */${hours} * * *",
+        "Schedules fetchAllBeaches() using node-cron.schedule()",
+        "startScheduler() also calls fetchAllBeaches() immediately on invocation",
+        "startScheduler() is called in backend/src/index.ts after connectDB() resolves successfully",
+        "Logs 'Scheduler started — fetching every ${hours}h' on startup",
+        "FORECAST_INTERVAL_HOURS=6 added to .env.example with comment: # How often to fetch forecasts (hours, default 6)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "IMPORTANT: connectDB() in index.ts currently uses .catch() — refactor so startScheduler() is called inside .then() or after await, NOT at module top level. The immediate call on startup means the Docker container fetches real data within seconds of starting, replacing stub snapshots."
+    },
+    {
+      "id": "US-005",
+      "title": "POST /admin/fetch-forecasts manual trigger endpoint",
+      "description": "As a developer, I want a manual trigger endpoint so that I can force a forecast refresh during development without restarting the server.",
+      "acceptanceCriteria": [
+        "backend/src/routes/admin.ts created with an Express Router",
+        "POST /admin/fetch-forecasts implemented: calls fetchAllBeaches() in a fire-and-forget pattern (do not await), returns { message: 'Forecast fetch triggered' } immediately with HTTP 200",
+        "Router mounted in backend/src/index.ts: app.use('/admin', adminRouter) — full endpoint path is POST /admin/fetch-forecasts",
+        "curl -X POST http://localhost:3000/admin/fetch-forecasts returns HTTP 200 with { \"message\": \"Forecast fetch triggered\" } immediately while the background fetch runs",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Fire-and-forget pattern: call fetchAllBeaches() without await and without .catch() blocking — let it run in the background. Log errors inside fetchAllBeaches() itself (already handled in US-003). No authentication on this endpoint for Phase 4."
+    }
+  ]
+}
