@@ -1,5 +1,28 @@
 import mongoose, { Schema } from 'mongoose'
 
+export interface IWindScoringLogic {
+  type: 'wave-generating-onshore'
+  swellGeneratingWind: {
+    directionDeg: number
+    directionLabel: string
+    minSpeedKmh: number
+    comment: string
+  }
+  qualityMultiplier: {
+    triggerWind: string
+    triggerDirectionDeg: number
+    effect: 'increase' | 'decrease'
+    comment: string
+  }
+  messinesspenalty: {
+    triggerWind: string
+    thresholdSpeedKmh: number
+    effect: 'increase' | 'decrease'
+    comment: string
+  }
+  optimalScenario: string
+}
+
 export interface IBeach {
   id: string
   name: string
@@ -16,7 +39,7 @@ export interface IBeach {
   idealSwellPeriodS: [number, number]
   maxOnshoreWindKmh: number
   idealWindDescription: 'wave-generating-onshore' | 'offshore-or-light'
-  windScoringLogic?: Record<string, unknown>
+  windScoringLogic?: IWindScoringLogic
   weights: {
     swellDirection: number
     swellPeriod: number
@@ -58,7 +81,31 @@ export const BeachSchema = new Schema<IBeach>(
       required: true,
       enum: ['wave-generating-onshore', 'offshore-or-light'],
     },
-    windScoringLogic: { type: Schema.Types.Mixed },
+    windScoringLogic: {
+      type: {
+        type: String,
+        enum: ['wave-generating-onshore'],
+      },
+      swellGeneratingWind: {
+        directionDeg: { type: Number },
+        directionLabel: { type: String },
+        minSpeedKmh: { type: Number },
+        comment: { type: String },
+      },
+      qualityMultiplier: {
+        triggerWind: { type: String },
+        triggerDirectionDeg: { type: Number },
+        effect: { type: String, enum: ['increase', 'decrease'] },
+        comment: { type: String },
+      },
+      messinesspenalty: {
+        triggerWind: { type: String },
+        thresholdSpeedKmh: { type: Number },
+        effect: { type: String, enum: ['increase', 'decrease'] },
+        comment: { type: String },
+      },
+      optimalScenario: { type: String },
+    },
     weights: {
       swellDirection: { type: Number, required: true },
       swellPeriod: { type: Number, required: true },

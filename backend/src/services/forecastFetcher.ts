@@ -1,6 +1,7 @@
 import { IBeach } from '../models/Beach'
 import { IHourlyForecast, ForecastSnapshot } from '../models/ForecastSnapshot'
 import { Beach } from '../models/Beach'
+import { scoreHour, computeDailySummaries } from './scoringEngine'
 
 const HOURLY_VARIABLES = [
   'swell_wave_height',
@@ -38,18 +39,24 @@ export async function fetchForecastForBeach(beach: IBeach): Promise<IHourlyForec
 
   const times = data.hourly.time
 
+  const fetchedAt = new Date()
+
   return times.map((timeStr, i) => {
     const rawData: Record<string, unknown> = {}
     for (const variable of HOURLY_VARIABLES) {
       rawData[variable] = data.hourly[variable]?.[i]
     }
 
+    const timestamp = new Date(timeStr + 'Z')
+    const scored = scoreHour(beach, rawData, timestamp, fetchedAt)
+
     return {
-      timestamp: new Date(timeStr + 'Z'),
+      timestamp,
       rawData,
-      surfScore: 0,
-      label: 'poor',
-      reasons: ['Placeholder — scoring not yet implemented'],
+      surfScore: scored.surfScore,
+      label: scored.label as IHourlyForecast['label'],
+      reasons: scored.reasons,
+      confidence: scored.confidence,
     }
   })
 }
@@ -58,11 +65,13 @@ export async function saveForecastSnapshot(
   beachId: string,
   hourlyForecasts: IHourlyForecast[]
 ): Promise<void> {
+  const dailySummaries = computeDailySummaries(hourlyForecasts)
+
   await ForecastSnapshot.create({
     beachId,
     fetchedAt: new Date(),
     hourlyForecasts,
-    dailySummaries: [],
+    dailySummaries,
   })
 }
 

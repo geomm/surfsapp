@@ -6,6 +6,7 @@ export interface IHourlyForecast {
   surfScore: number
   label: 'poor' | 'maybe' | 'good' | 'very-good'
   reasons: string[]
+  confidence: number
 }
 
 export interface IDailySummary {
@@ -34,6 +35,7 @@ const HourlyForecastSchema = new Schema<IHourlyForecast>(
       enum: ['poor', 'maybe', 'good', 'very-good'],
     },
     reasons: { type: [String], required: true },
+    confidence: { type: Number, required: true },
   },
   { _id: false }
 )
