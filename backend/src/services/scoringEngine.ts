@@ -203,6 +203,105 @@ export function scoreSwellPeriod(beach: IBeach, period: number): number {
  * Below min: 0, min→ideal[0]: 20–70, inside ideal: 80–100,
  * above ideal: penalty scaled by skillLevel.
  */
+/**
+ * Wind subscore (0–100).
+ * Standard beaches: score based on wind angle relative to shorelineNormalDeg and speed.
+ * Wave-generating-onshore beaches: additive modifiers from baseline 50.
+ * Dual-mode: if beach has windScoringLogic and wind is within ±30° of generating wind, use WGO logic.
+ */
+export function scoreWind(beach: IBeach, windDir: number, windSpeed: number): number {
+  // Dual-mode check: if beach has windScoringLogic AND wind is near generating wind dir, use WGO logic
+  if (beach.windScoringLogic && beach.idealWindDescription === 'wave-generating-onshore') {
+    const genDir = beach.windScoringLogic.swellGeneratingWind.directionDeg
+    const nearGeneratingWind = angularDistance(windDir, genDir) <= 30
+
+    if (nearGeneratingWind) {
+      return scoreWindWaveGenerating(beach, windDir, windSpeed)
+    } else {
+      return scoreWindStandard(beach, windDir, windSpeed)
+    }
+  }
+
+  return scoreWindStandard(beach, windDir, windSpeed)
+}
+
+function scoreWindStandard(beach: IBeach, windDir: number, windSpeed: number): number {
+  const windAngle = angularDistance(windDir, beach.shorelineNormalDeg)
+
+  // Glassy: any direction, speed < 5 km/h
+  if (windSpeed < 5) return 100
+
+  // Offshore (< 30°)
+  if (windAngle < 30) {
+    if (windSpeed < 15) {
+      // Light offshore: 90–100 (100 at 5, 90 at 15)
+      return Math.round(lerp(windSpeed, 5, 15, 100, 90))
+    }
+    if (windSpeed <= 25) {
+      // Moderate offshore: 70–85
+      return Math.round(lerp(windSpeed, 15, 25, 85, 70))
+    }
+    if (windSpeed <= 35) {
+      // Between moderate and strong: 60–70
+      return Math.round(lerp(windSpeed, 25, 35, 70, 60))
+    }
+    // Strong offshore (> 35): 40–60
+    return Math.round(lerp(windSpeed, 35, 60, 60, 40))
+  }
+
+  // Cross-shore (30–70°): 40–70
+  if (windAngle <= 70) {
+    return Math.round(lerp(windAngle, 30, 70, 70, 40))
+  }
+
+  // Onshore (70–120°): 20–45
+  if (windAngle <= 120) {
+    // Strong onshore check within this range
+    if (windAngle > 120 && windSpeed > 20) {
+      return Math.round(lerp(windSpeed, 20, 40, 20, 0))
+    }
+    return Math.round(lerp(windAngle, 70, 120, 45, 20))
+  }
+
+  // Strong onshore (> 120° and speed > 20): 0–20
+  if (windSpeed > 20) {
+    return Math.round(lerp(windSpeed, 20, 40, 20, 0))
+  }
+  // > 120° but light wind: still poor but not worst
+  return Math.round(lerp(windAngle, 120, 180, 20, 10))
+}
+
+function scoreWindWaveGenerating(beach: IBeach, windDir: number, windSpeed: number): number {
+  const wsl = beach.windScoringLogic!
+  let score = 50
+
+  const genDir = wsl.swellGeneratingWind.directionDeg
+  const nearGenWind = angularDistance(windDir, genDir) <= 20
+
+  // +20 if generating wind present (direction ±20° and speed >= min)
+  if (nearGenWind && windSpeed >= wsl.swellGeneratingWind.minSpeedKmh) {
+    score += 20
+  }
+
+  // +25 if wind near quality multiplier direction (±20°)
+  if (angularDistance(windDir, wsl.qualityMultiplier.triggerDirectionDeg) <= 20) {
+    score += 25
+  }
+
+  // -35 (or -21 for side-onshore) if generating wind is too strong
+  if (nearGenWind && windSpeed > wsl.messinesspenalty.thresholdSpeedKmh) {
+    const windAngleToNormal = angularDistance(windDir, beach.shorelineNormalDeg)
+    if (windAngleToNormal > 45) {
+      // Side-onshore: reduce penalty by 40% (35 * 0.6 = 21)
+      score -= 21
+    } else {
+      score -= 35
+    }
+  }
+
+  return Math.max(0, Math.min(100, score))
+}
+
 export function scoreSwellHeight(beach: IBeach, height: number): number {
   const min = beach.minSwellHeightM
   const [idealLow, idealHigh] = beach.idealSwellHeightM
