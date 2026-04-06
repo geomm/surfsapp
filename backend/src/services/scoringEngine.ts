@@ -98,3 +98,151 @@ export function applyHardGates(
 
   return null
 }
+
+/**
+ * Computes the midpoint of a compass direction range, handling 360° wraparound.
+ * E.g. midpoint of [340, 20] is 0 (not 180).
+ */
+function rangeMidpoint(range: [number, number]): number {
+  const [from, to] = range
+  const span = ((to - from) % 360 + 360) % 360
+  return (from + span / 2) % 360
+}
+
+/**
+ * Swell direction subscore (0–100).
+ * Continuous gradient: 100 at ideal centre, linear decay to 80 at ideal edge,
+ * 79→40 through acceptable range, 0 outside.
+ */
+export function scoreSwellDirection(beach: IBeach, swellDir: number): number {
+  const idealMid = rangeMidpoint(beach.idealSwellDirection)
+
+  // Half-widths computed as angular distance from midpoint to range edges
+  const idealHalfWidth = angularDistance(idealMid, beach.idealSwellDirection[0])
+  const acceptHalfWidth = Math.max(
+    angularDistance(idealMid, beach.acceptableSwellDirection[0]),
+    angularDistance(idealMid, beach.acceptableSwellDirection[1])
+  )
+
+  const angleFromCentre = angularDistance(swellDir, idealMid)
+
+  // Dead centre
+  if (idealHalfWidth === 0) {
+    // Degenerate case: ideal range is a single direction
+    if (isAngleInRange(swellDir, beach.acceptableSwellDirection)) {
+      const t = acceptHalfWidth > 0 ? angleFromCentre / acceptHalfWidth : 0
+      return Math.round(100 - t * 60)
+    }
+    return 0
+  }
+
+  // Inside ideal range: 100 at centre → 80 at edge
+  if (angleFromCentre <= idealHalfWidth) {
+    return Math.round(100 - (angleFromCentre / idealHalfWidth) * 20)
+  }
+
+  // Inside acceptable but outside ideal: 79 → 40
+  if (isAngleInRange(swellDir, beach.acceptableSwellDirection)) {
+    const distPastIdeal = angleFromCentre - idealHalfWidth
+    const acceptableOnlyWidth = acceptHalfWidth - idealHalfWidth
+    if (acceptableOnlyWidth <= 0) return 40
+    const t = Math.min(distPastIdeal / acceptableOnlyWidth, 1)
+    return Math.round(79 - t * 39)
+  }
+
+  // Outside acceptable (should be gated, but return 0)
+  return 0
+}
+
+/**
+ * Linear interpolation helper.
+ */
+function lerp(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+  if (inMax === inMin) return (outMin + outMax) / 2
+  const t = Math.max(0, Math.min(1, (value - inMin) / (inMax - inMin)))
+  return outMin + t * (outMax - outMin)
+}
+
+/**
+ * Swell period subscore (0–100).
+ * Below min: 0–20, min→ideal[0]: 20–60, inside ideal: 70–100, above ideal[1]: 60–80.
+ * All using linear interpolation.
+ */
+export function scoreSwellPeriod(beach: IBeach, period: number): number {
+  const min = beach.minSwellPeriodS
+  const [idealLow, idealHigh] = beach.idealSwellPeriodS
+
+  if (period < min) {
+    // 0 at period=0, 20 at period=min
+    return Math.round(lerp(period, 0, min, 0, 20))
+  }
+
+  if (period < idealLow) {
+    // 20 at min, 60 at idealLow
+    return Math.round(lerp(period, min, idealLow, 20, 60))
+  }
+
+  if (period <= idealHigh) {
+    // Inside ideal range: 70 at edges, 100 at midpoint
+    const mid = (idealLow + idealHigh) / 2
+    if (period <= mid) {
+      return Math.round(lerp(period, idealLow, mid, 70, 100))
+    } else {
+      return Math.round(lerp(period, mid, idealHigh, 100, 70))
+    }
+  }
+
+  // Above ideal: 80 just above, decaying to 60
+  // Use idealHigh * 2 as the far end
+  const farEnd = idealHigh * 2
+  return Math.round(lerp(period, idealHigh, farEnd, 80, 60))
+}
+
+/**
+ * Swell height subscore (0–100).
+ * Below min: 0, min→ideal[0]: 20–70, inside ideal: 80–100,
+ * above ideal: penalty scaled by skillLevel.
+ */
+export function scoreSwellHeight(beach: IBeach, height: number): number {
+  const min = beach.minSwellHeightM
+  const [idealLow, idealHigh] = beach.idealSwellHeightM
+
+  if (height < min) {
+    // Should be gated, but return 0
+    return 0
+  }
+
+  if (height < idealLow) {
+    // 20 at min, 70 at idealLow
+    return Math.round(lerp(height, min, idealLow, 20, 70))
+  }
+
+  if (height <= idealHigh) {
+    // Inside ideal: 80 at edges, 100 at midpoint
+    const mid = (idealLow + idealHigh) / 2
+    if (height <= mid) {
+      return Math.round(lerp(height, idealLow, mid, 80, 100))
+    } else {
+      return Math.round(lerp(height, mid, idealHigh, 100, 80))
+    }
+  }
+
+  // Above ideal: penalty scaled by skill level
+  // Penalty range depends on how far above ideal
+  const overFactor = (height - idealHigh) / idealHigh // 0 at edge, 1 at 2x ideal
+  const clampedOver = Math.min(overFactor, 1)
+
+  switch (beach.skillLevel) {
+    case 'advanced':
+      // 70 just above → 50 at far end
+      return Math.round(70 - clampedOver * 20)
+    case 'intermediate':
+      // 55 just above → 30 at far end
+      return Math.round(55 - clampedOver * 25)
+    case 'beginner':
+      // 30 just above → 0 at far end
+      return Math.round(30 - clampedOver * 30)
+    default:
+      return Math.round(55 - clampedOver * 25)
+  }
+}
