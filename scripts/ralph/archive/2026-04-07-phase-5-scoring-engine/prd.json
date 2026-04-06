@@ -1,0 +1,127 @@
+{
+  "project": "surfsapp",
+  "branchName": "ralph/phase-5-scoring-engine",
+  "description": "Phase 5 — Backend: Scoring Engine. Implement the rule-based surfability scorer that evaluates hourly forecasts against beach profiles, producing surf scores (0–100), labels, human-readable reasons, confidence values, and daily summaries with best-window search.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Strongly type IWindScoringLogic and update IBeach",
+      "description": "As a developer, I want windScoringLogic to be a properly typed interface so the scorer can access its fields without casting.",
+      "acceptanceCriteria": [
+        "IWindScoringLogic interface created in backend/src/models/Beach.ts with fields: type ('wave-generating-onshore'), swellGeneratingWind ({ directionDeg: number, directionLabel: string, minSpeedKmh: number, comment: string }), qualityMultiplier ({ triggerWind: string, triggerDirectionDeg: number, effect: 'increase' | 'decrease', comment: string }), messinesspenalty ({ triggerWind: string, thresholdSpeedKmh: number, effect: 'increase' | 'decrease', comment: string }), optimalScenario (string)",
+        "IBeach.windScoringLogic type changed from Record<string, unknown> to IWindScoringLogic | undefined",
+        "BeachSchema.windScoringLogic updated with a nested sub-schema matching the interface (not Schema.Types.Mixed)",
+        "IHourlyForecast in backend/src/models/ForecastSnapshot.ts updated: add confidence: number field (required)",
+        "HourlyForecastSchema updated: add confidence: { type: Number, required: true }",
+        "Update backend/src/services/forecastFetcher.ts: add confidence: 0 to the placeholder IHourlyForecast object in fetchForecastForBeach (alongside existing surfScore: 0)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "IMPORTANT: The field name in beach_profiles.json is messinesspenalty (lowercase 'p') — match this exactly in the interface and schema. Do NOT rename it to camelCase. Also export IWindScoringLogic so it can be imported by the scoring engine."
+    },
+    {
+      "id": "US-002",
+      "title": "Angular distance utility and hard gates",
+      "description": "As a developer, I want angular distance helpers and hard gate checks so the scorer can short-circuit on deal-breaker conditions.",
+      "acceptanceCriteria": [
+        "backend/src/services/scoringEngine.ts created",
+        "Exports angularDistance(a: number, b: number): number — returns shortest angle between two compass bearings (0–180), handles 360° wraparound",
+        "Exports isAngleInRange(angle: number, range: [number, number]): boolean — returns true if angle falls within [from, to] range, handles ranges crossing 360° (e.g. [340, 20] includes 350 and 10)",
+        "Exports applyHardGates(beach: IBeach, rawData: Record<string, unknown>): { gated: true, score: number, label: string, reason: string } | null — returns gate result if triggered, null if all gates pass",
+        "Gate 1 — Swell direction: if swell_wave_direction outside beach.acceptableSwellDirection → { gated: true, score: 0, label: 'poor', reason: 'Swell direction blocked by land/orientation' }",
+        "Gate 2 — Swell height: if swell_wave_height < beach.minSwellHeightM → { gated: true, score: 0, label: 'poor', reason: 'Swell too small (<Xm, min Ym)' } with actual values interpolated",
+        "Gate 3 — Wave-generating-onshore absent: if beach.idealWindDescription === 'wave-generating-onshore' AND wind direction NOT within ±30° of beach.windScoringLogic.swellGeneratingWind.directionDeg AND swell_wave_height < beach.minSwellHeightM * 1.5 → { gated: true, score: 5, label: 'poor', reason: 'Generating wind absent, no residual swell' }",
+        "If a required rawData field (swell_wave_direction, swell_wave_height, wind_direction_10m) is missing or NaN, treat as gated (fail safe) with reason 'Missing forecast data'",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "rawData keys match Open-Meteo variable names: swell_wave_direction, swell_wave_height, wind_direction_10m, wind_speed_10m, etc. Cast values from unknown to number. Direction ranges crossing 360° appear in 3 of 8 beaches (Mesachti [340,20], Kolimpithra [340,30]) — isAngleInRange MUST handle this correctly."
+    },
+    {
+      "id": "US-003",
+      "title": "Swell subscores — direction, period, height",
+      "description": "As a developer, I want swell subscore functions (0–100 each) so they can be combined into the final weighted score.",
+      "acceptanceCriteria": [
+        "scoringEngine.ts exports scoreSwellDirection(beach: IBeach, swellDir: number): number — continuous gradient: 100 at ideal centre, linear decay to 80 at ideal edge, 79→40 through acceptable range, 0 outside",
+        "scoreSwellDirection handles direction ranges crossing 360° (e.g. idealSwellDirection [340, 20]) — midpoint of [340, 20] is 0 (not 180), computed with modular arithmetic",
+        "scoringEngine.ts exports scoreSwellPeriod(beach: IBeach, period: number): number — below minSwellPeriodS: 0–20, between min and idealSwellPeriodS[0]: 20–60, inside ideal range: 70–100, above idealSwellPeriodS[1]: 60–80, all using linear interpolation",
+        "scoringEngine.ts exports scoreSwellHeight(beach: IBeach, height: number): number — below min: 0, between min and idealSwellHeightM[0]: 20–70, inside ideal: 80–100, above ideal: penalty scaled by skillLevel (advanced: 50–70, intermediate: 30–55, beginner: 0–30)",
+        "All three functions use linear interpolation between boundary values, not discrete buckets",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "For direction scoring, the 'ideal centre' is the midpoint of idealSwellDirection. Computing midpoint of a range crossing 360° requires modular arithmetic — e.g. midpoint of [340, 20] is 0. The half-width of the ideal window is the angular distance from centre to either edge."
+    },
+    {
+      "id": "US-004",
+      "title": "Wind subscore — standard and wave-generating-onshore",
+      "description": "As a developer, I want a wind scoring function that handles both standard beaches and wave-generating-onshore beaches so all 8 beaches are scored correctly.",
+      "acceptanceCriteria": [
+        "scoringEngine.ts exports scoreWind(beach: IBeach, windDir: number, windSpeed: number): number — returns 0–100",
+        "Standard beaches (idealWindDescription !== 'wave-generating-onshore'): windAngle = angular distance from windDir to shorelineNormalDeg. Glassy (<5 km/h any dir) → 100. Light offshore (<30° and <15) → 90–100. Moderate offshore (<30° and 15–25) → 70–85. Strong offshore (<30° and >35) → 40–60. Cross-shore (30–70°) → 40–70. Onshore (70–120°) → 20–45. Strong onshore (>120° and >20) → 0–20. Linear interpolation within bands.",
+        "Wave-generating-onshore beaches: start from 50. +20 if wind within ±20° of swellGeneratingWind.directionDeg AND speed >= swellGeneratingWind.minSpeedKmh. +25 if wind within ±20° of qualityMultiplier.triggerDirectionDeg. -35 if wind within ±20° of swellGeneratingWind.directionDeg AND speed > messinesspenalty.thresholdSpeedKmh. Clamp 0–100.",
+        "Side-onshore sub-variant: if windAngle (wind dir vs shorelineNormalDeg) > 45°, reduce messiness penalty by 40% (subtract 21 instead of 35)",
+        "Dual-mode: if beach has windScoringLogic AND wind is within ±30° of swellGeneratingWind.directionDeg, use wave-generating-onshore logic; otherwise use standard logic",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "The three wave-generating-onshore modifiers (+20, +25, -35) are additive and can all apply simultaneously. windAngle for standard scoring is always relative to shorelineNormalDeg. This is the most complex scoring function — follow docs/scoring-engine.md Wind Score section exactly."
+    },
+    {
+      "id": "US-005",
+      "title": "Weighted final score, label, reasons, and confidence",
+      "description": "As a developer, I want a scoreHour function that combines subscores, maps to a label, generates reasons, and computes confidence for each hourly forecast.",
+      "acceptanceCriteria": [
+        "scoringEngine.ts exports scoreHour(beach: IBeach, rawData: Record<string, unknown>, forecastTimestamp: Date, fetchedAt: Date): { surfScore: number, label: string, reasons: string[], confidence: number }",
+        "Calls applyHardGates first — if gated, returns gate result with confidence computed and reasons = [gate reason]",
+        "If not gated: computes scoreSwellDirection, scoreSwellPeriod, scoreSwellHeight, scoreWind from rawData values",
+        "Secondary swell modifier: +5 if swell_wave_direction_2 is within beach.acceptableSwellDirection, -10 if opposing direction (±180° ± 30° from primary), 0 if swell_wave_height_2 is null/0/undefined",
+        "Final score = swellDirScore * weights.swellDirection + swellPeriodScore * weights.swellPeriod + swellHeightScore * weights.swellHeight + windScore * weights.wind + 0 * weights.tide + secondaryModifier, clamped 0–100",
+        "Label mapping: 0–39 = 'poor', 40–59 = 'maybe', 60–79 = 'good', 80–100 = 'very-good'",
+        "Reasons array: 3–6 human-readable strings describing what helps/hurts. Examples: 'Swell direction matches beach exposure', 'Wind is light offshore — clean conditions', 'Swell too short (5s, ideal 9–15s)'. At least one reason per dimension (direction, period, height, wind).",
+        "Confidence = Math.max(0, 1.0 - (hoursFromNow / 240)) where hoursFromNow = (forecastTimestamp - fetchedAt) in hours",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Reasons should read like a surf report — state what is observed (positive or negative), not numeric scores. Include the most impactful factors first. The tide weight exists in beach.weights but always contributes 0 since there is no tide data."
+    },
+    {
+      "id": "US-006",
+      "title": "Daily summaries — variable best-window search",
+      "description": "As a developer, I want daily summaries computed from hourly scores so the frontend can display a 10-day forecast strip.",
+      "acceptanceCriteria": [
+        "scoringEngine.ts exports computeDailySummaries(hourlyForecasts: Array<{ timestamp: Date, surfScore: number, label: string }>): IDailySummary[]",
+        "Groups hourly forecasts by calendar date (UTC)",
+        "For each day: tries window sizes 2, 3, and 4 consecutive hours, slides across all hours, picks the window with the highest average score across all sizes",
+        "Returns one IDailySummary per day: date (YYYY-MM-DD string), bestWindowStart (ISO datetime string), bestWindowEnd (ISO datetime string), peakScore (highest single-hour score that day), overallLabel (label from best-window average using 0–39/40–59/60–79/80–100 thresholds)",
+        "If a day has fewer than 2 hours, use the single hour as the window",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "bestWindowStart/bestWindowEnd are timestamps of the first and last hour in the chosen window. peakScore is the single highest hourly score (not window average). overallLabel is from the window average."
+    },
+    {
+      "id": "US-007",
+      "title": "Wire scoring into forecast fetcher pipeline",
+      "description": "As a developer, I want the scoring engine called during forecast fetching so saved snapshots contain real scores instead of placeholders.",
+      "acceptanceCriteria": [
+        "forecastFetcher.ts imports scoreHour and computeDailySummaries from scoringEngine.ts",
+        "In fetchForecastForBeach: after mapping raw data to IHourlyForecast[], call scoreHour(beach, entry.rawData, entry.timestamp, new Date()) for each entry and replace surfScore, label, reasons, and confidence with the returned values",
+        "In saveForecastSnapshot: accept hourlyForecasts that already have scores, call computeDailySummaries(hourlyForecasts) and set result as dailySummaries (replacing empty [])",
+        "After docker compose up, GET /beaches returns beaches with real non-zero currentScore values",
+        "GET /beaches/mesachti-ikaria/forecast returns a snapshot where hourlyForecasts[0] has non-zero surfScore, meaningful label, descriptive reasons (not 'Placeholder...'), and confidence between 0 and 1",
+        "dailySummaries array has ~10 entries (one per forecast day) with bestWindowStart, bestWindowEnd, peakScore, and overallLabel",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "The fetchForecastForBeach function already receives the beach object — pass it to scoreHour. The saveForecastSnapshot signature may need updating to no longer pass empty dailySummaries from the caller. Remove the placeholder surfScore/label/reasons/confidence values from the initial mapping — they get set by scoreHour instead."
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+# Ralph Progress Log
+Started: Sun Apr 06 2026
+---
+
+## Codebase Patterns
+- Backend uses `tsx` for running TypeScript directly (no compile step needed for scripts)
+- Backend typecheck: `cd backend && npm run typecheck`
+- Beach profile JSON data lives in `backend/src/data/`; docs/beach-profiles.md is the source of truth for profile values
+- module: "commonjs" in tsconfig — no .js extensions needed in imports
+- idealWindDescription union values: 'wave-generating-onshore' | 'offshore-or-light'
+- skillLevel union values: 'beginner' | 'intermediate' | 'advanced'
+- label/overallLabel union values: 'poor' | 'maybe' | 'good' | 'very-good'
+- Sub-document schemas (HourlyForecast, DailySummary) use `_id: false` to avoid unnecessary _id generation
+- Use `.lean().select('-_id -__v')` to strip MongoDB internals from responses
+- backend/src/db/connection.ts exports connectDB() — needed by any script that talks to MongoDB
+- Open-Meteo time strings lack a Z suffix — append 'Z' when constructing Date objects so they parse as UTC
+- Use `beach.offshoreCoords ?? beach.coords` for Open-Meteo API coords (offshore preferred)
+- forecastFetcher.ts lives at backend/src/services/forecastFetcher.ts — contains fetchForecastForBeach, saveForecastSnapshot, fetchAllBeaches
+- ForecastSnapshot model at backend/src/models/ForecastSnapshot.ts — IHourlyForecast, IDailySummary, IForecastSnapshot interfaces
+- Beach model at backend/src/models/Beach.ts — IBeach interface, BeachSchema, Beach model
+- windScoringLogic field uses lowercase 'p' in messinesspenalty — match exactly, do NOT rename to camelCase
+- rawData keys match Open-Meteo variable names: swell_wave_height, swell_wave_period, swell_wave_direction, swell_wave_height_2, swell_wave_direction_2, wind_speed_10m, wind_direction_10m, wave_height
+- Direction ranges crossing 360° appear in beach profiles (e.g. [340, 20]) — all angular comparisons must handle wraparound
+- Scoring algorithm details in docs/scoring-engine.md — hard gates, subscores, weighted sum, label mapping, daily summaries
+- scoringEngine.ts lives at backend/src/services/scoringEngine.ts — exports angularDistance, isAngleInRange, applyHardGates (and later subscore/scoreHour functions)
+- Angular distance formula: `Math.abs(((a - b + 540) % 360) - 180)` — returns 0–180, handles wraparound
+- Compass range midpoint: `span = ((to - from) % 360 + 360) % 360`, `midpoint = (from + span/2) % 360` — handles 360° crossing
+- Subscore functions follow continuous gradient pattern with `lerp()` helper, not discrete buckets
+- scoringEngine.ts exports: angularDistance, isAngleInRange, applyHardGates, scoreSwellDirection, scoreSwellPeriod, scoreSwellHeight, scoreWind, scoreHour, computeDailySummaries
+- Wind scoring uses dual-mode: if beach has windScoringLogic AND wind within ±30° of generating wind dir → WGO logic, else → standard logic
+- Standard wind scoring: windAngle = angularDistance(windDir, shorelineNormalDeg), then bands for offshore/cross/onshore
+- WGO wind scoring: additive modifiers from baseline 50 (+20 generating, +25 quality, -35/-21 messiness)
+- scoreHour returns `label: string` — cast to `IHourlyForecast['label']` when assigning to IHourlyForecast objects
+- forecastFetcher.ts imports scoreHour and computeDailySummaries from scoringEngine.ts — scoring is wired into the fetch pipeline
+
+## 2026-04-06 - US-001
+- Created `IWindScoringLogic` interface in `backend/src/models/Beach.ts` with properly typed fields matching beach_profiles.json structure
+- Changed `IBeach.windScoringLogic` from `Record<string, unknown>` to `IWindScoringLogic | undefined`
+- Replaced `Schema.Types.Mixed` with a proper nested sub-schema for windScoringLogic
+- Added `confidence: number` field to `IHourlyForecast` interface and schema in `backend/src/models/ForecastSnapshot.ts`
+- Added `confidence: 0` placeholder in `backend/src/services/forecastFetcher.ts`
+- Files changed: `backend/src/models/Beach.ts`, `backend/src/models/ForecastSnapshot.ts`, `backend/src/services/forecastFetcher.ts`
+- **Learnings for future iterations:**
+  - Mongoose schema `type` field conflicts with the `type` keyword used for schema definition — use `{ type: String }` inside the nested object (Mongoose interprets bare `type` as schema type declaration, but nesting works fine)
+  - `IWindScoringLogic` is exported and can be imported by scoring engine
+  - The `messinesspenalty` field uses lowercase 'p' — confirmed in both JSON data and now in the interface
+---
+
+## 2026-04-06 - US-002
+- Created `backend/src/services/scoringEngine.ts` with angular distance utilities and hard gate logic
+- Implemented `angularDistance(a, b)` — shortest angle between two compass bearings using modular arithmetic
+- Implemented `isAngleInRange(angle, range)` — handles ranges crossing 360° (e.g. [340, 20])
+- Implemented `applyHardGates(beach, rawData)` — three gates (swell direction, swell height, wave-generating-onshore absent) plus NaN/missing fail-safe
+- Files changed: `backend/src/services/scoringEngine.ts`
+- **Learnings for future iterations:**
+  - Angular distance formula: `Math.abs(((a - b + 540) % 360) - 180)` gives shortest angle 0–180
+  - For isAngleInRange with wrapping ranges (from > to), use `a >= from || a <= to` logic
+  - Gate 3 only applies to beaches with `idealWindDescription === 'wave-generating-onshore'` AND `windScoringLogic` defined
+  - rawData values need `Number()` cast since they come as `unknown` type
+---
+
+## 2026-04-06 - US-003
+- Implemented three swell subscore functions in `backend/src/services/scoringEngine.ts`:
+  - `scoreSwellDirection(beach, swellDir)` — continuous gradient from ideal centre (100) → ideal edge (80) → acceptable edge (40) → 0 outside
+  - `scoreSwellPeriod(beach, period)` — linear interpolation across min (0–20), sub-ideal (20–60), ideal (70–100), above-ideal (80–60) ranges
+  - `scoreSwellHeight(beach, height)` — linear interpolation with skill-level-dependent penalty above ideal range
+- Added helper functions: `rangeMidpoint()` for compass direction midpoint with 360° wraparound, `lerp()` for linear interpolation
+- Files changed: `backend/src/services/scoringEngine.ts`
+- **Learnings for future iterations:**
+  - Compass range midpoint formula: span = ((to - from) % 360 + 360) % 360, midpoint = (from + span/2) % 360
+  - For direction scoring, acceptable half-width should use max of distances from ideal midpoint to both acceptable edges (handles asymmetric acceptable ranges)
+  - Period scoring inside ideal range uses symmetric triangle: 70 at edges, 100 at midpoint — same pattern for height (80 at edges, 100 at midpoint)
+  - Above-ideal period decays towards idealHigh*2 as the far end (80→60)
+  - Above-ideal height penalty uses overFactor = (height - idealHigh) / idealHigh, clamped to [0,1]
+---
+
+## 2026-04-06 - US-004
+- Implemented `scoreWind(beach, windDir, windSpeed)` in `backend/src/services/scoringEngine.ts`
+- Added `scoreWindStandard()` for standard offshore-good/onshore-bad logic with speed-aware bands
+- Added `scoreWindWaveGenerating()` for wave-generating-onshore beaches with additive modifiers (+20, +25, -35/-21)
+- Implemented dual-mode routing: if beach has windScoringLogic AND wind within ±30° of generating wind → WGO logic, else → standard
+- Side-onshore sub-variant: windAngle to shorelineNormal > 45° reduces messiness penalty by 40% (35→21)
+- Files changed: `backend/src/services/scoringEngine.ts`
+- **Learnings for future iterations:**
+  - Wind scoring is split into two private helper functions (scoreWindStandard, scoreWindWaveGenerating) with scoreWind as the public dual-mode router
+  - Standard wind bands use windAngle (angular distance from wind dir to shorelineNormalDeg) — 0° = dead offshore, 180° = dead onshore
+  - Glassy condition (< 5 km/h any direction) short-circuits to 100 before any angle checks
+  - The ±30° threshold for dual-mode routing is wider than the ±20° threshold for the WGO generating wind bonus
+  - messinesspenalty side-onshore reduction checks windAngle to shorelineNormalDeg > 45°, not to generating wind direction
+---
+
+## 2026-04-06 - US-005
+- Implemented `scoreHour(beach, rawData, forecastTimestamp, fetchedAt)` in `backend/src/services/scoringEngine.ts`
+- Calls `applyHardGates` first — gated results return early with confidence computed
+- Computes all four subscores (swellDirection, swellPeriod, swellHeight, wind) from rawData
+- Secondary swell modifier: +5 if secondary swell within acceptable direction, -10 if opposing (≥150° from primary)
+- Weighted final score using `beach.weights`, tide contributes 0, clamped 0–100
+- Label mapping: 0–39=poor, 40–59=maybe, 60–79=good, 80–100=very-good
+- `buildReasons()` generates 3–6 human-readable strings covering direction, period, height, wind, and optional secondary swell
+- Confidence = max(0, 1.0 - hoursFromNow/240)
+- Added `Label` type alias and `ScoreHourResult` interface at top of file
+- Added private `mapLabel()` helper
+- Files changed: `backend/src/services/scoringEngine.ts`
+- **Learnings for future iterations:**
+  - Secondary swell opposing direction check uses angularDistance ≥ 150° (not exactly 180° ± 30°) — this is equivalent since angularDistance returns 0–180
+  - buildReasons uses rangeMidpoint (private helper) — if it needs to be reused elsewhere, export it
+  - scoreHour returns `label: string` (not the Label union type) to match the IHourlyForecast interface which uses string
+  - Wind reason generation for WGO beaches still uses windAngle-based descriptions — could be improved to mention generating wind specifically in a future iteration
+---
+
+## 2026-04-06 - US-006
+- Implemented `computeDailySummaries(hourlyForecasts)` in `backend/src/services/scoringEngine.ts`
+- Groups hourly forecasts by UTC calendar date
+- Tries sliding windows of sizes 2, 3, and 4 consecutive hours, picks window with highest average score across all sizes
+- Returns IDailySummary[] with date, bestWindowStart/End (ISO strings), peakScore (highest single-hour), overallLabel (from window average)
+- Handles days with fewer than 2 hours by using the single hour as the window
+- Files changed: `backend/src/services/scoringEngine.ts`
+- **Learnings for future iterations:**
+  - computeDailySummaries imports IDailySummary from ForecastSnapshot model — first cross-model import in scoringEngine.ts
+  - mapLabel is a private helper already in scoringEngine.ts — reused for overallLabel mapping
+  - peakScore is the single highest hourly score (not window average) — these are distinct values
+  - bestWindowStart/bestWindowEnd are ISO datetime strings of the first/last hour in the chosen window
+---
+
+## 2026-04-06 - US-007
+- Wired scoring engine into forecast fetcher pipeline in `backend/src/services/forecastFetcher.ts`
+- Imported `scoreHour` and `computeDailySummaries` from `scoringEngine.ts`
+- Replaced placeholder surfScore/label/reasons/confidence with real `scoreHour()` calls in `fetchForecastForBeach`
+- Replaced empty `dailySummaries: []` with `computeDailySummaries(hourlyForecasts)` in `saveForecastSnapshot`
+- Created `fetchedAt` timestamp once per fetch call (shared across all hours) for consistent confidence calculation
+- Files changed: `backend/src/services/forecastFetcher.ts`
+- **Learnings for future iterations:**
+  - `scoreHour` returns `label: string` but `IHourlyForecast.label` is a union type — need to cast with `as IHourlyForecast['label']`
+  - `fetchedAt` should be captured once at the start of `fetchForecastForBeach`, not per-hour, so confidence values are consistent within a snapshot
+  - The wiring is minimal — only forecastFetcher.ts needed changes; scoringEngine.ts and models were already compatible
+  - Runtime verification requires docker compose up + forecast fetch — manual browser testing needed for GET /beaches and /forecast endpoints
+---
