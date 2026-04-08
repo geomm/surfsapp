@@ -13,7 +13,10 @@ const MARINE_VARIABLES = [
 const WIND_VARIABLES = ['wind_speed_10m', 'wind_direction_10m']
 
 export async function fetchForecastForBeach(beach: IBeach): Promise<IHourlyForecast[]> {
-  const coords = beach.offshoreCoords ?? beach.coords
+  const coords =
+    beach.offshoreCoords?.lat != null && beach.offshoreCoords?.lon != null
+      ? beach.offshoreCoords
+      : beach.coords
   const baseParams = {
     latitude: String(coords.lat),
     longitude: String(coords.lon),
@@ -39,8 +42,9 @@ export async function fetchForecastForBeach(beach: IBeach): Promise<IHourlyForec
   ])
 
   if (!marineResponse.ok) {
+    const body = await marineResponse.text()
     throw new Error(
-      `Failed to fetch marine forecast for beach ${beach.id}: HTTP ${marineResponse.status}`
+      `Failed to fetch marine forecast for beach ${beach.id}: HTTP ${marineResponse.status} — URL: ${marineUrl} — Body: ${body}`
     )
   }
   if (!windResponse.ok) {

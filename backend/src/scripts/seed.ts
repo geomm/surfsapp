@@ -52,6 +52,7 @@ async function seed(): Promise<void> {
           surfScore: stub.score,
           label: stub.label,
           reasons: ['Stub data — real forecast available after Phase 4'],
+          confidence: 1.0,
         },
       ],
       dailySummaries: [
