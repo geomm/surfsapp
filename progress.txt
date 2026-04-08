@@ -46,6 +46,15 @@
   - surf-badge variant union includes 'neutral' — use it for null currentLabel.
 ---
 
+## 2026-04-08 - US-006
+- Added ui/src/composables/usePullToRefresh.ts — touch-based pull-to-refresh with dampened pull distance, 60px threshold, and a trigger() function reused by the header refresh button.
+- HomeView: wired scrollRoot ref as the touch target, shows a <surf-icon refresh-cw> indicator that expands with pullDistance while pulling and spins while refreshing; header refresh button also spins and is disabled during refresh.
+- Desktop (no touch) only uses the header button — touch listeners guarded with 'ontouchstart' in window check.
+- Files changed: ui/src/composables/usePullToRefresh.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed (touch gesture best tested on device or Chrome devtools touch emulation).
+---
+
 ## 2026-04-08 - US-005
 - Added heart favourite button to each beach card in HomeView; uses @click.stop to avoid card-click. Styled via .fav-btn (44x44 touch target) and .fav-btn-on (red + bold).
 - Reactivity works through pinia store's `favourites` Set via isFavourite() helper calling beachStore.favourites.has.

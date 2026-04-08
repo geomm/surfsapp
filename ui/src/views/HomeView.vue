@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useBeachStore } from '../stores/beachStore'
 import type { Beach } from '../types/beach'
 import { degreesToCompass } from '../utils/compass'
 import { formatRelativeTime, isStale } from '../utils/time'
+import { usePullToRefresh } from '../composables/usePullToRefresh'
 
 const beachStore = useBeachStore()
+const scrollRoot = ref<HTMLElement | null>(null)
+
+const { isPulling, pullDistance, isRefreshing, trigger } = usePullToRefresh(scrollRoot, {
+  threshold: 60,
+  onRefresh: () => beachStore.fetchBeaches(),
+})
 
 function hasForecast(b: Beach): boolean {
   return (
@@ -40,7 +47,7 @@ onMounted(() => {
 })
 
 function retry() {
-  beachStore.fetchBeaches()
+  trigger()
 }
 
 function badgeVariant(beach: Beach): string {
@@ -66,13 +73,29 @@ function toggleFav(b: Beach) {
 </script>
 
 <template>
-  <div class="home">
+  <div ref="scrollRoot" class="home">
     <header class="header">
       <h1 class="title">surfsapp</h1>
-      <button class="refresh-btn" type="button" aria-label="Refresh" @click="retry">
+      <button
+        class="refresh-btn"
+        :class="{ 'refresh-btn-spinning': isRefreshing }"
+        type="button"
+        aria-label="Refresh"
+        :disabled="isRefreshing"
+        @click="retry"
+      >
         <surf-icon name="refresh-cw"></surf-icon>
       </button>
     </header>
+
+    <div
+      v-if="isPulling || isRefreshing"
+      class="ptr-indicator"
+      :class="{ 'ptr-spinning': isRefreshing }"
+      :style="{ height: (isRefreshing ? 48 : pullDistance) + 'px' }"
+    >
+      <surf-icon name="refresh-cw"></surf-icon>
+    </div>
 
     <main class="content">
       <div v-if="beachStore.loading" class="state">Loading…</div>
@@ -269,5 +292,31 @@ function toggleFav(b: Beach) {
 .fav-btn-on {
   color: var(--color-surf-poor);
   font-weight: var(--font-weight-bold);
+}
+
+.ptr-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  transition: height 0.15s ease-out;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.ptr-spinning surf-icon,
+.refresh-btn-spinning surf-icon {
+  animation: ptr-spin 0.8s linear infinite;
+}
+
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.refresh-btn[disabled] {
+  cursor: default;
+  opacity: 0.8;
 }
 </style>

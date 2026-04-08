@@ -116,7 +116,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Keep the pull-to-refresh implementation simple — a custom composable with touch event listeners. Return { isPulling, pullDistance, isRefreshing } from the composable so the template can react. Attach to the scrollable container element via a template ref."
     }
   ]
