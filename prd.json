@@ -120,7 +120,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "BeachDetailView is lazy-loaded via dynamic import in router so MapLibre's ~200KB doesn't bloat the home view. Use a template ref to give MapLibre its container element."
     },
     {

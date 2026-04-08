@@ -106,6 +106,16 @@
   - Typecheck passes. Manual browser verification still needed.
 ---
 
+## 2026-04-09 - US-006 (Phase 7)
+- Installed maplibre-gl in ui/, imported maplibre-gl.css in ui/src/main.ts.
+- Created ui/src/components/BeachMap.vue with props coords + name, demo style, marker + popup, 240px container, destroy on unmount, 'Map unavailable' fallback on init error.
+- BeachDetailView renders <BeachMap> between the reasons disclosure and the (future) forecast strip.
+- Files changed: ui/package.json, ui/yarn.lock, ui/src/main.ts, ui/src/components/BeachMap.vue, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - BeachDetailView is already lazy-loaded via dynamic import in router.ts, so MapLibre's bundle only hits the detail route.
+---
+
 ## 2026-04-09 - US-003 (Phase 7)
 - BeachDetailView hero block: name, region, large score number next to <surf-badge>, favourite heart (44x44, red when active) absolute top-right, staleness line with 6h warn color, 'No data'/'No data yet' fallback.
 - Reused formatRelativeTime/isStale and favourites pattern from HomeView.

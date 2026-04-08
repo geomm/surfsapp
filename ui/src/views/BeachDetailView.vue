@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useBeachStore } from '../stores/beachStore'
 import { formatRelativeTime, isStale } from '../utils/time'
 import { classifyReason } from '../utils/reasons'
+import BeachMap from '../components/BeachMap.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -151,6 +152,13 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </surf-disclosure>
+
+      <BeachMap
+        v-if="beach"
+        class="beach-map-wrap"
+        :coords="beach.coords"
+        :name="beach.name"
+      />
     </main>
   </div>
 </template>
@@ -271,6 +279,11 @@ onBeforeUnmount(() => {
 }
 
 .reasons-disclosure {
+  display: block;
+  margin-top: var(--space-4);
+}
+
+.beach-map-wrap {
   display: block;
   margin-top: var(--space-4);
 }
