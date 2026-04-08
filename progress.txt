@@ -86,3 +86,12 @@
   - Pinia Set state is reactive in templates when read inside a function (re-evaluated on render).
   - Typecheck passes. Manual browser verification still needed.
 ---
+
+## 2026-04-09 - US-003 (Phase 7)
+- BeachDetailView hero block: name, region, large score number next to <surf-badge>, favourite heart (44x44, red when active) absolute top-right, staleness line with 6h warn color, 'No data'/'No data yet' fallback.
+- Reused formatRelativeTime/isStale and favourites pattern from HomeView.
+- Files changed: ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - --font-size-2xl not confirmed to exist; used fallback var(--font-size-2xl, var(--font-size-xl)).
+---

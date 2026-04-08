@@ -2,12 +2,23 @@
 import { onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBeachStore } from '../stores/beachStore'
+import { formatRelativeTime, isStale } from '../utils/time'
 
 const route = useRoute()
 const router = useRouter()
 const beachStore = useBeachStore()
 
 const beachId = computed(() => String(route.params.id))
+const beach = computed(() => beachStore.selectedBeach)
+const isFavourite = computed(() =>
+  beach.value ? beachStore.favourites.has(beach.value.id) : false
+)
+const stalenessWarn = computed(() =>
+  !!beach.value?.lastUpdated && isStale(beach.value.lastUpdated, 6)
+)
+const stalenessText = computed(() =>
+  beach.value?.lastUpdated ? formatRelativeTime(beach.value.lastUpdated) : ''
+)
 
 function goBack() {
   if (window.history.length > 1) {
@@ -19,6 +30,10 @@ function goBack() {
 
 function retry() {
   beachStore.fetchBeachDetail(beachId.value)
+}
+
+function toggleFav() {
+  if (beach.value) beachStore.toggleFavourite(beach.value.id)
 }
 
 onMounted(() => {
@@ -53,6 +68,40 @@ onBeforeUnmount(() => {
         <p class="error">{{ beachStore.detailError }}</p>
         <surf-button @click="retry">Retry</surf-button>
       </div>
+
+      <section v-else-if="beach" class="hero">
+        <button
+          type="button"
+          class="fav-btn"
+          :class="{ 'fav-btn-on': isFavourite }"
+          :aria-label="isFavourite ? 'Unfavourite' : 'Favourite'"
+          :aria-pressed="isFavourite"
+          @click="toggleFav"
+        >
+          <surf-icon name="heart"></surf-icon>
+        </button>
+        <div class="hero-name">{{ beach.name }}</div>
+        <div class="hero-region">{{ beach.region }}</div>
+        <div class="score-row">
+          <template v-if="beach.currentScore !== null">
+            <span class="score-num">{{ beach.currentScore }}</span>
+            <surf-badge :variant="beach.currentLabel ?? 'neutral'">
+              {{ beach.currentLabel ?? '' }}
+            </surf-badge>
+          </template>
+          <template v-else>
+            <surf-badge variant="neutral">No data</surf-badge>
+          </template>
+        </div>
+        <div
+          v-if="beach.currentScore !== null"
+          class="staleness"
+          :class="{ 'staleness-warn': stalenessWarn }"
+        >
+          {{ stalenessText }}
+        </div>
+        <div v-else class="staleness">No data yet</div>
+      </section>
     </main>
   </div>
 </template>
@@ -108,5 +157,67 @@ onBeforeUnmount(() => {
 .error {
   color: var(--color-surf-poor);
   margin-bottom: var(--space-3);
+}
+
+.hero {
+  position: relative;
+  padding: var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hero-name {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.hero-region {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.score-num {
+  font-size: var(--font-size-2xl, var(--font-size-xl));
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.fav-btn {
+  position: absolute;
+  top: var(--space-3);
+  right: 0;
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.fav-btn-on {
+  color: var(--color-surf-poor);
+}
+
+.staleness {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.staleness-warn {
+  color: var(--color-surf-maybe);
 }
 </style>

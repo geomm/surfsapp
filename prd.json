@@ -55,7 +55,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Reuse formatRelativeTime and the favourites pattern from Phase 6 HomeView. The 6-hour warning logic is identical to the home view card staleness."
     },
     {
