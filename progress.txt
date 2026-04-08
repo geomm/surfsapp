@@ -25,6 +25,14 @@
   - Manual browser verification still needed — backend not running during typecheck-only pass.
 ---
 
+## 2026-04-08 - US-004
+- Added ui/src/utils/time.ts with formatRelativeTime and isStale helpers.
+- HomeView shows staleness line per card; warn color (var(--color-surf-maybe)) when >6h old; 'No data yet' when lastUpdated is null.
+- Files changed: ui/src/utils/time.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Typecheck passed. Manual browser verification still needed.
+---
+
 ## 2026-04-08 - US-002
 - Replaced ui/src/views/HomeView.vue with beach listing: header (title + refresh icon), loading/error/retry states, sortedBeaches rendered as <surf-card clickable> list with name, region, <surf-badge> (variant=currentLabel or 'neutral' when null, score or 'No data' text), skillLevel tag.
 - Uses beachStore.fetchBeaches() onMounted; retry button re-fetches.

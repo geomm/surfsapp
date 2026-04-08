@@ -78,7 +78,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Compare lastUpdated against Date.now() to compute the difference. The 6-hour warning threshold matches the default FORECAST_INTERVAL_HOURS on the backend."
     },
     {

@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useBeachStore } from '../stores/beachStore'
 import type { Beach } from '../types/beach'
 import { degreesToCompass } from '../utils/compass'
+import { formatRelativeTime, isStale } from '../utils/time'
 
 const beachStore = useBeachStore()
 
@@ -44,6 +45,15 @@ function retry() {
 
 function badgeVariant(beach: Beach): string {
   return beach.currentLabel ?? 'neutral'
+}
+
+function stalenessText(b: Beach): string {
+  if (!b.lastUpdated) return 'No data yet'
+  return formatRelativeTime(b.lastUpdated)
+}
+
+function stalenessWarn(b: Beach): boolean {
+  return !!b.lastUpdated && isStale(b.lastUpdated, 6)
 }
 </script>
 
@@ -91,6 +101,9 @@ function badgeVariant(beach: Beach): string {
               <div v-else class="no-forecast">No forecast data</div>
               <div v-if="bestWindow(beach)" class="best-window">{{ bestWindow(beach) }}</div>
               <div class="skill-tag">{{ beach.skillLevel }}</div>
+              <div class="staleness" :class="{ 'staleness-warn': stalenessWarn(beach) }">
+                {{ stalenessText(beach) }}
+              </div>
             </div>
           </surf-card>
         </li>
@@ -211,5 +224,14 @@ function badgeVariant(beach: Beach): string {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   text-transform: capitalize;
+}
+
+.staleness {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.staleness-warn {
+  color: var(--color-surf-maybe);
 }
 </style>
