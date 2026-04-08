@@ -98,7 +98,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-004 (surf-disclosure component). Unicode ✓/✕ is preferred over extending the icon registry to keep this story small."
     },
     {

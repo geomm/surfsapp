@@ -98,6 +98,14 @@
   - `reflect: true` on boolean props lets CSS use `:host([open])` selectors for state-driven styling.
 ---
 
+## 2026-04-09 - US-005 (Phase 7)
+- Added ui/src/utils/reasons.ts with classifyReason(reason, score).
+- BeachDetailView renders <surf-disclosure summary="Why this score"> beneath the hero; pros/cons grouped from selectedForecast.hourlyForecasts[0].reasons; ✓ / ✕ unicode icons colored via --color-surf-very-good / --color-surf-poor; empty groups hidden; 'No detailed reasons available' fallback.
+- Files changed: ui/src/utils/reasons.ts, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+---
+
 ## 2026-04-09 - US-003 (Phase 7)
 - BeachDetailView hero block: name, region, large score number next to <surf-badge>, favourite heart (44x44, red when active) absolute top-right, staleness line with 6h warn color, 'No data'/'No data yet' fallback.
 - Reused formatRelativeTime/isStale and favourites pattern from HomeView.

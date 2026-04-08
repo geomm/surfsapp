@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBeachStore } from '../stores/beachStore'
 import { formatRelativeTime, isStale } from '../utils/time'
+import { classifyReason } from '../utils/reasons'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,6 +19,24 @@ const stalenessWarn = computed(() =>
 )
 const stalenessText = computed(() =>
   beach.value?.lastUpdated ? formatRelativeTime(beach.value.lastUpdated) : ''
+)
+
+const currentReasons = computed<string[]>(() => {
+  const hourly = beachStore.selectedForecast?.hourlyForecasts
+  return hourly && hourly.length > 0 ? hourly[0].reasons ?? [] : []
+})
+
+const currentScoreForClassify = computed(() => {
+  const hourly = beachStore.selectedForecast?.hourlyForecasts
+  if (hourly && hourly.length > 0) return hourly[0].surfScore ?? 0
+  return beach.value?.currentScore ?? 0
+})
+
+const pros = computed(() =>
+  currentReasons.value.filter((r) => classifyReason(r, currentScoreForClassify.value) === 'pro')
+)
+const cons = computed(() =>
+  currentReasons.value.filter((r) => classifyReason(r, currentScoreForClassify.value) === 'con')
 )
 
 function goBack() {
@@ -102,6 +121,36 @@ onBeforeUnmount(() => {
         </div>
         <div v-else class="staleness">No data yet</div>
       </section>
+
+      <surf-disclosure
+        v-if="beach"
+        class="reasons-disclosure"
+        summary="Why this score"
+      >
+        <div v-if="currentReasons.length === 0" class="no-reasons">
+          No detailed reasons available
+        </div>
+        <div v-else class="reason-groups">
+          <div v-if="pros.length > 0" class="reason-group">
+            <h3 class="reason-heading">Working for you</h3>
+            <ul class="reason-list">
+              <li v-for="(r, i) in pros" :key="'p' + i" class="reason-item">
+                <span class="reason-icon reason-icon-pro">✓</span>
+                <span>{{ r }}</span>
+              </li>
+            </ul>
+          </div>
+          <div v-if="cons.length > 0" class="reason-group">
+            <h3 class="reason-heading">Working against you</h3>
+            <ul class="reason-list">
+              <li v-for="(r, i) in cons" :key="'c' + i" class="reason-item">
+                <span class="reason-icon reason-icon-con">✕</span>
+                <span>{{ r }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </surf-disclosure>
     </main>
   </div>
 </template>
@@ -219,5 +268,61 @@ onBeforeUnmount(() => {
 
 .staleness-warn {
   color: var(--color-surf-maybe);
+}
+
+.reasons-disclosure {
+  display: block;
+  margin-top: var(--space-4);
+}
+
+.no-reasons {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.reason-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.reason-heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.reason-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.reason-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.reason-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25em;
+  font-weight: var(--font-weight-bold);
+}
+
+.reason-icon-pro {
+  color: var(--color-surf-very-good);
+}
+
+.reason-icon-con {
+  color: var(--color-surf-poor);
 }
 </style>
