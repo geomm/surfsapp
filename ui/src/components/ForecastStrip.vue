@@ -9,17 +9,16 @@ defineProps<{
 
 <template>
   <div v-if="dailySummaries && dailySummaries.length > 0" class="strip">
-    <surf-card
-      v-for="day in dailySummaries"
-      :key="day.date"
-      padding
-      class="day-card"
-    >
-      <div class="weekday">{{ formatWeekday(day.date) }}</div>
-      <div class="dom">{{ formatDayOfMonth(day.date) }}</div>
-      <surf-badge :variant="day.overallLabel ?? 'neutral'">
-        {{ day.peakScore ?? '' }}
-      </surf-badge>
+    <surf-card v-for="day in dailySummaries" :key="day.date" padding="md" class="day-card">
+      <div class="day-card-header">
+        <div class="date-time">
+          <div class="weekday">{{ formatWeekday(day.date) }}</div>
+          <div class="dom">{{ formatDayOfMonth(day.date) }}</div>
+        </div>
+        <surf-badge :variant="day.overallLabel ?? 'neutral'">
+          {{ day.peakScore ?? '' }}
+        </surf-badge>
+      </div>
       <div class="window">
         <template v-if="day.bestWindowStart && day.bestWindowEnd">
           {{ day.bestWindowStart }}–{{ day.bestWindowEnd }}
@@ -46,8 +45,24 @@ defineProps<{
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: normal;
   gap: var(--space-1);
+  padding-bottom: var(--space-3);
+}
+
+.day-card:last-child {
+  padding-bottom: unset;
+}
+
+.day-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.date-time {
+  display: flex;
+  gap: var(--space-3);
 }
 
 .weekday {
