@@ -20,7 +20,7 @@
         "Typecheck passes (cd ui && yarn typecheck)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "API base URL should be a constant at the top of the store: const API_BASE = 'http://localhost:3000'. Favourites are in-memory only — they reset on page reload. Use Options API style defineStore (not setup syntax) for clarity. The Beach interface will be extended in US-003 with forecast fields."
     },
     {
@@ -43,7 +43,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Use existing Lit components: <surf-card clickable>, <surf-badge variant=X>, <surf-icon name='refresh-cw'>. The surf-badge variant values match currentLabel exactly: 'very-good', 'good', 'maybe', 'poor'. The header refresh button will be wired to pull-to-refresh in US-006."
     },
     {
@@ -61,7 +61,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Fetching 8 individual forecasts is acceptable for MVP. The forecast response shape: { hourlyForecasts: [{ rawData: { swell_wave_height, swell_wave_period, swell_wave_direction, wind_speed_10m, wind_direction_10m, ... }, ... }], dailySummaries: [{ bestWindowStart, bestWindowEnd, ... }] }. Use Promise.all for parallel forecast fetches. Handle missing/failed forecasts gracefully — don't block the whole listing."
     },
     {
@@ -78,7 +78,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Compare lastUpdated against Date.now() to compute the difference. The 6-hour warning threshold matches the default FORECAST_INTERVAL_HOURS on the backend."
     },
     {
@@ -97,7 +97,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Favourites are in Pinia store memory only — reset on reload. Use beachStore.favourites.has(beach.id) to check state. The heart icon from lucide is an outline by default; for filled state, either use CSS fill property or a different visual treatment (bold stroke + red color is sufficient)."
     },
     {
@@ -116,7 +116,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Keep the pull-to-refresh implementation simple — a custom composable with touch event listeners. Return { isPulling, pullDistance, isRefreshing } from the composable so the template can react. Attach to the scrollable container element via a template ref."
     }
   ]
