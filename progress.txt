@@ -45,3 +45,12 @@
   - surf-card dispatches 'card-click' custom event (composed, bubbles) when clickable is set.
   - surf-badge variant union includes 'neutral' — use it for null currentLabel.
 ---
+
+## 2026-04-08 - US-005
+- Added heart favourite button to each beach card in HomeView; uses @click.stop to avoid card-click. Styled via .fav-btn (44x44 touch target) and .fav-btn-on (red + bold).
+- Reactivity works through pinia store's `favourites` Set via isFavourite() helper calling beachStore.favourites.has.
+- Files changed: ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Pinia Set state is reactive in templates when read inside a function (re-evaluated on render).
+  - Typecheck passes. Manual browser verification still needed.
+---
