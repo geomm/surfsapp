@@ -124,3 +124,13 @@
   - Typecheck passes. Manual browser verification still needed.
   - --font-size-2xl not confirmed to exist; used fallback var(--font-size-2xl, var(--font-size-xl)).
 ---
+
+## 2026-04-09 - US-007 (Phase 7)
+- Extended ui/src/utils/time.ts with formatWeekday + formatDayOfMonth helpers.
+- Created ui/src/components/ForecastStrip.vue: horizontally scrollable scroll-snap strip of <surf-card> days with weekday, day-of-month, <surf-badge> peakScore/overallLabel, best window 'HH:MM–HH:MM' or '—'. Empty/null state → 'No forecast available'.
+- BeachDetailView renders <ForecastStrip> beneath <BeachMap> when selectedForecast has dailySummaries.
+- Files changed: ui/src/utils/time.ts, ui/src/components/ForecastStrip.vue, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - Phase 7 Beach Detail View is now complete — all 7 stories pass.
+---

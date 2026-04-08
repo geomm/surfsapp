@@ -141,7 +141,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "bestWindowStart/bestWindowEnd in dailySummaries are stored as 'HH:MM' strings on the backend (per Phase 6 progress notes) — extract directly, no ISO parsing needed. Verify shape against backend response if uncertain."
     }
   ]

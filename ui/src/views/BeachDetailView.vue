@@ -5,6 +5,7 @@ import { useBeachStore } from '../stores/beachStore'
 import { formatRelativeTime, isStale } from '../utils/time'
 import { classifyReason } from '../utils/reasons'
 import BeachMap from '../components/BeachMap.vue'
+import ForecastStrip from '../components/ForecastStrip.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -159,6 +160,12 @@ onBeforeUnmount(() => {
         :coords="beach.coords"
         :name="beach.name"
       />
+
+      <ForecastStrip
+        v-if="beach && beachStore.selectedForecast && beachStore.selectedForecast.dailySummaries.length > 0"
+        class="forecast-strip-wrap"
+        :daily-summaries="beachStore.selectedForecast.dailySummaries"
+      />
     </main>
   </div>
 </template>
@@ -284,6 +291,11 @@ onBeforeUnmount(() => {
 }
 
 .beach-map-wrap {
+  display: block;
+  margin-top: var(--space-4);
+}
+
+.forecast-strip-wrap {
   display: block;
   margin-top: var(--space-4);
 }
