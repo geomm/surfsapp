@@ -78,7 +78,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Match the file/folder convention of other Lit components in ui/src/components/lit/. The chevron rotation: transform: rotate(90deg) when open. Use ::slotted selector to style slotted content if needed."
     },
     {

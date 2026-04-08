@@ -110,6 +110,24 @@ const sheetOpen = ref(false)
       </div>
     </section>
 
+    <!-- surf-disclosure -->
+    <section>
+      <h2>surf-disclosure</h2>
+      <div class="row">
+        <div class="item" style="width: 320px">
+          <span class="label">closed (default)</span>
+          <surf-disclosure summary="Why this score" style="width: 100%"></surf-disclosure>
+        </div>
+        <div class="item" style="width: 320px">
+          <span class="label">open with content</span>
+          <surf-disclosure summary="Conditions detail" open style="width: 100%">
+            <p>Swell 1.4m at 9s from WNW. Wind light offshore.</p>
+            <p>Tide rising through the morning.</p>
+          </surf-disclosure>
+        </div>
+      </div>
+    </section>
+
     <!-- surf-bottom-sheet -->
     <section>
       <h2>surf-bottom-sheet</h2>

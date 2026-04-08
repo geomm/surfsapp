@@ -87,6 +87,17 @@
   - Typecheck passes. Manual browser verification still needed.
 ---
 
+## 2026-04-09 - US-004 (Phase 7)
+- Created ui/src/components/lit/surf-disclosure.ts: reactive `summary` + `open` (reflected) props, header with default/named 'summary' slot, chevron-right icon rotating 90° when open, body max-height+opacity 200ms transition, dispatches composed/bubbling 'toggle' event with {open}.
+- Registered in ui/src/components/lit/index.ts (imported once by main.ts via the barrel).
+- Added closed + open examples to ComponentsPreview (/components gallery).
+- Files changed: ui/src/components/lit/surf-disclosure.ts, ui/src/components/lit/index.ts, ui/src/views/ComponentsPreview.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - Lit components are registered via the ui/src/components/lit/index.ts barrel (imported once in main.ts) — add new components there, not directly in main.ts.
+  - `reflect: true` on boolean props lets CSS use `:host([open])` selectors for state-driven styling.
+---
+
 ## 2026-04-09 - US-003 (Phase 7)
 - BeachDetailView hero block: name, region, large score number next to <surf-badge>, favourite heart (44x44, red when active) absolute top-right, staleness line with 6h warn color, 'No data'/'No data yet' fallback.
 - Reused formatRelativeTime/isStale and favourites pattern from HomeView.
