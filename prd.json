@@ -17,7 +17,7 @@
         "Typecheck passes (cd ui && yarn typecheck)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "API_BASE constant already exists at the top of beachStore.ts — reuse it. Use Options API style defineStore (matches Phase 6 store)."
     },
     {

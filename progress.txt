@@ -55,6 +55,18 @@
   - Typecheck passes. Manual browser verification still needed (touch gesture best tested on device or Chrome devtools touch emulation).
 ---
 
+## 2026-04-09 - US-001 (Phase 7)
+- Extended ui/src/types/beach.ts with HourlyForecast, DailySummary, ForecastSnapshot interfaces.
+- Extended beachStore state with selectedBeach, selectedForecast, detailLoading, detailError.
+- Added fetchBeachDetail(id) action: seeds selectedBeach from cached list, then Promise.all parallel fetches /beaches/:id and /beaches/:id/forecast.
+- Added clearSelectedBeach() action.
+- Branch ralph/phase-7-beach-detail-view created from main.
+- Files changed: ui/src/types/beach.ts, ui/src/stores/beachStore.ts
+- **Learnings for future iterations:**
+  - Typecheck: `cd ui && yarn typecheck` passes.
+  - Backend GET /beaches/:id assumed to return a Beach object directly (matches phase-6 list shape).
+---
+
 ## 2026-04-08 - US-005
 - Added heart favourite button to each beach card in HomeView; uses @click.stop to avoid card-click. Styled via .fav-btn (44x44 touch target) and .fav-btn-on (red + bold).
 - Reactivity works through pinia store's `favourites` Set via isFavourite() helper calling beachStore.favourites.has.

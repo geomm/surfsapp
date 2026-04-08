@@ -16,3 +16,27 @@ export interface Beach {
   bestWindowStart?: string | null
   bestWindowEnd?: string | null
 }
+
+export interface HourlyForecast {
+  timestamp: string
+  rawData: Record<string, number>
+  surfScore: number
+  label: string
+  reasons: string[]
+  confidence: number
+}
+
+export interface DailySummary {
+  date: string
+  bestWindowStart: string | null
+  bestWindowEnd: string | null
+  peakScore: number
+  overallLabel: string
+}
+
+export interface ForecastSnapshot {
+  beachId: string
+  fetchedAt: string
+  hourlyForecasts: HourlyForecast[]
+  dailySummaries: DailySummary[]
+}
