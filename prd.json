@@ -61,7 +61,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Fetching 8 individual forecasts is acceptable for MVP. The forecast response shape: { hourlyForecasts: [{ rawData: { swell_wave_height, swell_wave_period, swell_wave_direction, wind_speed_10m, wind_direction_10m, ... }, ... }], dailySummaries: [{ bestWindowStart, bestWindowEnd, ... }] }. Use Promise.all for parallel forecast fetches. Handle missing/failed forecasts gracefully — don't block the whole listing."
     },
     {

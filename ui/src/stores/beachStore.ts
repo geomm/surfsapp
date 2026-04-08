@@ -37,8 +37,35 @@ export const useBeachStore = defineStore('beach', {
       try {
         const res = await fetch(`${API_BASE}/beaches`)
         if (!res.ok) throw new Error(`Failed to fetch beaches: ${res.status}`)
-        const data = await res.json()
-        this.beaches = data as Beach[]
+        const data = (await res.json()) as Beach[]
+        const today = new Date().toISOString().slice(0, 10)
+        const enriched = await Promise.all(
+          data.map(async (beach) => {
+            try {
+              const fRes = await fetch(`${API_BASE}/beaches/${beach.id}/forecast`)
+              if (!fRes.ok) return beach
+              const forecast = await fRes.json()
+              const first = forecast?.hourlyForecasts?.[0]?.rawData ?? {}
+              const todaySummary =
+                forecast?.dailySummaries?.find((d: { date?: string }) =>
+                  typeof d?.date === 'string' ? d.date.startsWith(today) : false,
+                ) ?? forecast?.dailySummaries?.[0]
+              return {
+                ...beach,
+                swellHeight: first.swell_wave_height ?? null,
+                swellPeriod: first.swell_wave_period ?? null,
+                swellDirection: first.swell_wave_direction ?? null,
+                windSpeed: first.wind_speed_10m ?? null,
+                windDirection: first.wind_direction_10m ?? null,
+                bestWindowStart: todaySummary?.bestWindowStart ?? null,
+                bestWindowEnd: todaySummary?.bestWindowEnd ?? null,
+              } as Beach
+            } catch {
+              return beach
+            }
+          }),
+        )
+        this.beaches = enriched
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Unknown error'
       } finally {

@@ -2,8 +2,37 @@
 import { onMounted } from 'vue'
 import { useBeachStore } from '../stores/beachStore'
 import type { Beach } from '../types/beach'
+import { degreesToCompass } from '../utils/compass'
 
 const beachStore = useBeachStore()
+
+function hasForecast(b: Beach): boolean {
+  return (
+    b.swellHeight != null &&
+    b.swellPeriod != null &&
+    b.swellDirection != null &&
+    b.windSpeed != null &&
+    b.windDirection != null
+  )
+}
+
+function swellText(b: Beach): string {
+  return `${(b.swellHeight as number).toFixed(1)}m · ${Math.round(b.swellPeriod as number)}s · ${degreesToCompass(b.swellDirection as number)}`
+}
+
+function windText(b: Beach): string {
+  return `${Math.round(b.windSpeed as number)} km/h ${degreesToCompass(b.windDirection as number)}`
+}
+
+function hhmm(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function bestWindow(b: Beach): string | null {
+  if (!b.bestWindowStart || !b.bestWindowEnd) return null
+  return `Best: ${hhmm(b.bestWindowStart)}–${hhmm(b.bestWindowEnd)}`
+}
 
 onMounted(() => {
   beachStore.fetchBeaches()
@@ -49,6 +78,18 @@ function badgeVariant(beach: Beach): string {
                   <template v-else>No data</template>
                 </surf-badge>
               </div>
+              <div v-if="hasForecast(beach)" class="conditions">
+                <span class="cond-item">
+                  <surf-icon name="waves" size="16"></surf-icon>
+                  <span>{{ swellText(beach) }}</span>
+                </span>
+                <span class="cond-item">
+                  <surf-icon name="wind" size="16"></surf-icon>
+                  <span>{{ windText(beach) }}</span>
+                </span>
+              </div>
+              <div v-else class="no-forecast">No forecast data</div>
+              <div v-if="bestWindow(beach)" class="best-window">{{ bestWindow(beach) }}</div>
               <div class="skill-tag">{{ beach.skillLevel }}</div>
             </div>
           </surf-card>
@@ -139,6 +180,30 @@ function badgeVariant(beach: Beach): string {
 
 .beach-region {
   font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.cond-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.no-forecast {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.best-window {
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 

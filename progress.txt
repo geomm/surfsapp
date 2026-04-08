@@ -14,6 +14,17 @@
   - sortedBeaches getter must place null scores last (not sort them as 0).
 ---
 
+## 2026-04-08 - US-003
+- Extended Beach interface with optional forecast fields.
+- beachStore.fetchBeaches now parallel-fetches /beaches/:id/forecast per beach and extracts first hourly rawData + today's dailySummary; failures/missing fields handled gracefully.
+- Added ui/src/utils/compass.ts (degreesToCompass 8-point).
+- HomeView renders conditions row (<surf-icon waves> swell Xm · Xs · DIR, <surf-icon wind> X km/h DIR), best window 'Best: HH:MM–HH:MM', or 'No forecast data' fallback.
+- Files changed: ui/src/types/beach.ts, ui/src/stores/beachStore.ts, ui/src/utils/compass.ts, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Backend forecast response shape assumed: { hourlyForecasts: [{ rawData: {...} }], dailySummaries: [{ date, bestWindowStart, bestWindowEnd }] }. Verify when backend is running.
+  - Manual browser verification still needed — backend not running during typecheck-only pass.
+---
+
 ## 2026-04-08 - US-002
 - Replaced ui/src/views/HomeView.vue with beach listing: header (title + refresh icon), loading/error/retry states, sortedBeaches rendered as <surf-card clickable> list with name, region, <surf-badge> (variant=currentLabel or 'neutral' when null, score or 'No data' text), skillLevel tag.
 - Uses beachStore.fetchBeaches() onMounted; retry button re-fetches.
