@@ -55,6 +55,14 @@ function stalenessText(b: Beach): string {
 function stalenessWarn(b: Beach): boolean {
   return !!b.lastUpdated && isStale(b.lastUpdated, 6)
 }
+
+function isFavourite(b: Beach): boolean {
+  return beachStore.favourites.has(b.id)
+}
+
+function toggleFav(b: Beach) {
+  beachStore.toggleFavourite(b.id)
+}
 </script>
 
 <template>
@@ -83,6 +91,16 @@ function stalenessWarn(b: Beach): boolean {
                   <div class="beach-name">{{ beach.name }}</div>
                   <div class="beach-region">{{ beach.region }}</div>
                 </div>
+                <button
+                  type="button"
+                  class="fav-btn"
+                  :class="{ 'fav-btn-on': isFavourite(beach) }"
+                  :aria-label="isFavourite(beach) ? 'Unfavourite' : 'Favourite'"
+                  :aria-pressed="isFavourite(beach)"
+                  @click.stop="toggleFav(beach)"
+                >
+                  <surf-icon name="heart"></surf-icon>
+                </button>
                 <surf-badge :variant="badgeVariant(beach)">
                   <template v-if="beach.currentScore !== null">{{ beach.currentScore }}</template>
                   <template v-else>No data</template>
@@ -233,5 +251,23 @@ function stalenessWarn(b: Beach): boolean {
 
 .staleness-warn {
   color: var(--color-surf-maybe);
+}
+
+.fav-btn {
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.fav-btn-on {
+  color: var(--color-surf-poor);
+  font-weight: var(--font-weight-bold);
 }
 </style>
