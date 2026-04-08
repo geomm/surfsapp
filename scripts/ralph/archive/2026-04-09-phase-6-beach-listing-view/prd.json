@@ -1,0 +1,123 @@
+{
+  "project": "surfsapp",
+  "branchName": "ralph/phase-6-beach-listing-view",
+  "description": "Phase 6 — Beach Listing View. Build the home screen with beach cards showing surf scores, swell/wind conditions, best window, staleness, favourites toggle, and pull-to-refresh. Introduces Pinia as the data layer.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install Pinia and create beachStore",
+      "description": "As a developer, I want a Pinia store for beach data so the listing view and future views can share state.",
+      "acceptanceCriteria": [
+        "pinia package installed in ui/ via yarn add pinia",
+        "Pinia instance created and registered in the Vue app entry point (ui/src/main.ts) — createPinia() called before app.mount()",
+        "ui/src/stores/beachStore.ts created, exporting useBeachStore via defineStore('beach', ...)",
+        "Store state: beaches (Beach[] array), loading (boolean), error (string | null), favourites (Set<string> of beach IDs)",
+        "Beach TypeScript interface defined in ui/src/types/beach.ts: { id: string, name: string, region: string, coords: { lat: number, lon: number }, skillLevel: string, tags: string[], currentScore: number | null, currentLabel: string | null, lastUpdated: string | null }",
+        "Store action fetchBeaches(): calls GET http://localhost:3000/beaches using native fetch, sets beaches on success, sets error on failure, manages loading flag (true before fetch, false after)",
+        "Store action toggleFavourite(beachId: string): adds or removes from favourites Set",
+        "Store getter sortedBeaches: returns beaches sorted by currentScore descending, nulls last",
+        "Store getter favouriteBeaches: returns only beaches whose id is in favourites",
+        "Typecheck passes (cd ui && yarn typecheck)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "API base URL should be a constant at the top of the store: const API_BASE = 'http://localhost:3000'. Favourites are in-memory only — they reset on page reload. Use Options API style defineStore (not setup syntax) for clarity. The Beach interface will be extended in US-003 with forecast fields."
+    },
+    {
+      "id": "US-002",
+      "title": "Beach listing page — layout and cards",
+      "description": "As a user, I want to see all beaches listed with their current surf score so I can decide where to surf.",
+      "acceptanceCriteria": [
+        "ui/src/views/HomeView.vue replaced — remove the dev-nav content entirely",
+        "On mount, calls beachStore.fetchBeaches()",
+        "Shows a loading state (text or spinner) while loading is true",
+        "Shows an error message with a retry button (using <surf-button>) if error is set",
+        "Renders each beach as a <surf-card clickable> in a vertical list with var(--space-4) gap",
+        "Each card shows: beach name (bold, --font-size-lg), region (--color-text-secondary, --font-size-sm), <surf-badge> with currentLabel as variant and score number as text (e.g. '74'), skillLevel as a small text tag",
+        "Cards use beachStore.sortedBeaches (sorted by score, best first)",
+        "Beaches with currentScore === null show <surf-badge variant='neutral'>No data</surf-badge>",
+        "Page has a header bar with app title 'surfsapp' on the left and a refresh icon button (<surf-icon name='refresh-cw'>) on the right",
+        "Layout is mobile-first: cards full-width with var(--space-4) horizontal padding, max-width 600px centered on desktop",
+        "Dev routes (/design, /components) remain in router.ts but are no longer linked from HomeView",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Use existing Lit components: <surf-card clickable>, <surf-badge variant=X>, <surf-icon name='refresh-cw'>. The surf-badge variant values match currentLabel exactly: 'very-good', 'good', 'maybe', 'poor'. The header refresh button will be wired to pull-to-refresh in US-006."
+    },
+    {
+      "id": "US-003",
+      "title": "Rich card content — swell, wind, and best window",
+      "description": "As a user, I want to see current swell and wind conditions plus today's best surf window on each card.",
+      "acceptanceCriteria": [
+        "Beach interface in ui/src/types/beach.ts extended with optional forecast fields: swellHeight (number | null), swellPeriod (number | null), swellDirection (number | null), windSpeed (number | null), windDirection (number | null), bestWindowStart (string | null), bestWindowEnd (string | null)",
+        "beachStore.fetchBeaches() updated: after fetching GET /beaches, fetches GET /beaches/${id}/forecast for each beach to extract first hourly rawData (swell_wave_height, swell_wave_period, swell_wave_direction, wind_speed_10m, wind_direction_10m) and first dailySummary (bestWindowStart, bestWindowEnd)",
+        "Utility function degreesToCompass(deg: number): string created in ui/src/utils/compass.ts — converts degrees to 8-point compass (N, NE, E, SE, S, SW, W, NW)",
+        "Each card shows a conditions row: <surf-icon name='waves' size=16> followed by 'Xm · Xs · DIR' (swell height rounded to 1 decimal, period rounded to integer, compass direction) and <surf-icon name='wind' size=16> followed by 'X km/h DIR' (wind speed rounded to integer, compass)",
+        "If today's dailySummary exists, show 'Best: HH:MM–HH:MM' below conditions in --color-text-secondary --font-size-xs (extract hours from ISO datetime strings)",
+        "If no forecast data for a beach, show 'No forecast data' in --color-text-secondary instead of conditions",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Fetching 8 individual forecasts is acceptable for MVP. The forecast response shape: { hourlyForecasts: [{ rawData: { swell_wave_height, swell_wave_period, swell_wave_direction, wind_speed_10m, wind_direction_10m, ... }, ... }], dailySummaries: [{ bestWindowStart, bestWindowEnd, ... }] }. Use Promise.all for parallel forecast fetches. Handle missing/failed forecasts gracefully — don't block the whole listing."
+    },
+    {
+      "id": "US-004",
+      "title": "Staleness indicator",
+      "description": "As a user, I want to know how fresh the data is so I can trust what I'm seeing.",
+      "acceptanceCriteria": [
+        "ui/src/utils/time.ts created with formatRelativeTime(dateString: string): string function",
+        "Relative time formatting: <1 min → 'Updated just now', 1–59 min → 'Updated Xm ago', 1–23h → 'Updated Xh ago', 1+ days → 'Updated Xd ago'",
+        "Each beach card shows staleness text using --font-size-xs and --color-text-secondary",
+        "If lastUpdated is null, show 'No data yet' instead",
+        "If data is older than 6 hours, staleness text color changes to --color-surf-maybe (warning yellow)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Compare lastUpdated against Date.now() to compute the difference. The 6-hour warning threshold matches the default FORECAST_INTERVAL_HOURS on the backend."
+    },
+    {
+      "id": "US-005",
+      "title": "Favourite toggle",
+      "description": "As a user, I want to favourite beaches so I can quickly find my preferred spots.",
+      "acceptanceCriteria": [
+        "Each beach card has a heart icon button in the top-right corner using <surf-icon name='heart'>",
+        "Tapping the heart calls beachStore.toggleFavourite(beachId)",
+        "Favourited beaches show a filled/highlighted heart — apply color: var(--color-surf-poor) (red) via a CSS class",
+        "Non-favourited beaches show the heart in --color-text-secondary (outlined default)",
+        "Heart icon button has minimum 44x44px touch target (use padding or min-width/min-height on the button wrapper)",
+        "Favourite state is reactive — toggling immediately updates the icon without re-fetching data",
+        "Heart click does NOT trigger the card-click event (use @click.stop or stopPropagation)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Favourites are in Pinia store memory only — reset on reload. Use beachStore.favourites.has(beach.id) to check state. The heart icon from lucide is an outline by default; for filled state, either use CSS fill property or a different visual treatment (bold stroke + red color is sufficient)."
+    },
+    {
+      "id": "US-006",
+      "title": "Pull-to-refresh",
+      "description": "As a user, I want to pull down on the listing to refresh data so I can get the latest scores.",
+      "acceptanceCriteria": [
+        "Pull-to-refresh implemented: pulling down on the beach list triggers beachStore.fetchBeaches()",
+        "Visual indicator during pull: a <surf-icon name='refresh-cw'> appears at the top of the list area, rotates or animates while refreshing",
+        "The header refresh button also triggers beachStore.fetchBeaches() and shows spinning/loading state",
+        "Pull gesture has minimum 60px threshold to avoid accidental triggers",
+        "After refresh completes, indicator dismisses and list updates with new data",
+        "Implemented as a Vue composable (e.g. ui/src/composables/usePullToRefresh.ts) that attaches touchstart/touchmove/touchend listeners",
+        "On desktop (no touch events), only the header refresh button is available — no pull gesture needed",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Keep the pull-to-refresh implementation simple — a custom composable with touch event listeners. Return { isPulling, pullDistance, isRefreshing } from the composable so the template can react. Attach to the scrollable container element via a template ref."
+    }
+  ]
+}
