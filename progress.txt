@@ -55,6 +55,17 @@
   - Typecheck passes. Manual browser verification still needed (touch gesture best tested on device or Chrome devtools touch emulation).
 ---
 
+## 2026-04-09 - US-002 (Phase 7)
+- Added lazy /beaches/:id route (name: beach-detail) in ui/src/router.ts.
+- Created ui/src/views/BeachDetailView.vue scaffold: header with back button (router.back() or /), beach name title, onMounted fetchBeachDetail, onBeforeUnmount clearSelectedBeach, loading + error/retry states, mobile-first max-width 600px layout.
+- HomeView surf-card now @click="openBeach(beach)" pushing to beach-detail route.
+- Files changed: ui/src/router.ts, ui/src/views/BeachDetailView.vue, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed.
+  - Router file lives at ui/src/router.ts so detail view import path is './views/BeachDetailView.vue' (PRD snippet used '../views/...' which would be wrong).
+  - Vue @click on a Lit <surf-card clickable> works — the card bubbles a native click in addition to the card-click custom event.
+---
+
 ## 2026-04-09 - US-001 (Phase 7)
 - Extended ui/src/types/beach.ts with HourlyForecast, DailySummary, ForecastSnapshot interfaces.
 - Extended beachStore state with selectedBeach, selectedForecast, detailLoading, detailError.

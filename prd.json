@@ -38,7 +38,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (fetchBeachDetail action). Existing surf-card already has clickable prop — use @click on the card element."
     },
     {

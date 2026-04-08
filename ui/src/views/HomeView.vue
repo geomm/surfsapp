@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useBeachStore } from '../stores/beachStore'
 import type { Beach } from '../types/beach'
 import { degreesToCompass } from '../utils/compass'
@@ -7,7 +8,12 @@ import { formatRelativeTime, isStale } from '../utils/time'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 
 const beachStore = useBeachStore()
+const router = useRouter()
 const scrollRoot = ref<HTMLElement | null>(null)
+
+function openBeach(b: Beach) {
+  router.push({ name: 'beach-detail', params: { id: b.id } })
+}
 
 const { isPulling, pullDistance, isRefreshing, trigger } = usePullToRefresh(scrollRoot, {
   threshold: 60,
@@ -107,7 +113,7 @@ function toggleFav(b: Beach) {
 
       <ul v-else class="beach-list">
         <li v-for="beach in beachStore.sortedBeaches" :key="beach.id" class="beach-item">
-          <surf-card clickable>
+          <surf-card clickable @click="openBeach(beach)">
             <div class="card-body">
               <div class="card-head">
                 <div class="beach-info">
