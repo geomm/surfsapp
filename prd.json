@@ -43,7 +43,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Use existing Lit components: <surf-card clickable>, <surf-badge variant=X>, <surf-icon name='refresh-cw'>. The surf-badge variant values match currentLabel exactly: 'very-good', 'good', 'maybe', 'poor'. The header refresh button will be wired to pull-to-refresh in US-006."
     },
     {

@@ -1,5 +1,5 @@
 ## Codebase Patterns
-- UI typecheck is run from repo root via `yarn typecheck` (not from ui/); it runs `vue-tsc --noEmit`.
+- UI typecheck: run `yarn typecheck` from ui/ (no root package.json). It runs `vue-tsc --noEmit`.
 - Lit components registered via `./components/lit/index` import in ui/src/main.ts.
 - Pinia uses Options API `defineStore` style for this project.
 
@@ -12,4 +12,17 @@
   - Branch ralph/phase-6-beach-listing-view created from main.
   - Run `yarn typecheck` from repo root, not from ui/.
   - sortedBeaches getter must place null scores last (not sort them as 0).
+---
+
+## 2026-04-08 - US-002
+- Replaced ui/src/views/HomeView.vue with beach listing: header (title + refresh icon), loading/error/retry states, sortedBeaches rendered as <surf-card clickable> list with name, region, <surf-badge> (variant=currentLabel or 'neutral' when null, score or 'No data' text), skillLevel tag.
+- Uses beachStore.fetchBeaches() onMounted; retry button re-fetches.
+- Mobile-first layout, max-width 600px centered, var(--space-4) gap between cards.
+- Dev routes /design and /components still in router.ts but no longer linked.
+- Files changed: ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Lit custom elements work in Vue templates without additional config; vue-tsc accepts them.
+  - Backend wasn't running locally during implementation; typecheck-only verification. Manual browser verification still needed.
+  - surf-card dispatches 'card-click' custom event (composed, bubbles) when clickable is set.
+  - surf-badge variant union includes 'neutral' — use it for null currentLabel.
 ---
