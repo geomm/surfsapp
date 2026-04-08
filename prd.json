@@ -20,7 +20,7 @@
         "Typecheck passes (cd ui && yarn typecheck)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "API base URL should be a constant at the top of the store: const API_BASE = 'http://localhost:3000'. Favourites are in-memory only — they reset on page reload. Use Options API style defineStore (not setup syntax) for clarity. The Beach interface will be extended in US-003 with forecast fields."
     },
     {

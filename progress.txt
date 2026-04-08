@@ -1,0 +1,15 @@
+## Codebase Patterns
+- UI typecheck is run from repo root via `yarn typecheck` (not from ui/); it runs `vue-tsc --noEmit`.
+- Lit components registered via `./components/lit/index` import in ui/src/main.ts.
+- Pinia uses Options API `defineStore` style for this project.
+
+## 2026-04-08 - US-001
+- Installed pinia in ui/ and registered createPinia() in ui/src/main.ts.
+- Created ui/src/types/beach.ts (Beach interface).
+- Created ui/src/stores/beachStore.ts with state (beaches, loading, error, favourites), actions (fetchBeaches, toggleFavourite), getters (sortedBeaches, favouriteBeaches). API_BASE constant at top.
+- Files changed: ui/package.json, ui/yarn.lock, ui/src/main.ts, ui/src/types/beach.ts, ui/src/stores/beachStore.ts
+- **Learnings for future iterations:**
+  - Branch ralph/phase-6-beach-listing-view created from main.
+  - Run `yarn typecheck` from repo root, not from ui/.
+  - sortedBeaches getter must place null scores last (not sort them as 0).
+---
