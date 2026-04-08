@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Beach } from '../types/beach'
+import type { Beach, ForecastSnapshot } from '../types/beach'
 
 const API_BASE = 'http://localhost:3000'
 
@@ -8,6 +8,10 @@ interface BeachState {
   loading: boolean
   error: string | null
   favourites: Set<string>
+  selectedBeach: Beach | null
+  selectedForecast: ForecastSnapshot | null
+  detailLoading: boolean
+  detailError: string | null
 }
 
 export const useBeachStore = defineStore('beach', {
@@ -16,6 +20,10 @@ export const useBeachStore = defineStore('beach', {
     loading: false,
     error: null,
     favourites: new Set<string>(),
+    selectedBeach: null,
+    selectedForecast: null,
+    detailLoading: false,
+    detailError: null,
   }),
   getters: {
     sortedBeaches(state): Beach[] {
@@ -71,6 +79,32 @@ export const useBeachStore = defineStore('beach', {
       } finally {
         this.loading = false
       }
+    },
+    async fetchBeachDetail(id: string) {
+      this.detailLoading = true
+      this.detailError = null
+      const cached = this.beaches.find((b) => b.id === id)
+      if (cached) this.selectedBeach = cached
+      try {
+        const [beachRes, forecastRes] = await Promise.all([
+          fetch(`${API_BASE}/beaches/${id}`),
+          fetch(`${API_BASE}/beaches/${id}/forecast`),
+        ])
+        if (!beachRes.ok) throw new Error(`Failed to fetch beach: ${beachRes.status}`)
+        if (!forecastRes.ok) throw new Error(`Failed to fetch forecast: ${forecastRes.status}`)
+        const beach = (await beachRes.json()) as Beach
+        const forecast = (await forecastRes.json()) as ForecastSnapshot
+        this.selectedBeach = beach
+        this.selectedForecast = forecast
+      } catch (err) {
+        this.detailError = err instanceof Error ? err.message : 'Unknown error'
+      } finally {
+        this.detailLoading = false
+      }
+    },
+    clearSelectedBeach() {
+      this.selectedBeach = null
+      this.selectedForecast = null
     },
     toggleFavourite(beachId: string) {
       if (this.favourites.has(beachId)) {

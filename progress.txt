@@ -55,6 +55,29 @@
   - Typecheck passes. Manual browser verification still needed (touch gesture best tested on device or Chrome devtools touch emulation).
 ---
 
+## 2026-04-09 - US-002 (Phase 7)
+- Added lazy /beaches/:id route (name: beach-detail) in ui/src/router.ts.
+- Created ui/src/views/BeachDetailView.vue scaffold: header with back button (router.back() or /), beach name title, onMounted fetchBeachDetail, onBeforeUnmount clearSelectedBeach, loading + error/retry states, mobile-first max-width 600px layout.
+- HomeView surf-card now @click="openBeach(beach)" pushing to beach-detail route.
+- Files changed: ui/src/router.ts, ui/src/views/BeachDetailView.vue, ui/src/views/HomeView.vue
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed.
+  - Router file lives at ui/src/router.ts so detail view import path is './views/BeachDetailView.vue' (PRD snippet used '../views/...' which would be wrong).
+  - Vue @click on a Lit <surf-card clickable> works — the card bubbles a native click in addition to the card-click custom event.
+---
+
+## 2026-04-09 - US-001 (Phase 7)
+- Extended ui/src/types/beach.ts with HourlyForecast, DailySummary, ForecastSnapshot interfaces.
+- Extended beachStore state with selectedBeach, selectedForecast, detailLoading, detailError.
+- Added fetchBeachDetail(id) action: seeds selectedBeach from cached list, then Promise.all parallel fetches /beaches/:id and /beaches/:id/forecast.
+- Added clearSelectedBeach() action.
+- Branch ralph/phase-7-beach-detail-view created from main.
+- Files changed: ui/src/types/beach.ts, ui/src/stores/beachStore.ts
+- **Learnings for future iterations:**
+  - Typecheck: `cd ui && yarn typecheck` passes.
+  - Backend GET /beaches/:id assumed to return a Beach object directly (matches phase-6 list shape).
+---
+
 ## 2026-04-08 - US-005
 - Added heart favourite button to each beach card in HomeView; uses @click.stop to avoid card-click. Styled via .fav-btn (44x44 touch target) and .fav-btn-on (red + bold).
 - Reactivity works through pinia store's `favourites` Set via isFavourite() helper calling beachStore.favourites.has.
@@ -62,4 +85,52 @@
 - **Learnings for future iterations:**
   - Pinia Set state is reactive in templates when read inside a function (re-evaluated on render).
   - Typecheck passes. Manual browser verification still needed.
+---
+
+## 2026-04-09 - US-004 (Phase 7)
+- Created ui/src/components/lit/surf-disclosure.ts: reactive `summary` + `open` (reflected) props, header with default/named 'summary' slot, chevron-right icon rotating 90° when open, body max-height+opacity 200ms transition, dispatches composed/bubbling 'toggle' event with {open}.
+- Registered in ui/src/components/lit/index.ts (imported once by main.ts via the barrel).
+- Added closed + open examples to ComponentsPreview (/components gallery).
+- Files changed: ui/src/components/lit/surf-disclosure.ts, ui/src/components/lit/index.ts, ui/src/views/ComponentsPreview.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - Lit components are registered via the ui/src/components/lit/index.ts barrel (imported once in main.ts) — add new components there, not directly in main.ts.
+  - `reflect: true` on boolean props lets CSS use `:host([open])` selectors for state-driven styling.
+---
+
+## 2026-04-09 - US-005 (Phase 7)
+- Added ui/src/utils/reasons.ts with classifyReason(reason, score).
+- BeachDetailView renders <surf-disclosure summary="Why this score"> beneath the hero; pros/cons grouped from selectedForecast.hourlyForecasts[0].reasons; ✓ / ✕ unicode icons colored via --color-surf-very-good / --color-surf-poor; empty groups hidden; 'No detailed reasons available' fallback.
+- Files changed: ui/src/utils/reasons.ts, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+---
+
+## 2026-04-09 - US-006 (Phase 7)
+- Installed maplibre-gl in ui/, imported maplibre-gl.css in ui/src/main.ts.
+- Created ui/src/components/BeachMap.vue with props coords + name, demo style, marker + popup, 240px container, destroy on unmount, 'Map unavailable' fallback on init error.
+- BeachDetailView renders <BeachMap> between the reasons disclosure and the (future) forecast strip.
+- Files changed: ui/package.json, ui/yarn.lock, ui/src/main.ts, ui/src/components/BeachMap.vue, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - BeachDetailView is already lazy-loaded via dynamic import in router.ts, so MapLibre's bundle only hits the detail route.
+---
+
+## 2026-04-09 - US-003 (Phase 7)
+- BeachDetailView hero block: name, region, large score number next to <surf-badge>, favourite heart (44x44, red when active) absolute top-right, staleness line with 6h warn color, 'No data'/'No data yet' fallback.
+- Reused formatRelativeTime/isStale and favourites pattern from HomeView.
+- Files changed: ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - --font-size-2xl not confirmed to exist; used fallback var(--font-size-2xl, var(--font-size-xl)).
+---
+
+## 2026-04-09 - US-007 (Phase 7)
+- Extended ui/src/utils/time.ts with formatWeekday + formatDayOfMonth helpers.
+- Created ui/src/components/ForecastStrip.vue: horizontally scrollable scroll-snap strip of <surf-card> days with weekday, day-of-month, <surf-badge> peakScore/overallLabel, best window 'HH:MM–HH:MM' or '—'. Empty/null state → 'No forecast available'.
+- BeachDetailView renders <ForecastStrip> beneath <BeachMap> when selectedForecast has dailySummaries.
+- Files changed: ui/src/utils/time.ts, ui/src/components/ForecastStrip.vue, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck passes. Manual browser verification still needed.
+  - Phase 7 Beach Detail View is now complete — all 7 stories pass.
 ---

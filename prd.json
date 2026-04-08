@@ -17,7 +17,7 @@
         "Typecheck passes (cd ui && yarn typecheck)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "API_BASE constant already exists at the top of beachStore.ts — reuse it. Use Options API style defineStore (matches Phase 6 store)."
     },
     {
@@ -38,7 +38,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (fetchBeachDetail action). Existing surf-card already has clickable prop — use @click on the card element."
     },
     {
@@ -55,7 +55,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Reuse formatRelativeTime and the favourites pattern from Phase 6 HomeView. The 6-hour warning logic is identical to the home view card staleness."
     },
     {
@@ -78,7 +78,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Match the file/folder convention of other Lit components in ui/src/components/lit/. The chevron rotation: transform: rotate(90deg) when open. Use ::slotted selector to style slotted content if needed."
     },
     {
@@ -98,7 +98,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-004 (surf-disclosure component). Unicode ✓/✕ is preferred over extending the icon registry to keep this story small."
     },
     {
@@ -120,7 +120,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "BeachDetailView is lazy-loaded via dynamic import in router so MapLibre's ~200KB doesn't bloat the home view. Use a template ref to give MapLibre its container element."
     },
     {
@@ -141,7 +141,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "bestWindowStart/bestWindowEnd in dailySummaries are stored as 'HH:MM' strings on the backend (per Phase 6 progress notes) — extract directly, no ISO parsing needed. Verify shape against backend response if uncertain."
     }
   ]

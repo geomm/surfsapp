@@ -14,3 +14,15 @@ export function isStale(dateString: string, thresholdHours = 6): boolean {
   const diffMs = Date.now() - new Date(dateString).getTime()
   return diffMs > thresholdHours * 3600 * 1000
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+export function formatWeekday(dateString: string): string {
+  const d = new Date(dateString)
+  return WEEKDAYS[d.getDay()] ?? ''
+}
+
+export function formatDayOfMonth(dateString: string): string {
+  const d = new Date(dateString)
+  return String(d.getDate())
+}

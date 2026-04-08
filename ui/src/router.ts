@@ -7,6 +7,11 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: HomeView },
+    {
+      path: '/beaches/:id',
+      name: 'beach-detail',
+      component: () => import('./views/BeachDetailView.vue'),
+    },
     { path: '/design', component: DesignPreview },
     { path: '/components', component: ComponentsPreview },
   ],
