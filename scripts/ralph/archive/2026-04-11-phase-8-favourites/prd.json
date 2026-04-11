@@ -1,0 +1,87 @@
+{
+  "project": "surfsapp",
+  "branchName": "ralph/phase-8-favourites",
+  "description": "Phase 8 — Favourites. Persist favourites in IndexedDB via Dexie, hydrate on startup, add a favourites-only toggle filter in the home header, and show an illustrated empty state when no favourites are saved.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install Dexie and create database schema",
+      "description": "As a developer, I need an IndexedDB database so the app can persist data across sessions.",
+      "acceptanceCriteria": [
+        "dexie installed via yarn add dexie in ui/",
+        "ui/src/db.ts created, exporting a Dexie subclass instance named db",
+        "Database name: surfsapp",
+        "Version 1 schema with two tables: favourites (primary key beachId) and settings (primary key key)",
+        "TypeScript interfaces defined: FavouriteRecord { beachId: string } and SettingRecord { key: string; value: unknown }",
+        "Tables typed on the Dexie subclass so db.favourites and db.settings are fully typed",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Use Dexie v4 stable (not dexie@next). The settings table is created now but not used until Phase 11 — creating it early avoids a Dexie version bump later."
+    },
+    {
+      "id": "US-002",
+      "title": "Persist favourites to IndexedDB on toggle",
+      "description": "As a user, I want my favourite beaches to be remembered so they survive page refreshes and app restarts.",
+      "acceptanceCriteria": [
+        "beachStore.toggleFavourite(beachId) updated: after toggling the in-memory Set, write to IndexedDB — db.favourites.put({ beachId }) on add, db.favourites.delete(beachId) on remove",
+        "IndexedDB write is fire-and-forget (no await blocking the UI) but errors are caught and logged via console.error",
+        "Pinia remains the immediate source of truth — UI reacts to the Set, not to IndexedDB directly",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Import db from ui/src/db.ts. Wrap IndexedDB calls in .catch(console.error) to avoid unhandled rejections."
+    },
+    {
+      "id": "US-003",
+      "title": "Hydrate favourites from IndexedDB on app startup",
+      "description": "As a user, I want my previously saved favourites to appear immediately when I open the app.",
+      "acceptanceCriteria": [
+        "New action hydrateFavourites() added to beachStore: reads all records from db.favourites, populates the in-memory favourites Set",
+        "hydrateFavourites() called in App.vue onMounted (or in the store's initialization) so it runs once on app startup before the first render completes",
+        "If IndexedDB read fails, log the error and continue with an empty Set (graceful degradation)",
+        "Typecheck passes",
+        "Verify in browser: favourite a beach, refresh the page, confirm the heart is still filled"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Call hydrateFavourites() with await so it completes before fetchBeaches() to avoid a flash of unfavourited hearts."
+    },
+    {
+      "id": "US-004",
+      "title": "Favourites-only toggle in home header",
+      "description": "As a user, I want a quick toggle to filter the beach listing to only my favourites so I can focus on the beaches I care about.",
+      "acceptanceCriteria": [
+        "A toggle button added to the home header bar, positioned between the title and the refresh button",
+        "Toggle uses a <surf-icon name='heart'> — ≥44x44px touch target",
+        "Toggle has two visual states: inactive (default, --color-text-secondary) and active (filled, --color-surf-poor red)",
+        "New state showFavouritesOnly (boolean, default false) added to beachStore",
+        "New getter displayedBeaches added to beachStore: returns sortedBeaches filtered to only favourites when showFavouritesOnly is true, otherwise returns all sortedBeaches",
+        "New action toggleFavouritesFilter() toggles showFavouritesOnly",
+        "HomeView v-for updated to iterate over beachStore.displayedBeaches instead of beachStore.sortedBeaches",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "The toggle sits between the 'surfsapp' title and the refresh button in the header flex row."
+    },
+    {
+      "id": "US-005",
+      "title": "Empty state for favourites filter",
+      "description": "As a user, I want a helpful message when I filter to favourites but haven't saved any yet, so I know what to do.",
+      "acceptanceCriteria": [
+        "When showFavouritesOnly is true and displayedBeaches is empty, show an empty state block instead of the beach list",
+        "Empty state contains: a <surf-icon name='heart'> rendered at 48px in --color-text-secondary, a heading 'No favourites yet' (--font-size-lg, --font-weight-semibold), a subtext 'Tap the heart on any beach to save it here' (--font-size-sm, --color-text-secondary), and a <surf-button> labelled 'Show all beaches' that calls beachStore.toggleFavouritesFilter()",
+        "Empty state is vertically centered in the content area with --space-6 padding",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Reuse surf-icon and surf-button from existing Lit component library. The empty state should feel encouraging, not like an error."
+    }
+  ]
+}

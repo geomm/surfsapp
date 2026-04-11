@@ -1,87 +1,108 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-8-favourites",
-  "description": "Phase 8 — Favourites. Persist favourites in IndexedDB via Dexie, hydrate on startup, add a favourites-only toggle filter in the home header, and show an illustrated empty state when no favourites are saved.",
+  "branchName": "ralph/phase-9-offline-first",
+  "description": "Phase 9 — Offline First. Service worker via vite-plugin-pwa, IndexedDB caching of beaches and forecasts, network-first fetch with fallback, offline banner, and prompt-to-update banner.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Install Dexie and create database schema",
-      "description": "As a developer, I need an IndexedDB database so the app can persist data across sessions.",
+      "title": "Install vite-plugin-pwa and configure service worker",
+      "description": "As a developer, I need a service worker registered so the app shell is cached and the app loads offline.",
       "acceptanceCriteria": [
-        "dexie installed via yarn add dexie in ui/",
-        "ui/src/db.ts created, exporting a Dexie subclass instance named db",
-        "Database name: surfsapp",
-        "Version 1 schema with two tables: favourites (primary key beachId) and settings (primary key key)",
-        "TypeScript interfaces defined: FavouriteRecord { beachId: string } and SettingRecord { key: string; value: unknown }",
-        "Tables typed on the Dexie subclass so db.favourites and db.settings are fully typed",
+        "vite-plugin-pwa installed via yarn add -D vite-plugin-pwa in ui/",
+        "vite.config.ts updated: import VitePWA from vite-plugin-pwa and add to plugins array",
+        "PWA config: registerType 'prompt', workbox.globPatterns ['**/*.{js,css,html,ico,png,svg,woff2}']",
+        "manifest section with name 'surfsapp', short_name 'surfsapp', theme_color '#1a73e8', background_color '#ffffff', display 'standalone'",
+        "Add type reference for vite-plugin-pwa/vue in env.d.ts or vite-env.d.ts (/// <reference types='vite-plugin-pwa/vue' />) so virtual:pwa-register/vue imports typecheck",
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Use Dexie v4 stable (not dexie@next). The settings table is created now but not used until Phase 11 — creating it early avoids a Dexie version bump later."
+      "passes": false,
+      "notes": "Do NOT add icon files — Phase 10 handles icons. The manifest can reference placeholder paths. registerType 'prompt' means the new SW waits for user action before activating (US-006 builds the prompt UI). Service worker only works in production builds (yarn build && yarn preview), not dev mode."
     },
     {
       "id": "US-002",
-      "title": "Persist favourites to IndexedDB on toggle",
-      "description": "As a user, I want my favourite beaches to be remembered so they survive page refreshes and app restarts.",
+      "title": "Extend Dexie schema for beaches and forecasts cache",
+      "description": "As a developer, I need IndexedDB tables to cache API responses so the app can serve data offline.",
       "acceptanceCriteria": [
-        "beachStore.toggleFavourite(beachId) updated: after toggling the in-memory Set, write to IndexedDB — db.favourites.put({ beachId }) on add, db.favourites.delete(beachId) on remove",
-        "IndexedDB write is fire-and-forget (no await blocking the UI) but errors are caught and logged via console.error",
-        "Pinia remains the immediate source of truth — UI reacts to the Set, not to IndexedDB directly",
+        "ui/src/db.ts updated: Dexie version bumped to 2",
+        "New table beachesCache with schema '&id' — stores full Beach objects",
+        "New table forecastsCache with schema '&beachId' — stores full ForecastSnapshot objects",
+        "TypeScript interfaces added: BeachCacheRecord (same shape as Beach) and ForecastCacheRecord (same shape as ForecastSnapshot)",
+        "Tables typed on the SurfsAppDB class: db.beachesCache and db.forecastsCache are fully typed",
+        "Existing v1 tables (favourites, settings) preserved in the v2 upgrade — v1 stores definition repeated in v2",
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Import db from ui/src/db.ts. Wrap IndexedDB calls in .catch(console.error) to avoid unhandled rejections."
+      "passes": false,
+      "notes": "Dexie requires repeating all stores in each version declaration. Import Beach and ForecastSnapshot types from types/beach.ts."
     },
     {
       "id": "US-003",
-      "title": "Hydrate favourites from IndexedDB on app startup",
-      "description": "As a user, I want my previously saved favourites to appear immediately when I open the app.",
+      "title": "Cache beaches and forecasts on successful fetch",
+      "description": "As a user, I want the app to save the latest data locally so it's available when I'm offline.",
       "acceptanceCriteria": [
-        "New action hydrateFavourites() added to beachStore: reads all records from db.favourites, populates the in-memory favourites Set",
-        "hydrateFavourites() called in App.vue onMounted (or in the store's initialization) so it runs once on app startup before the first render completes",
-        "If IndexedDB read fails, log the error and continue with an empty Set (graceful degradation)",
-        "Typecheck passes",
-        "Verify in browser: favourite a beach, refresh the page, confirm the heart is still filled"
+        "In beachStore.fetchBeaches(): after successful API response and enrichment, write all beaches to db.beachesCache via db.beachesCache.bulkPut(enriched)",
+        "In beachStore.fetchBeaches(): for each beach where the forecast fetch succeeded, write the forecast to db.forecastsCache via db.forecastsCache.put(forecast) — the forecast object must include beachId",
+        "In beachStore.fetchBeachDetail(id): after successful API response, write beach to db.beachesCache.put(beach) and forecast to db.forecastsCache.put(forecast)",
+        "All IndexedDB writes are fire-and-forget (.catch(console.error)) — never block UI on cache writes",
+        "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Call hydrateFavourites() with await so it completes before fetchBeaches() to avoid a flash of unfavourited hearts."
+      "passes": false,
+      "notes": "The forecast object from GET /beaches/:id/forecast already contains beachId. For the listing enrichment, you need to store the raw forecast response before extracting swell/wind fields — capture it in the per-beach map callback."
     },
     {
       "id": "US-004",
-      "title": "Favourites-only toggle in home header",
-      "description": "As a user, I want a quick toggle to filter the beach listing to only my favourites so I can focus on the beaches I care about.",
+      "title": "Network-first fetch with IndexedDB fallback",
+      "description": "As a user, I want the app to show cached data when I'm offline so I can still check conditions.",
       "acceptanceCriteria": [
-        "A toggle button added to the home header bar, positioned between the title and the refresh button",
-        "Toggle uses a <surf-icon name='heart'> — ≥44x44px touch target",
-        "Toggle has two visual states: inactive (default, --color-text-secondary) and active (filled, --color-surf-poor red)",
-        "New state showFavouritesOnly (boolean, default false) added to beachStore",
-        "New getter displayedBeaches added to beachStore: returns sortedBeaches filtered to only favourites when showFavouritesOnly is true, otherwise returns all sortedBeaches",
-        "New action toggleFavouritesFilter() toggles showFavouritesOnly",
-        "HomeView v-for updated to iterate over beachStore.displayedBeaches instead of beachStore.sortedBeaches",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "In beachStore.fetchBeaches(): wrap existing network fetch in try/catch; on network failure, read from db.beachesCache.toArray() and for each cached beach read its forecast from db.forecastsCache.get(beach.id); enrich cached beaches the same way as network beaches (swell/wind/bestWindow extraction from forecast); set this.beaches from cache",
+        "If both network and cache fail (no cached data), set this.error to 'No internet connection and no cached data available'",
+        "In beachStore.fetchBeachDetail(id): on network failure, read from db.beachesCache.get(id) and db.forecastsCache.get(id); set selectedBeach and selectedForecast from cache",
+        "If detail cache miss, set detailError to 'No internet connection and no cached data for this beach'",
+        "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "The toggle sits between the 'surfsapp' title and the refresh button in the header flex row."
+      "passes": false,
+      "notes": "The enrichment logic (extracting swell/wind/bestWindow from forecast hourlyForecasts and dailySummaries) must work identically for both network and cached data. Consider extracting a helper function to avoid duplication."
     },
     {
       "id": "US-005",
-      "title": "Empty state for favourites filter",
-      "description": "As a user, I want a helpful message when I filter to favourites but haven't saved any yet, so I know what to do.",
+      "title": "Offline banner",
+      "description": "As a user, I want to know when I'm offline so I understand the data may be stale.",
       "acceptanceCriteria": [
-        "When showFavouritesOnly is true and displayedBeaches is empty, show an empty state block instead of the beach list",
-        "Empty state contains: a <surf-icon name='heart'> rendered at 48px in --color-text-secondary, a heading 'No favourites yet' (--font-size-lg, --font-weight-semibold), a subtext 'Tap the heart on any beach to save it here' (--font-size-sm, --color-text-secondary), and a <surf-button> labelled 'Show all beaches' that calls beachStore.toggleFavouritesFilter()",
-        "Empty state is vertically centered in the content area with --space-6 padding",
+        "ui/src/composables/useOnlineStatus.ts created: exports a reactive isOnline ref tracking navigator.onLine, listens to window online/offline events, cleans up listeners on scope dispose",
+        "App.vue imports useOnlineStatus and renders a top banner when !isOnline",
+        "Banner has amber/yellow background (--color-surf-maybe or #f59e0b), white bold text, full-width, fixed to top with z-index above header",
+        "Banner text: 'You're offline — showing cached data'",
+        "Banner has a slide-down CSS transition when appearing (~200ms) and slide-up when disappearing",
+        "When banner is visible, page content shifts down (not overlapped) — use a top padding/margin on the app container equal to the banner height",
+        "Banner disappears immediately when connectivity returns",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Reuse surf-icon and surf-button from existing Lit component library. The empty state should feel encouraging, not like an error."
+      "passes": false,
+      "notes": "navigator.onLine is not 100% reliable (captive portals) but is sufficient for MVP. Use onScopeDispose from Vue to clean up event listeners."
+    },
+    {
+      "id": "US-006",
+      "title": "Prompt-to-update banner for new service worker",
+      "description": "As a user, I want to know when a new version of the app is available so I can update.",
+      "acceptanceCriteria": [
+        "ui/src/composables/useServiceWorker.ts created: imports useRegisterSW from virtual:pwa-register/vue, exposes needRefresh (boolean ref) and updateServiceWorker (function)",
+        "App.vue imports useServiceWorker and renders a top banner when needRefresh is true",
+        "Banner has blue/primary background, white text: 'New version available' with a <surf-button> labelled 'Refresh' that calls updateServiceWorker(true)",
+        "If both offline banner and update banner would show simultaneously, offline banner takes priority (update banner hidden)",
+        "Banner has the same slide-down/slide-up animation style as the offline banner",
+        "Page content shifts down when banner is visible",
+        "After clicking Refresh, the page reloads with the new service worker active",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "virtual:pwa-register/vue is provided by vite-plugin-pwa and requires registerType 'prompt' (set in US-001). This composable only works in production builds — in dev mode needRefresh will always be false. Ensure the type reference from US-001 is in place so the import typechecks."
     }
   ]
 }
