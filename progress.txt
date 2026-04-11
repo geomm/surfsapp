@@ -2,6 +2,7 @@
 - UI typecheck: run `yarn typecheck` from ui/ (no root package.json). It runs `vue-tsc --noEmit`.
 - Lit components registered via `./components/lit/index` import in ui/src/main.ts.
 - Pinia uses Options API `defineStore` style for this project.
+- IndexedDB via Dexie: `ui/src/db.ts` exports `db` (SurfsAppDB) with `favourites` (&beachId) and `settings` (&key) tables. Import as `import { db } from '../db'` from stores/components.
 
 ## 2026-04-08 - US-001
 - Installed pinia in ui/ and registered createPinia() in ui/src/main.ts.
@@ -123,6 +124,18 @@
 - **Learnings for future iterations:**
   - Typecheck passes. Manual browser verification still needed.
   - --font-size-2xl not confirmed to exist; used fallback var(--font-size-2xl, var(--font-size-xl)).
+---
+
+## 2026-04-11 - US-001 (Phase 8)
+- Branch ralph/phase-8-favourites created from main.
+- Installed dexie@4 (yarn add dexie) in ui/.
+- Created ui/src/db.ts exporting a SurfsAppDB Dexie subclass (database name: 'surfsapp') with version 1 schema: favourites (&beachId) and settings (&key). Tables typed via Table<FavouriteRecord, string> / Table<SettingRecord, string> class fields so db.favourites and db.settings are fully typed.
+- Exported FavouriteRecord and SettingRecord interfaces from the same module.
+- Files changed: ui/package.json, ui/yarn.lock, ui/src/db.ts
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - Dexie Table generic takes (RecordType, PrimaryKey) — use `&beachId` / `&key` for unique string primary keys.
+  - The settings table is created in v1 even though it isn't used until Phase 11 to avoid a future Dexie version bump.
 ---
 
 ## 2026-04-09 - US-007 (Phase 7)
