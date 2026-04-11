@@ -65,7 +65,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The toggle sits between the 'surfsapp' title and the refresh button in the header flex row."
     },
     {

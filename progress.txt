@@ -160,6 +160,17 @@
   - Phase 7 Beach Detail View is now complete — all 7 stories pass.
 ---
 
+## 2026-04-11 - US-004 (Phase 8)
+- beachStore: added showFavouritesOnly state (default false), displayedBeaches getter (filters sortedBeaches to favourites when showFavouritesOnly), and toggleFavouritesFilter() action.
+- HomeView header: added heart <surf-icon> toggle button between the title and the refresh button with aria-pressed + aria-label; active state uses --color-surf-poor, inactive uses --color-text-secondary. 44x44 touch target. Filter button uses margin-left: auto so it sits flush with the refresh button.
+- HomeView v-for now iterates over beachStore.displayedBeaches instead of sortedBeaches.
+- Files changed: ui/src/stores/beachStore.ts, ui/src/views/HomeView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed.
+  - Pinia options-API getters can reference other getters via `this.sortedBeaches` — typing works as long as the referenced getter has an explicit return type annotation.
+  - Header flex layout already used `justify-content: space-between`; adding `margin-left: auto` to a middle item keeps it grouped with the rightmost item without disturbing the title.
+---
+
 ## 2026-04-11 - US-003 (Phase 8)
 - Added beachStore.hydrateFavourites() action: reads all records from db.favourites, populates the in-memory favourites Set; on error, logs and continues with an empty Set.
 - Wired hydration in ui/src/main.ts BEFORE app.mount(): instantiates the store with the pinia instance, calls hydrateFavourites(), then mounts via .finally() so a hydration failure still mounts the app.

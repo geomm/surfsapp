@@ -9,6 +9,7 @@ interface BeachState {
   loading: boolean
   error: string | null
   favourites: Set<string>
+  showFavouritesOnly: boolean
   selectedBeach: Beach | null
   selectedForecast: ForecastSnapshot | null
   detailLoading: boolean
@@ -21,6 +22,7 @@ export const useBeachStore = defineStore('beach', {
     loading: false,
     error: null,
     favourites: new Set<string>(),
+    showFavouritesOnly: false,
     selectedBeach: null,
     selectedForecast: null,
     detailLoading: false,
@@ -37,6 +39,13 @@ export const useBeachStore = defineStore('beach', {
     },
     favouriteBeaches(state): Beach[] {
       return state.beaches.filter((b) => state.favourites.has(b.id))
+    },
+    displayedBeaches(state): Beach[] {
+      const sorted = this.sortedBeaches
+      if (state.showFavouritesOnly) {
+        return sorted.filter((b) => state.favourites.has(b.id))
+      }
+      return sorted
     },
   },
   actions: {
@@ -114,6 +123,9 @@ export const useBeachStore = defineStore('beach', {
       } catch (err) {
         console.error('Failed to hydrate favourites from IndexedDB', err)
       }
+    },
+    toggleFavouritesFilter() {
+      this.showFavouritesOnly = !this.showFavouritesOnly
     },
     toggleFavourite(beachId: string) {
       if (this.favourites.has(beachId)) {

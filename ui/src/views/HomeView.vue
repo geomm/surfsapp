@@ -83,6 +83,16 @@ function toggleFav(b: Beach) {
     <header class="header">
       <h1 class="title">surfsapp</h1>
       <button
+        type="button"
+        class="fav-filter-btn"
+        :class="{ 'fav-filter-btn-on': beachStore.showFavouritesOnly }"
+        :aria-label="beachStore.showFavouritesOnly ? 'Show all beaches' : 'Show favourites only'"
+        :aria-pressed="beachStore.showFavouritesOnly"
+        @click="beachStore.toggleFavouritesFilter()"
+      >
+        <surf-icon name="heart"></surf-icon>
+      </button>
+      <button
         class="refresh-btn"
         :class="{ 'refresh-btn-spinning': isRefreshing }"
         type="button"
@@ -112,7 +122,7 @@ function toggleFav(b: Beach) {
       </div>
 
       <ul v-else class="beach-list">
-        <li v-for="beach in beachStore.sortedBeaches" :key="beach.id" class="beach-item">
+        <li v-for="beach in beachStore.displayedBeaches" :key="beach.id" class="beach-item">
           <surf-card clickable @click="openBeach(beach)">
             <div class="card-body">
               <div class="card-head">
@@ -191,6 +201,24 @@ function toggleFav(b: Beach) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.fav-filter-btn {
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: auto;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fav-filter-btn-on {
+  color: var(--color-surf-poor);
 }
 
 .content {
