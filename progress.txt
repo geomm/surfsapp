@@ -190,3 +190,73 @@
   - To use a Pinia store before app.mount(), pass the pinia instance: `useBeachStore(pinia)`.
   - Use `.finally()` (not `.then()`) on hydration so transient IndexedDB errors don't prevent the app from mounting.
 ---
+
+## 2026-04-11 - US-002 (Phase 9)
+- Extended ui/src/db.ts with Dexie v2 schema: added beachesCache (&id) and forecastsCache (&beachId) tables. v1 stores (favourites, settings) repeated in the v2 version() call per Dexie requirements.
+- Added BeachCacheRecord and ForecastCacheRecord type aliases that reuse Beach and ForecastSnapshot from types/beach.ts (the cache records are shape-identical to the API types).
+- Typed db.beachesCache and db.forecastsCache as Table<..., string> class fields.
+- Files changed: ui/src/db.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - Dexie v2 upgrade added without an upgrade() callback — new stores don't need data migration.
+  - Type aliases (not re-declarations) for cache records keep the shapes in sync with the API types automatically.
+---
+
+## 2026-04-11 - US-003 (Phase 9)
+- beachStore.fetchBeaches: refactored the per-beach map callback to return { beach, forecast } tuples instead of just an enriched Beach — the raw ForecastSnapshot is captured before swell/wind extraction so it can be cached. After enrichment, db.beachesCache.bulkPut(enriched) writes all beaches; for each result with a non-null forecast, db.forecastsCache.put(forecast) writes the snapshot. All writes are fire-and-forget with .catch(console.error).
+- beachStore.fetchBeachDetail: added fire-and-forget db.beachesCache.put(beach) and db.forecastsCache.put(forecast) after the successful API responses.
+- Forecast responses now typed as ForecastSnapshot (was untyped); the beachId field is populated by the backend so cached records satisfy the &beachId primary key in db.forecastsCache.
+- Files changed: ui/src/stores/beachStore.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed.
+  - Dexie bulkPut/put return Promises — keep them unawaited so cache writes never block UI rendering, but always attach .catch to avoid unhandled rejections (same pattern as the Phase 8 favourites writes).
+  - When an enrichment step transforms the API response and discards part of it, return a tuple { transformed, raw } from the map callback so callers can still access the raw payload (here: for IndexedDB caching).
+  - The `first` rawData object needs an explicit `Record<string, number>` type annotation because `?? {}` widens the union and otherwise loses the index signature.
+---
+
+## 2026-04-11 - US-004 (Phase 9)
+- Extracted enrichBeachWithForecast(beach, forecast) helper at module scope in beachStore.ts so enrichment logic is identical for network and cached data paths.
+- beachStore.fetchBeaches: on network error, reads db.beachesCache.toArray(); for each cached beach, reads matching forecast from db.forecastsCache.get(beach.id) and enriches via the shared helper. If cache is empty, sets this.error to 'No internet connection and no cached data available'. On successful cache hydration, clears this.error.
+- beachStore.fetchBeachDetail: on network error, Promise.all reads db.beachesCache.get(id) + db.forecastsCache.get(id). If no cached beach, sets detailError to 'No internet connection and no cached data for this beach'. Otherwise sets selectedBeach + selectedForecast from cache and clears detailError.
+- Files changed: ui/src/stores/beachStore.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (toggle devtools offline mode, refresh, confirm cached data renders with no error banner).
+  - The outer try/catch's `err` variable is accessible from within a nested try/catch inside the catch block — useful as a final fallback when the cache read itself also fails.
+  - enrichBeachWithForecast is a pure module-scope helper (not a store method) because it doesn't need `this` and keeping it outside the Pinia options object avoids `this` typing headaches in Options-API stores.
+---
+
+## 2026-04-11 - US-001 (Phase 9)
+- Branch ralph/phase-9-offline-first created from main.
+- Installed vite-plugin-pwa@1.2.0 as a dev dependency in ui/.
+- Updated ui/vite.config.ts: imported VitePWA and added to plugins array with registerType 'prompt', workbox globPatterns ['**/*.{js,css,html,ico,png,svg,woff2}'], and a minimal manifest (name/short_name 'surfsapp', theme_color '#1a73e8', background_color '#ffffff', display 'standalone'). No icons included (Phase 10).
+- Created ui/src/vite-env.d.ts with /// <reference types="vite/client" /> and /// <reference types="vite-plugin-pwa/vue" /> so future virtual:pwa-register/vue imports typecheck.
+- Files changed: ui/package.json, ui/yarn.lock, ui/vite.config.ts, ui/src/vite-env.d.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - The ui/ project previously had no vite-env.d.ts — created one that includes both vite/client and vite-plugin-pwa/vue references.
+  - registerType 'prompt' is required for the US-006 update-banner UX (the new SW waits for user action before activating).
+  - Service worker is only registered in production builds (yarn build && yarn preview) — dev mode will not register it, so US-005/US-006 browser verification must run against a production build.
+---
+
+## 2026-04-11 - US-006 (Phase 9)
+- Created ui/src/composables/useServiceWorker.ts: wraps useRegisterSW from virtual:pwa-register/vue, exposes needRefresh ref + updateServiceWorker function, logs onRegisterError.
+- App.vue: imported useServiceWorker and added a second fixed-top banner (.update-banner) rendered via <Transition name="banner"> that reuses the existing slide-down/up CSS. Blue background (var(--color-primary, #1a73e8)), white 'New version available' text and a <surf-button variant="secondary" size="sm"> Refresh button that calls updateServiceWorker(true). Offline takes priority: showUpdateBanner is gated by `needRefresh && isOnline`, so when offline the update banner is hidden even if a new SW is waiting.
+- The app-shell--banner padding-top is now driven by a shared showAnyBanner computed so either banner pushes the page content down by 40px.
+- The update banner's surf-button overrides --color-primary to #ffffff so the secondary variant's text/border render white on the blue banner background.
+- Files changed: ui/src/composables/useServiceWorker.ts, ui/src/App.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification requires a production build: `cd ui && yarn build && yarn preview`, then make a code change, rebuild, and refresh twice to see the update banner. In dev mode needRefresh is always false.
+  - The vite-plugin-pwa/vue virtual module import only typechecks because ui/src/vite-env.d.ts has `/// <reference types="vite-plugin-pwa/vue" />` (added in US-001).
+  - surf-button's secondary variant uses --color-primary for both its text and border; override the CSS custom property at the use site (`--color-primary: #ffffff`) to restyle it on coloured backgrounds rather than forking the component.
+  - Phase 9 Offline First is now complete — all 6 stories pass.
+---
+
+## 2026-04-11 - US-005 (Phase 9)
+- Created ui/src/composables/useOnlineStatus.ts: exports isOnline reactive ref seeded from navigator.onLine, subscribes to window online/offline events, cleans up listeners via onScopeDispose.
+- Replaced ui/src/App.vue template-only shell with a <script setup> that uses useOnlineStatus and renders a fixed-top offline banner inside a <Transition name="banner">. Banner is amber (--color-surf-maybe / #f59e0b), white bold 40px tall, z-index 1000, text 'You're offline — showing cached data'. Slide-down/up transform+opacity transition at 200ms. App shell div below gets padding-top: 40px when offline (transition on padding-top).
+- Files changed: ui/src/composables/useOnlineStatus.ts, ui/src/App.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools offline toggle — banner should slide down and content should push down, not be overlapped).
+  - onScopeDispose from 'vue' works inside composables without an explicit component context; it ties cleanup to the current effect scope (in this case the setup function of App.vue).
+  - App.vue was previously template-only with just <RouterView />; this is the first time it holds app-chrome. Future banners (US-006 update banner) should render in this same location and share the 40px fixed-top banner pattern.
+---
