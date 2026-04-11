@@ -83,6 +83,16 @@ function toggleFav(b: Beach) {
     <header class="header">
       <h1 class="title">surfsapp</h1>
       <button
+        type="button"
+        class="fav-filter-btn"
+        :class="{ 'fav-filter-btn-on': beachStore.showFavouritesOnly }"
+        :aria-label="beachStore.showFavouritesOnly ? 'Show all beaches' : 'Show favourites only'"
+        :aria-pressed="beachStore.showFavouritesOnly"
+        @click="beachStore.toggleFavouritesFilter()"
+      >
+        <surf-icon name="heart"></surf-icon>
+      </button>
+      <button
         class="refresh-btn"
         :class="{ 'refresh-btn-spinning': isRefreshing }"
         type="button"
@@ -111,8 +121,20 @@ function toggleFav(b: Beach) {
         <surf-button @click="retry">Retry</surf-button>
       </div>
 
+      <div
+        v-else-if="beachStore.showFavouritesOnly && beachStore.displayedBeaches.length === 0"
+        class="empty-state"
+      >
+        <surf-icon name="heart" size="48"></surf-icon>
+        <h2 class="empty-title">No favourites yet</h2>
+        <p class="empty-subtext">Tap the heart on any beach to save it here</p>
+        <surf-button variant="secondary" @click="beachStore.toggleFavouritesFilter()">
+          Show all beaches
+        </surf-button>
+      </div>
+
       <ul v-else class="beach-list">
-        <li v-for="beach in beachStore.sortedBeaches" :key="beach.id" class="beach-item">
+        <li v-for="beach in beachStore.displayedBeaches" :key="beach.id" class="beach-item">
           <surf-card clickable @click="openBeach(beach)">
             <div class="card-body">
               <div class="card-head">
@@ -191,6 +213,24 @@ function toggleFav(b: Beach) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.fav-filter-btn {
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: auto;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fav-filter-btn-on {
+  color: var(--color-surf-poor);
 }
 
 .content {
@@ -280,6 +320,35 @@ function toggleFav(b: Beach) {
 
 .staleness-warn {
   color: var(--color-surf-maybe);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  text-align: center;
+  min-height: 60vh;
+  color: var(--color-text-secondary);
+}
+
+.empty-state surf-icon {
+  color: var(--color-text-secondary);
+}
+
+.empty-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.empty-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
 .fav-btn {

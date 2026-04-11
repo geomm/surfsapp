@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Beach, ForecastSnapshot } from '../types/beach'
+import { db } from '../db'
 
 const API_BASE = 'http://localhost:3000'
 
@@ -8,6 +9,7 @@ interface BeachState {
   loading: boolean
   error: string | null
   favourites: Set<string>
+  showFavouritesOnly: boolean
   selectedBeach: Beach | null
   selectedForecast: ForecastSnapshot | null
   detailLoading: boolean
@@ -20,6 +22,7 @@ export const useBeachStore = defineStore('beach', {
     loading: false,
     error: null,
     favourites: new Set<string>(),
+    showFavouritesOnly: false,
     selectedBeach: null,
     selectedForecast: null,
     detailLoading: false,
@@ -36,6 +39,13 @@ export const useBeachStore = defineStore('beach', {
     },
     favouriteBeaches(state): Beach[] {
       return state.beaches.filter((b) => state.favourites.has(b.id))
+    },
+    displayedBeaches(state): Beach[] {
+      const sorted = this.sortedBeaches
+      if (state.showFavouritesOnly) {
+        return sorted.filter((b) => state.favourites.has(b.id))
+      }
+      return sorted
     },
   },
   actions: {
@@ -106,11 +116,28 @@ export const useBeachStore = defineStore('beach', {
       this.selectedBeach = null
       this.selectedForecast = null
     },
+    async hydrateFavourites() {
+      try {
+        const records = await db.favourites.toArray()
+        this.favourites = new Set(records.map((r) => r.beachId))
+      } catch (err) {
+        console.error('Failed to hydrate favourites from IndexedDB', err)
+      }
+    },
+    toggleFavouritesFilter() {
+      this.showFavouritesOnly = !this.showFavouritesOnly
+    },
     toggleFavourite(beachId: string) {
       if (this.favourites.has(beachId)) {
         this.favourites.delete(beachId)
+        db.favourites.delete(beachId).catch((err) => {
+          console.error('Failed to remove favourite from IndexedDB', err)
+        })
       } else {
         this.favourites.add(beachId)
+        db.favourites.put({ beachId }).catch((err) => {
+          console.error('Failed to persist favourite to IndexedDB', err)
+        })
       }
     },
   },

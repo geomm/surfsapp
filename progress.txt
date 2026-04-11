@@ -2,6 +2,9 @@
 - UI typecheck: run `yarn typecheck` from ui/ (no root package.json). It runs `vue-tsc --noEmit`.
 - Lit components registered via `./components/lit/index` import in ui/src/main.ts.
 - Pinia uses Options API `defineStore` style for this project.
+- IndexedDB via Dexie: `ui/src/db.ts` exports `db` (SurfsAppDB) with `favourites` (&beachId) and `settings` (&key) tables. Import as `import { db } from '../db'` from stores/components.
+- Vue parent `onMounted` fires AFTER child `onMounted`, so any startup work that must complete BEFORE child components mount (e.g. hydrating store from IndexedDB before HomeView's fetchBeaches) must run in main.ts before `app.mount()`, not in App.vue's onMounted.
+- To use a Pinia store inside main.ts (before mount), pass the pinia instance explicitly: `useBeachStore(pinia)`.
 
 ## 2026-04-08 - US-001
 - Installed pinia in ui/ and registered createPinia() in ui/src/main.ts.
@@ -125,6 +128,28 @@
   - --font-size-2xl not confirmed to exist; used fallback var(--font-size-2xl, var(--font-size-xl)).
 ---
 
+## 2026-04-11 - US-002 (Phase 8)
+- beachStore.toggleFavourite now persists to IndexedDB: db.favourites.put({ beachId }) on add, db.favourites.delete(beachId) on remove.
+- Fire-and-forget writes (no await); errors caught via .catch(console.error) so unhandled promise rejections don't bubble.
+- Pinia Set remains the immediate source of truth — UI reactivity unchanged.
+- Files changed: ui/src/stores/beachStore.ts
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - Dexie's put/delete return Promises; keep them unawaited but always attach .catch to avoid unhandled rejections.
+---
+
+## 2026-04-11 - US-001 (Phase 8)
+- Branch ralph/phase-8-favourites created from main.
+- Installed dexie@4 (yarn add dexie) in ui/.
+- Created ui/src/db.ts exporting a SurfsAppDB Dexie subclass (database name: 'surfsapp') with version 1 schema: favourites (&beachId) and settings (&key). Tables typed via Table<FavouriteRecord, string> / Table<SettingRecord, string> class fields so db.favourites and db.settings are fully typed.
+- Exported FavouriteRecord and SettingRecord interfaces from the same module.
+- Files changed: ui/package.json, ui/yarn.lock, ui/src/db.ts
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - Dexie Table generic takes (RecordType, PrimaryKey) — use `&beachId` / `&key` for unique string primary keys.
+  - The settings table is created in v1 even though it isn't used until Phase 11 to avoid a future Dexie version bump.
+---
+
 ## 2026-04-09 - US-007 (Phase 7)
 - Extended ui/src/utils/time.ts with formatWeekday + formatDayOfMonth helpers.
 - Created ui/src/components/ForecastStrip.vue: horizontally scrollable scroll-snap strip of <surf-card> days with weekday, day-of-month, <surf-badge> peakScore/overallLabel, best window 'HH:MM–HH:MM' or '—'. Empty/null state → 'No forecast available'.
@@ -133,4 +158,35 @@
 - **Learnings for future iterations:**
   - Typecheck passes. Manual browser verification still needed.
   - Phase 7 Beach Detail View is now complete — all 7 stories pass.
+---
+
+## 2026-04-11 - US-004 (Phase 8)
+- beachStore: added showFavouritesOnly state (default false), displayedBeaches getter (filters sortedBeaches to favourites when showFavouritesOnly), and toggleFavouritesFilter() action.
+- HomeView header: added heart <surf-icon> toggle button between the title and the refresh button with aria-pressed + aria-label; active state uses --color-surf-poor, inactive uses --color-text-secondary. 44x44 touch target. Filter button uses margin-left: auto so it sits flush with the refresh button.
+- HomeView v-for now iterates over beachStore.displayedBeaches instead of sortedBeaches.
+- Files changed: ui/src/stores/beachStore.ts, ui/src/views/HomeView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed.
+  - Pinia options-API getters can reference other getters via `this.sortedBeaches` — typing works as long as the referenced getter has an explicit return type annotation.
+  - Header flex layout already used `justify-content: space-between`; adding `margin-left: auto` to a middle item keeps it grouped with the rightmost item without disturbing the title.
+---
+
+## 2026-04-11 - US-005 (Phase 8)
+- HomeView: added empty state block shown when showFavouritesOnly is true AND displayedBeaches is empty. Contains surf-icon heart (48px), h2 'No favourites yet', subtext 'Tap the heart on any beach to save it here', and a secondary surf-button 'Show all beaches' wired to beachStore.toggleFavouritesFilter().
+- Empty state rendered via v-else-if between the error branch and the beach list v-else; centered with flex column, --space-6 padding, min-height 60vh so it feels visually anchored in the content area.
+- Files changed: ui/src/views/HomeView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (toggle filter with no favourites saved, confirm empty state appears; click 'Show all beaches' to confirm it clears the filter).
+  - Phase 8 Favourites is now complete — all 5 stories pass.
+---
+
+## 2026-04-11 - US-003 (Phase 8)
+- Added beachStore.hydrateFavourites() action: reads all records from db.favourites, populates the in-memory favourites Set; on error, logs and continues with an empty Set.
+- Wired hydration in ui/src/main.ts BEFORE app.mount(): instantiates the store with the pinia instance, calls hydrateFavourites(), then mounts via .finally() so a hydration failure still mounts the app.
+- Approach chosen because Vue parent onMounted runs AFTER children — calling it from App.vue would race HomeView's fetchBeaches and cause a flash of unfavourited hearts.
+- Files changed: ui/src/stores/beachStore.ts, ui/src/main.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (favourite a beach, refresh, confirm heart is still filled).
+  - To use a Pinia store before app.mount(), pass the pinia instance: `useBeachStore(pinia)`.
+  - Use `.finally()` (not `.then()`) on hydration so transient IndexedDB errors don't prevent the app from mounting.
 ---
