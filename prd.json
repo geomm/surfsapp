@@ -82,7 +82,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "navigator.onLine is not 100% reliable (captive portals) but is sufficient for MVP. Use onScopeDispose from Vue to clean up event listeners."
     },
     {
