@@ -3,6 +3,8 @@
 - Lit components registered via `./components/lit/index` import in ui/src/main.ts.
 - Pinia uses Options API `defineStore` style for this project.
 - IndexedDB via Dexie: `ui/src/db.ts` exports `db` (SurfsAppDB) with `favourites` (&beachId) and `settings` (&key) tables. Import as `import { db } from '../db'` from stores/components.
+- Vue parent `onMounted` fires AFTER child `onMounted`, so any startup work that must complete BEFORE child components mount (e.g. hydrating store from IndexedDB before HomeView's fetchBeaches) must run in main.ts before `app.mount()`, not in App.vue's onMounted.
+- To use a Pinia store inside main.ts (before mount), pass the pinia instance explicitly: `useBeachStore(pinia)`.
 
 ## 2026-04-08 - US-001
 - Installed pinia in ui/ and registered createPinia() in ui/src/main.ts.
@@ -156,4 +158,15 @@
 - **Learnings for future iterations:**
   - Typecheck passes. Manual browser verification still needed.
   - Phase 7 Beach Detail View is now complete — all 7 stories pass.
+---
+
+## 2026-04-11 - US-003 (Phase 8)
+- Added beachStore.hydrateFavourites() action: reads all records from db.favourites, populates the in-memory favourites Set; on error, logs and continues with an empty Set.
+- Wired hydration in ui/src/main.ts BEFORE app.mount(): instantiates the store with the pinia instance, calls hydrateFavourites(), then mounts via .finally() so a hydration failure still mounts the app.
+- Approach chosen because Vue parent onMounted runs AFTER children — calling it from App.vue would race HomeView's fetchBeaches and cause a flash of unfavourited hearts.
+- Files changed: ui/src/stores/beachStore.ts, ui/src/main.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (favourite a beach, refresh, confirm heart is still filled).
+  - To use a Pinia store before app.mount(), pass the pinia instance: `useBeachStore(pinia)`.
+  - Use `.finally()` (not `.then()`) on hydration so transient IndexedDB errors don't prevent the app from mounting.
 ---

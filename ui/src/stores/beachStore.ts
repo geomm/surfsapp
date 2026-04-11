@@ -107,6 +107,14 @@ export const useBeachStore = defineStore('beach', {
       this.selectedBeach = null
       this.selectedForecast = null
     },
+    async hydrateFavourites() {
+      try {
+        const records = await db.favourites.toArray()
+        this.favourites = new Set(records.map((r) => r.beachId))
+      } catch (err) {
+        console.error('Failed to hydrate favourites from IndexedDB', err)
+      }
+    },
     toggleFavourite(beachId: string) {
       if (this.favourites.has(beachId)) {
         this.favourites.delete(beachId)
