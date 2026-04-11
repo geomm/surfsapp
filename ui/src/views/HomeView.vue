@@ -293,6 +293,10 @@ function toggleFav(b: Beach) {
   justify-content: center;
   cursor: pointer;
   color: var(--color-text-secondary);
+  margin-left: auto;
+  margin-right: 0px;
+  border: 2px solid #cccccc54;
+  border-radius: 8px;
 }
 
 .fav-btn-on {
