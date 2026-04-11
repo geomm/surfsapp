@@ -33,7 +33,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Dexie requires repeating all stores in each version declaration. Import Beach and ForecastSnapshot types from types/beach.ts."
     },
     {

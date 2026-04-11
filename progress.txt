@@ -191,6 +191,17 @@
   - Use `.finally()` (not `.then()`) on hydration so transient IndexedDB errors don't prevent the app from mounting.
 ---
 
+## 2026-04-11 - US-002 (Phase 9)
+- Extended ui/src/db.ts with Dexie v2 schema: added beachesCache (&id) and forecastsCache (&beachId) tables. v1 stores (favourites, settings) repeated in the v2 version() call per Dexie requirements.
+- Added BeachCacheRecord and ForecastCacheRecord type aliases that reuse Beach and ForecastSnapshot from types/beach.ts (the cache records are shape-identical to the API types).
+- Typed db.beachesCache and db.forecastsCache as Table<..., string> class fields.
+- Files changed: ui/src/db.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - Dexie v2 upgrade added without an upgrade() callback — new stores don't need data migration.
+  - Type aliases (not re-declarations) for cache records keep the shapes in sync with the API types automatically.
+---
+
 ## 2026-04-11 - US-001 (Phase 9)
 - Branch ralph/phase-9-offline-first created from main.
 - Installed vite-plugin-pwa@1.2.0 as a dev dependency in ui/.
