@@ -101,7 +101,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "virtual:pwa-register/vue is provided by vite-plugin-pwa and requires registerType 'prompt' (set in US-001). This composable only works in production builds — in dev mode needRefresh will always be false. Ensure the type reference from US-001 is in place so the import typechecks."
     }
   ]

@@ -238,6 +238,19 @@
   - Service worker is only registered in production builds (yarn build && yarn preview) — dev mode will not register it, so US-005/US-006 browser verification must run against a production build.
 ---
 
+## 2026-04-11 - US-006 (Phase 9)
+- Created ui/src/composables/useServiceWorker.ts: wraps useRegisterSW from virtual:pwa-register/vue, exposes needRefresh ref + updateServiceWorker function, logs onRegisterError.
+- App.vue: imported useServiceWorker and added a second fixed-top banner (.update-banner) rendered via <Transition name="banner"> that reuses the existing slide-down/up CSS. Blue background (var(--color-primary, #1a73e8)), white 'New version available' text and a <surf-button variant="secondary" size="sm"> Refresh button that calls updateServiceWorker(true). Offline takes priority: showUpdateBanner is gated by `needRefresh && isOnline`, so when offline the update banner is hidden even if a new SW is waiting.
+- The app-shell--banner padding-top is now driven by a shared showAnyBanner computed so either banner pushes the page content down by 40px.
+- The update banner's surf-button overrides --color-primary to #ffffff so the secondary variant's text/border render white on the blue banner background.
+- Files changed: ui/src/composables/useServiceWorker.ts, ui/src/App.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification requires a production build: `cd ui && yarn build && yarn preview`, then make a code change, rebuild, and refresh twice to see the update banner. In dev mode needRefresh is always false.
+  - The vite-plugin-pwa/vue virtual module import only typechecks because ui/src/vite-env.d.ts has `/// <reference types="vite-plugin-pwa/vue" />` (added in US-001).
+  - surf-button's secondary variant uses --color-primary for both its text and border; override the CSS custom property at the use site (`--color-primary: #ffffff`) to restyle it on coloured backgrounds rather than forking the component.
+  - Phase 9 Offline First is now complete — all 6 stories pass.
+---
+
 ## 2026-04-11 - US-005 (Phase 9)
 - Created ui/src/composables/useOnlineStatus.ts: exports isOnline reactive ref seeded from navigator.onLine, subscribes to window online/offline events, cleans up listeners via onScopeDispose.
 - Replaced ui/src/App.vue template-only shell with a <script setup> that uses useOnlineStatus and renders a fixed-top offline banner inside a <Transition name="banner">. Banner is amber (--color-surf-maybe / #f59e0b), white bold 40px tall, z-index 1000, text 'You're offline — showing cached data'. Slide-down/up transform+opacity transition at 200ms. App shell div below gets padding-top: 40px when offline (transition on padding-top).

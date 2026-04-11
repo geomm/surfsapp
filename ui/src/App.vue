@@ -1,16 +1,35 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useOnlineStatus } from './composables/useOnlineStatus'
+import { useServiceWorker } from './composables/useServiceWorker'
 
 const { isOnline } = useOnlineStatus()
+const { needRefresh, updateServiceWorker } = useServiceWorker()
+
+const showOfflineBanner = computed(() => !isOnline.value)
+const showUpdateBanner = computed(() => needRefresh.value && isOnline.value)
+const showAnyBanner = computed(() => showOfflineBanner.value || showUpdateBanner.value)
+
+function handleRefresh() {
+  updateServiceWorker(true)
+}
 </script>
 
 <template>
   <Transition name="banner">
-    <div v-if="!isOnline" class="offline-banner" role="status" aria-live="polite">
+    <div v-if="showOfflineBanner" class="offline-banner" role="status" aria-live="polite">
       You're offline — showing cached data
     </div>
   </Transition>
-  <div :class="['app-shell', { 'app-shell--banner': !isOnline }]">
+  <Transition name="banner">
+    <div v-if="showUpdateBanner" class="update-banner" role="status" aria-live="polite">
+      <span class="update-banner__text">New version available</span>
+      <surf-button variant="secondary" size="sm" class="update-banner__button" @click="handleRefresh">
+        Refresh
+      </surf-button>
+    </div>
+  </Transition>
+  <div :class="['app-shell', { 'app-shell--banner': showAnyBanner }]">
     <RouterView />
   </div>
 </template>
@@ -33,6 +52,33 @@ const { isOnline } = useOnlineStatus()
   text-align: center;
   padding: 0 var(--space-4, 1rem);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3, 0.75rem);
+  background: var(--color-primary, #1a73e8);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: var(--font-size-sm, 0.875rem);
+  padding: 0 var(--space-4, 1rem);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.update-banner__text {
+  color: #ffffff;
+}
+
+.update-banner__button {
+  --color-primary: #ffffff;
 }
 
 .app-shell {
