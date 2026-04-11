@@ -16,7 +16,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Do NOT add icon files — Phase 10 handles icons. The manifest can reference placeholder paths. registerType 'prompt' means the new SW waits for user action before activating (US-006 builds the prompt UI). Service worker only works in production builds (yarn build && yarn preview), not dev mode."
     },
     {

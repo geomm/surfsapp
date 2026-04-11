@@ -190,3 +190,16 @@
   - To use a Pinia store before app.mount(), pass the pinia instance: `useBeachStore(pinia)`.
   - Use `.finally()` (not `.then()`) on hydration so transient IndexedDB errors don't prevent the app from mounting.
 ---
+
+## 2026-04-11 - US-001 (Phase 9)
+- Branch ralph/phase-9-offline-first created from main.
+- Installed vite-plugin-pwa@1.2.0 as a dev dependency in ui/.
+- Updated ui/vite.config.ts: imported VitePWA and added to plugins array with registerType 'prompt', workbox globPatterns ['**/*.{js,css,html,ico,png,svg,woff2}'], and a minimal manifest (name/short_name 'surfsapp', theme_color '#1a73e8', background_color '#ffffff', display 'standalone'). No icons included (Phase 10).
+- Created ui/src/vite-env.d.ts with /// <reference types="vite/client" /> and /// <reference types="vite-plugin-pwa/vue" /> so future virtual:pwa-register/vue imports typecheck.
+- Files changed: ui/package.json, ui/yarn.lock, ui/vite.config.ts, ui/src/vite-env.d.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - The ui/ project previously had no vite-env.d.ts — created one that includes both vite/client and vite-plugin-pwa/vue references.
+  - registerType 'prompt' is required for the US-006 update-banner UX (the new SW waits for user action before activating).
+  - Service worker is only registered in production builds (yarn build && yarn preview) — dev mode will not register it, so US-005/US-006 browser verification must run against a production build.
+---
