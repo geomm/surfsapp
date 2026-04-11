@@ -202,6 +202,18 @@
   - Type aliases (not re-declarations) for cache records keep the shapes in sync with the API types automatically.
 ---
 
+## 2026-04-11 - US-003 (Phase 9)
+- beachStore.fetchBeaches: refactored the per-beach map callback to return { beach, forecast } tuples instead of just an enriched Beach — the raw ForecastSnapshot is captured before swell/wind extraction so it can be cached. After enrichment, db.beachesCache.bulkPut(enriched) writes all beaches; for each result with a non-null forecast, db.forecastsCache.put(forecast) writes the snapshot. All writes are fire-and-forget with .catch(console.error).
+- beachStore.fetchBeachDetail: added fire-and-forget db.beachesCache.put(beach) and db.forecastsCache.put(forecast) after the successful API responses.
+- Forecast responses now typed as ForecastSnapshot (was untyped); the beachId field is populated by the backend so cached records satisfy the &beachId primary key in db.forecastsCache.
+- Files changed: ui/src/stores/beachStore.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed.
+  - Dexie bulkPut/put return Promises — keep them unawaited so cache writes never block UI rendering, but always attach .catch to avoid unhandled rejections (same pattern as the Phase 8 favourites writes).
+  - When an enrichment step transforms the API response and discards part of it, return a tuple { transformed, raw } from the map callback so callers can still access the raw payload (here: for IndexedDB caching).
+  - The `first` rawData object needs an explicit `Record<string, number>` type annotation because `?? {}` widens the union and otherwise loses the index signature.
+---
+
 ## 2026-04-11 - US-001 (Phase 9)
 - Branch ralph/phase-9-offline-first created from main.
 - Installed vite-plugin-pwa@1.2.0 as a dev dependency in ui/.

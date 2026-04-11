@@ -57,18 +57,19 @@ export const useBeachStore = defineStore('beach', {
         if (!res.ok) throw new Error(`Failed to fetch beaches: ${res.status}`)
         const data = (await res.json()) as Beach[]
         const today = new Date().toISOString().slice(0, 10)
-        const enriched = await Promise.all(
+        const results = await Promise.all(
           data.map(async (beach) => {
             try {
               const fRes = await fetch(`${API_BASE}/beaches/${beach.id}/forecast`)
-              if (!fRes.ok) return beach
-              const forecast = await fRes.json()
-              const first = forecast?.hourlyForecasts?.[0]?.rawData ?? {}
+              if (!fRes.ok) return { beach, forecast: null as ForecastSnapshot | null }
+              const forecast = (await fRes.json()) as ForecastSnapshot
+              const first: Record<string, number> =
+                forecast?.hourlyForecasts?.[0]?.rawData ?? {}
               const todaySummary =
                 forecast?.dailySummaries?.find((d: { date?: string }) =>
                   typeof d?.date === 'string' ? d.date.startsWith(today) : false,
                 ) ?? forecast?.dailySummaries?.[0]
-              return {
+              const enrichedBeach: Beach = {
                 ...beach,
                 swellHeight: first.swell_wave_height ?? null,
                 swellPeriod: first.swell_wave_period ?? null,
@@ -77,13 +78,25 @@ export const useBeachStore = defineStore('beach', {
                 windDirection: first.wind_direction_10m ?? null,
                 bestWindowStart: todaySummary?.bestWindowStart ?? null,
                 bestWindowEnd: todaySummary?.bestWindowEnd ?? null,
-              } as Beach
+              }
+              return { beach: enrichedBeach, forecast }
             } catch {
-              return beach
+              return { beach, forecast: null as ForecastSnapshot | null }
             }
           }),
         )
+        const enriched = results.map((r) => r.beach)
         this.beaches = enriched
+        db.beachesCache.bulkPut(enriched).catch((err) => {
+          console.error('Failed to cache beaches in IndexedDB', err)
+        })
+        for (const { forecast } of results) {
+          if (forecast) {
+            db.forecastsCache.put(forecast).catch((err) => {
+              console.error('Failed to cache forecast in IndexedDB', err)
+            })
+          }
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Unknown error'
       } finally {
@@ -106,6 +119,12 @@ export const useBeachStore = defineStore('beach', {
         const forecast = (await forecastRes.json()) as ForecastSnapshot
         this.selectedBeach = beach
         this.selectedForecast = forecast
+        db.beachesCache.put(beach).catch((err) => {
+          console.error('Failed to cache beach in IndexedDB', err)
+        })
+        db.forecastsCache.put(forecast).catch((err) => {
+          console.error('Failed to cache forecast in IndexedDB', err)
+        })
       } catch (err) {
         this.detailError = err instanceof Error ? err.message : 'Unknown error'
       } finally {

@@ -48,7 +48,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "The forecast object from GET /beaches/:id/forecast already contains beachId. For the listing enrichment, you need to store the raw forecast response before extracting swell/wind fields — capture it in the per-beach map callback."
     },
     {
