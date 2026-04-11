@@ -126,6 +126,16 @@
   - --font-size-2xl not confirmed to exist; used fallback var(--font-size-2xl, var(--font-size-xl)).
 ---
 
+## 2026-04-11 - US-002 (Phase 8)
+- beachStore.toggleFavourite now persists to IndexedDB: db.favourites.put({ beachId }) on add, db.favourites.delete(beachId) on remove.
+- Fire-and-forget writes (no await); errors caught via .catch(console.error) so unhandled promise rejections don't bubble.
+- Pinia Set remains the immediate source of truth — UI reactivity unchanged.
+- Files changed: ui/src/stores/beachStore.ts
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - Dexie's put/delete return Promises; keep them unawaited but always attach .catch to avoid unhandled rejections.
+---
+
 ## 2026-04-11 - US-001 (Phase 8)
 - Branch ralph/phase-8-favourites created from main.
 - Installed dexie@4 (yarn add dexie) in ui/.

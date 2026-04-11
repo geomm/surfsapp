@@ -31,7 +31,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Import db from ui/src/db.ts. Wrap IndexedDB calls in .catch(console.error) to avoid unhandled rejections."
     },
     {

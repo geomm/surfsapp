@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Beach, ForecastSnapshot } from '../types/beach'
+import { db } from '../db'
 
 const API_BASE = 'http://localhost:3000'
 
@@ -109,8 +110,14 @@ export const useBeachStore = defineStore('beach', {
     toggleFavourite(beachId: string) {
       if (this.favourites.has(beachId)) {
         this.favourites.delete(beachId)
+        db.favourites.delete(beachId).catch((err) => {
+          console.error('Failed to remove favourite from IndexedDB', err)
+        })
       } else {
         this.favourites.add(beachId)
+        db.favourites.put({ beachId }).catch((err) => {
+          console.error('Failed to persist favourite to IndexedDB', err)
+        })
       }
     },
   },
