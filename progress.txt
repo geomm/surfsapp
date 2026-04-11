@@ -214,6 +214,17 @@
   - The `first` rawData object needs an explicit `Record<string, number>` type annotation because `?? {}` widens the union and otherwise loses the index signature.
 ---
 
+## 2026-04-11 - US-004 (Phase 9)
+- Extracted enrichBeachWithForecast(beach, forecast) helper at module scope in beachStore.ts so enrichment logic is identical for network and cached data paths.
+- beachStore.fetchBeaches: on network error, reads db.beachesCache.toArray(); for each cached beach, reads matching forecast from db.forecastsCache.get(beach.id) and enriches via the shared helper. If cache is empty, sets this.error to 'No internet connection and no cached data available'. On successful cache hydration, clears this.error.
+- beachStore.fetchBeachDetail: on network error, Promise.all reads db.beachesCache.get(id) + db.forecastsCache.get(id). If no cached beach, sets detailError to 'No internet connection and no cached data for this beach'. Otherwise sets selectedBeach + selectedForecast from cache and clears detailError.
+- Files changed: ui/src/stores/beachStore.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (toggle devtools offline mode, refresh, confirm cached data renders with no error banner).
+  - The outer try/catch's `err` variable is accessible from within a nested try/catch inside the catch block — useful as a final fallback when the cache read itself also fails.
+  - enrichBeachWithForecast is a pure module-scope helper (not a store method) because it doesn't need `this` and keeping it outside the Pinia options object avoids `this` typing headaches in Options-API stores.
+---
+
 ## 2026-04-11 - US-001 (Phase 9)
 - Branch ralph/phase-9-offline-first created from main.
 - Installed vite-plugin-pwa@1.2.0 as a dev dependency in ui/.

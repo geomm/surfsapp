@@ -63,7 +63,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The enrichment logic (extracting swell/wind/bestWindow from forecast hourlyForecasts and dailySummaries) must work identically for both network and cached data. Consider extracting a helper function to avoid duplication."
     },
     {
