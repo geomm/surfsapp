@@ -1,148 +1,87 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-7-beach-detail-view",
-  "description": "Phase 7 — Beach Detail View. Build the beach detail screen with current score, pros/cons reasons inside a new surf-disclosure Lit component, MapLibre map, 10-day forecast strip, favourite toggle, and staleness indicator.",
+  "branchName": "ralph/phase-8-favourites",
+  "description": "Phase 8 — Favourites. Persist favourites in IndexedDB via Dexie, hydrate on startup, add a favourites-only toggle filter in the home header, and show an illustrated empty state when no favourites are saved.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Extend beachStore with selectedBeach + fetchBeachDetail",
-      "description": "As a developer, I want the beach store to manage the currently viewed beach so the detail page has a single source of truth.",
+      "title": "Install Dexie and create database schema",
+      "description": "As a developer, I need an IndexedDB database so the app can persist data across sessions.",
       "acceptanceCriteria": [
-        "ui/src/types/beach.ts extended with HourlyForecast interface { timestamp: string, rawData: Record<string, number>, surfScore: number, label: string, reasons: string[], confidence: number }",
-        "ui/src/types/beach.ts extended with DailySummary interface { date: string, bestWindowStart: string | null, bestWindowEnd: string | null, peakScore: number, overallLabel: string }",
-        "ui/src/types/beach.ts extended with ForecastSnapshot interface { beachId: string, fetchedAt: string, hourlyForecasts: HourlyForecast[], dailySummaries: DailySummary[] }",
-        "beachStore state extended with: selectedBeach (Beach | null), selectedForecast (ForecastSnapshot | null), detailLoading (boolean), detailError (string | null)",
-        "New action fetchBeachDetail(id: string): if state.beaches contains the beach, set selectedBeach from cache immediately; then fetches GET http://localhost:3000/beaches/${id} and GET http://localhost:3000/beaches/${id}/forecast in parallel via Promise.all; sets selectedBeach and selectedForecast on success; sets detailError on failure; manages detailLoading flag",
-        "New action clearSelectedBeach(): resets selectedBeach and selectedForecast to null",
-        "Typecheck passes (cd ui && yarn typecheck)"
+        "dexie installed via yarn add dexie in ui/",
+        "ui/src/db.ts created, exporting a Dexie subclass instance named db",
+        "Database name: surfsapp",
+        "Version 1 schema with two tables: favourites (primary key beachId) and settings (primary key key)",
+        "TypeScript interfaces defined: FavouriteRecord { beachId: string } and SettingRecord { key: string; value: unknown }",
+        "Tables typed on the Dexie subclass so db.favourites and db.settings are fully typed",
+        "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "API_BASE constant already exists at the top of beachStore.ts — reuse it. Use Options API style defineStore (matches Phase 6 store)."
+      "passes": false,
+      "notes": "Use Dexie v4 stable (not dexie@next). The settings table is created now but not used until Phase 11 — creating it early avoids a Dexie version bump later."
     },
     {
       "id": "US-002",
-      "title": "Add /beaches/:id route and BeachDetailView scaffold",
-      "description": "As a user, I want tapping a beach card to open a dedicated detail page so I can see more information about that beach.",
+      "title": "Persist favourites to IndexedDB on toggle",
+      "description": "As a user, I want my favourite beaches to be remembered so they survive page refreshes and app restarts.",
       "acceptanceCriteria": [
-        "ui/src/router.ts updated with route { path: '/beaches/:id', name: 'beach-detail', component: () => import('../views/BeachDetailView.vue') }",
-        "ui/src/views/BeachDetailView.vue created",
-        "Page header bar contains a back button (<surf-icon name='arrow-left'>) on the left that calls router.back() (or router.push('/') if window.history.length <= 1) and the beach name centered/left-aligned",
-        "HomeView.vue cards wired so clicking a <surf-card> calls router.push({ name: 'beach-detail', params: { id: beach.id } })",
-        "Page reads route.params.id and triggers beachStore.fetchBeachDetail(id) on mount",
-        "Page calls beachStore.clearSelectedBeach() in onBeforeUnmount",
-        "Loading state shows text/spinner while detailLoading is true",
-        "Error state shows detailError text plus a <surf-button> retry that calls fetchBeachDetail again",
-        "Layout is mobile-first, max-width 600px centered on desktop, var(--space-4) horizontal padding",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "beachStore.toggleFavourite(beachId) updated: after toggling the in-memory Set, write to IndexedDB — db.favourites.put({ beachId }) on add, db.favourites.delete(beachId) on remove",
+        "IndexedDB write is fire-and-forget (no await blocking the UI) but errors are caught and logged via console.error",
+        "Pinia remains the immediate source of truth — UI reacts to the Set, not to IndexedDB directly",
+        "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Depends on US-001 (fetchBeachDetail action). Existing surf-card already has clickable prop — use @click on the card element."
+      "passes": false,
+      "notes": "Import db from ui/src/db.ts. Wrap IndexedDB calls in .catch(console.error) to avoid unhandled rejections."
     },
     {
       "id": "US-003",
-      "title": "Hero block — name, score, favourite, staleness",
-      "description": "As a user, I want the most important information (current score, freshness, favourite toggle) at the top of the detail page.",
+      "title": "Hydrate favourites from IndexedDB on app startup",
+      "description": "As a user, I want my previously saved favourites to appear immediately when I open the app.",
       "acceptanceCriteria": [
-        "Below the page header bar, a hero block shows: beach name (--font-size-xl bold), region (--font-size-sm --color-text-secondary)",
-        "Large score display: score number in --font-size-2xl (or largest available token) next to a <surf-badge> with the currentLabel as variant",
-        "Favourite heart button (<surf-icon name='heart'>) positioned in the top-right of the hero block, ≥44x44px touch target, calls beachStore.toggleFavourite(selectedBeach.id), filled red (--color-surf-poor) when in beachStore.favourites",
-        "Staleness line under the score uses formatRelativeTime(lastUpdated) from ui/src/utils/time.ts (already exists from Phase 6) and turns --color-surf-maybe if older than 6 hours",
-        "If currentScore === null, show <surf-badge variant='neutral'>No data</surf-badge> and 'No data yet' instead of the score number and staleness",
+        "New action hydrateFavourites() added to beachStore: reads all records from db.favourites, populates the in-memory favourites Set",
+        "hydrateFavourites() called in App.vue onMounted (or in the store's initialization) so it runs once on app startup before the first render completes",
+        "If IndexedDB read fails, log the error and continue with an empty Set (graceful degradation)",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser: favourite a beach, refresh the page, confirm the heart is still filled"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Reuse formatRelativeTime and the favourites pattern from Phase 6 HomeView. The 6-hour warning logic is identical to the home view card staleness."
+      "passes": false,
+      "notes": "Call hydrateFavourites() with await so it completes before fetchBeaches() to avoid a flash of unfavourited hearts."
     },
     {
       "id": "US-004",
-      "title": "Build surf-disclosure Lit component",
-      "description": "As a developer, I want a reusable expand/collapse block component so the detail view (and future views) can hide secondary content behind a tap.",
+      "title": "Favourites-only toggle in home header",
+      "description": "As a user, I want a quick toggle to filter the beach listing to only my favourites so I can focus on the beaches I care about.",
       "acceptanceCriteria": [
-        "ui/src/components/lit/SurfDisclosure.ts created and registered as <surf-disclosure>",
-        "Use Lit declare + constructor pattern for reactive properties (matches existing Lit components in this repo)",
-        "Properties: summary (string, default ''), open (boolean, default false)",
-        "Default slot renders the collapsible body content",
-        "Named slot 'summary' allows rich header content; when present, overrides the summary string property",
-        "Header row shows the summary text plus a <surf-icon name='chevron-right'> that rotates 90° when open via CSS transform transition",
-        "Clicking the header toggles open and dispatches a CustomEvent('toggle', { detail: { open }, bubbles: true, composed: true })",
-        "Body uses max-height + opacity transition (~200ms) for smooth open/close animation",
-        "Header has min-height 44px touch target, --space-3 padding, --font-size-md text",
-        "Component imported once in ui/src/main.ts (matches existing Lit component registration pattern)",
-        "Component added to /components dev gallery view with at least one closed example and one open example with sample body content",
+        "A toggle button added to the home header bar, positioned between the title and the refresh button",
+        "Toggle uses a <surf-icon name='heart'> — ≥44x44px touch target",
+        "Toggle has two visual states: inactive (default, --color-text-secondary) and active (filled, --color-surf-poor red)",
+        "New state showFavouritesOnly (boolean, default false) added to beachStore",
+        "New getter displayedBeaches added to beachStore: returns sortedBeaches filtered to only favourites when showFavouritesOnly is true, otherwise returns all sortedBeaches",
+        "New action toggleFavouritesFilter() toggles showFavouritesOnly",
+        "HomeView v-for updated to iterate over beachStore.displayedBeaches instead of beachStore.sortedBeaches",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Match the file/folder convention of other Lit components in ui/src/components/lit/. The chevron rotation: transform: rotate(90deg) when open. Use ::slotted selector to style slotted content if needed."
+      "passes": false,
+      "notes": "The toggle sits between the 'surfsapp' title and the refresh button in the header flex row."
     },
     {
       "id": "US-005",
-      "title": "Reasons displayed as pros/cons inside disclosure",
-      "description": "As a user, I want to understand why a beach has its current score by seeing what's working for and against the conditions.",
+      "title": "Empty state for favourites filter",
+      "description": "As a user, I want a helpful message when I filter to favourites but haven't saved any yet, so I know what to do.",
       "acceptanceCriteria": [
-        "ui/src/utils/reasons.ts created with classifyReason(reason: string, score: number): 'pro' | 'con' — pros: reason starts with '+' OR contains 'ideal'/'good'/'favourable' (case-insensitive); cons: starts with '-' OR contains 'too'/'wrong'/'off'/'weak'; default: 'pro' if score >= 50 else 'con'",
-        "Reasons sourced from selectedForecast.hourlyForecasts[0].reasons (current hour); empty array if no forecast",
-        "BeachDetailView renders <surf-disclosure summary='Why this score'> beneath the hero block",
-        "Inside the disclosure, two grouped lists: 'Working for you' (pros) and 'Working against you' (cons)",
-        "Each list item shows a leading icon + reason text in a row with --space-2 gap; pros use ✓ in --color-surf-very-good, cons use ✕ in --color-surf-poor (unicode characters wrapped in styled spans are acceptable)",
-        "If a group is empty, hide its heading and list entirely",
-        "If there are no reasons at all, the disclosure body shows 'No detailed reasons available' in --color-text-secondary",
-        "Disclosure starts collapsed by default",
+        "When showFavouritesOnly is true and displayedBeaches is empty, show an empty state block instead of the beach list",
+        "Empty state contains: a <surf-icon name='heart'> rendered at 48px in --color-text-secondary, a heading 'No favourites yet' (--font-size-lg, --font-weight-semibold), a subtext 'Tap the heart on any beach to save it here' (--font-size-sm, --color-text-secondary), and a <surf-button> labelled 'Show all beaches' that calls beachStore.toggleFavouritesFilter()",
+        "Empty state is vertically centered in the content area with --space-6 padding",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Depends on US-004 (surf-disclosure component). Unicode ✓/✕ is preferred over extending the icon registry to keep this story small."
-    },
-    {
-      "id": "US-006",
-      "title": "Install MapLibre and render BeachMap component",
-      "description": "As a user, I want to see where the beach is on a map with the surrounding coastline so I have geographic context.",
-      "acceptanceCriteria": [
-        "maplibre-gl installed via yarn add maplibre-gl in ui/",
-        "maplibre-gl/dist/maplibre-gl.css imported once in ui/src/main.ts",
-        "ui/src/components/BeachMap.vue created — Vue SFC with props coords ({ lat: number, lon: number }) and name (string)",
-        "On mount, initialises a MapLibre map using the demo style 'https://demotiles.maplibre.org/style.json' (with a code comment noting this is MVP-only and to swap in Phase 13)",
-        "Map centers on the beach coords with zoom 12",
-        "A single Marker is placed at the beach coords with a Popup showing the beach name on click",
-        "Map container has fixed height 240px, full-width, border-radius var(--radius-md) (or --space-2 if --radius-md not defined)",
-        "Map instance is destroyed via map.remove() in onBeforeUnmount",
-        "If map initialisation throws, show 'Map unavailable' text in --color-text-secondary instead",
-        "BeachDetailView renders <BeachMap :coords='selectedBeach.coords' :name='selectedBeach.name' /> between the disclosure block and the forecast strip",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "BeachDetailView is lazy-loaded via dynamic import in router so MapLibre's ~200KB doesn't bloat the home view. Use a template ref to give MapLibre its container element."
-    },
-    {
-      "id": "US-007",
-      "title": "10-day horizontal forecast strip",
-      "description": "As a user, I want to scan the next 10 days of conditions at a glance so I can plan ahead.",
-      "acceptanceCriteria": [
-        "ui/src/utils/time.ts extended with formatWeekday(dateString: string): string (e.g. 'Mon') and formatDayOfMonth(dateString: string): string (e.g. '14')",
-        "ui/src/components/ForecastStrip.vue created — Vue SFC with prop dailySummaries: DailySummary[]",
-        "Container uses display: flex; overflow-x: auto; gap: var(--space-3); scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;",
-        "Each day card uses <surf-card padding> with min-width 96px, scroll-snap-align: start",
-        "Each day card shows: weekday short label (--font-size-xs), day-of-month number (--font-size-md bold), <surf-badge> with peakScore as text and overallLabel as variant, best window time as 'HH:MM–HH:MM' in --font-size-xs --color-text-secondary",
-        "If a daily summary lacks bestWindowStart/bestWindowEnd, the card shows '—' in place of the time range",
-        "BeachDetailView renders <ForecastStrip :daily-summaries='selectedForecast.dailySummaries' /> beneath the BeachMap",
-        "Strip horizontal padding aligns with the page content padding so the first card edge matches the rest of the content",
-        "If selectedForecast is null or dailySummaries is empty, the strip is not rendered (or shows 'No forecast available')",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "bestWindowStart/bestWindowEnd in dailySummaries are stored as 'HH:MM' strings on the backend (per Phase 6 progress notes) — extract directly, no ISO parsing needed. Verify shape against backend response if uncertain."
+      "passes": false,
+      "notes": "Reuse surf-icon and surf-button from existing Lit component library. The empty state should feel encouraging, not like an error."
     }
   ]
 }
