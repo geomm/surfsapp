@@ -171,6 +171,15 @@
   - Header flex layout already used `justify-content: space-between`; adding `margin-left: auto` to a middle item keeps it grouped with the rightmost item without disturbing the title.
 ---
 
+## 2026-04-11 - US-005 (Phase 8)
+- HomeView: added empty state block shown when showFavouritesOnly is true AND displayedBeaches is empty. Contains surf-icon heart (48px), h2 'No favourites yet', subtext 'Tap the heart on any beach to save it here', and a secondary surf-button 'Show all beaches' wired to beachStore.toggleFavouritesFilter().
+- Empty state rendered via v-else-if between the error branch and the beach list v-else; centered with flex column, --space-6 padding, min-height 60vh so it feels visually anchored in the content area.
+- Files changed: ui/src/views/HomeView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (toggle filter with no favourites saved, confirm empty state appears; click 'Show all beaches' to confirm it clears the filter).
+  - Phase 8 Favourites is now complete — all 5 stories pass.
+---
+
 ## 2026-04-11 - US-003 (Phase 8)
 - Added beachStore.hydrateFavourites() action: reads all records from db.favourites, populates the in-memory favourites Set; on error, logs and continues with an empty Set.
 - Wired hydration in ui/src/main.ts BEFORE app.mount(): instantiates the store with the pinia instance, calls hydrateFavourites(), then mounts via .finally() so a hydration failure still mounts the app.
