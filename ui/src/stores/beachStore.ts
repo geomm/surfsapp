@@ -30,6 +30,8 @@ interface BeachState {
   error: string | null
   favourites: Set<string>
   showFavouritesOnly: boolean
+  selectedRegions: Set<string>
+  selectedDifficulties: Set<string>
   selectedBeach: Beach | null
   selectedForecast: ForecastSnapshot | null
   detailLoading: boolean
@@ -43,6 +45,8 @@ export const useBeachStore = defineStore('beach', {
     error: null,
     favourites: new Set<string>(),
     showFavouritesOnly: false,
+    selectedRegions: new Set<string>(),
+    selectedDifficulties: new Set<string>(),
     selectedBeach: null,
     selectedForecast: null,
     detailLoading: false,
@@ -62,10 +66,37 @@ export const useBeachStore = defineStore('beach', {
     },
     displayedBeaches(state): Beach[] {
       const sorted = this.sortedBeaches
-      if (state.showFavouritesOnly) {
-        return sorted.filter((b) => state.favourites.has(b.id))
+      return sorted.filter((b) => {
+        if (state.selectedRegions.size > 0 && !state.selectedRegions.has(b.region)) return false
+        if (
+          state.selectedDifficulties.size > 0 &&
+          !state.selectedDifficulties.has(b.skillLevel)
+        )
+          return false
+        if (state.showFavouritesOnly && !state.favourites.has(b.id)) return false
+        return true
+      })
+    },
+    activeFilterCount(state): number {
+      let count = 0
+      if (state.selectedRegions.size > 0) count += 1
+      if (state.selectedDifficulties.size > 0) count += 1
+      if (state.showFavouritesOnly) count += 1
+      return count
+    },
+    availableRegions(state): string[] {
+      const set = new Set<string>()
+      for (const b of state.beaches) {
+        if (b.region) set.add(b.region)
       }
-      return sorted
+      return Array.from(set).sort()
+    },
+    availableDifficulties(state): string[] {
+      const set = new Set<string>()
+      for (const b of state.beaches) {
+        if (b.skillLevel) set.add(b.skillLevel)
+      }
+      return Array.from(set).sort()
     },
   },
   actions: {
@@ -182,6 +213,72 @@ export const useBeachStore = defineStore('beach', {
     },
     toggleFavouritesFilter() {
       this.showFavouritesOnly = !this.showFavouritesOnly
+      db.settings
+        .put({ key: 'showFavouritesOnly', value: this.showFavouritesOnly })
+        .catch((err) => {
+          console.error('Failed to persist showFavouritesOnly to IndexedDB', err)
+        })
+    },
+    toggleRegion(region: string) {
+      if (this.selectedRegions.has(region)) {
+        this.selectedRegions.delete(region)
+      } else {
+        this.selectedRegions.add(region)
+      }
+      db.settings
+        .put({ key: 'selectedRegions', value: Array.from(this.selectedRegions) })
+        .catch((err) => {
+          console.error('Failed to persist selectedRegions to IndexedDB', err)
+        })
+    },
+    toggleDifficulty(level: string) {
+      if (this.selectedDifficulties.has(level)) {
+        this.selectedDifficulties.delete(level)
+      } else {
+        this.selectedDifficulties.add(level)
+      }
+      db.settings
+        .put({ key: 'selectedDifficulties', value: Array.from(this.selectedDifficulties) })
+        .catch((err) => {
+          console.error('Failed to persist selectedDifficulties to IndexedDB', err)
+        })
+    },
+    clearFilters() {
+      this.selectedRegions = new Set<string>()
+      this.selectedDifficulties = new Set<string>()
+      this.showFavouritesOnly = false
+      db.settings.put({ key: 'selectedRegions', value: [] }).catch((err) => {
+        console.error('Failed to persist selectedRegions to IndexedDB', err)
+      })
+      db.settings.put({ key: 'selectedDifficulties', value: [] }).catch((err) => {
+        console.error('Failed to persist selectedDifficulties to IndexedDB', err)
+      })
+      db.settings.put({ key: 'showFavouritesOnly', value: false }).catch((err) => {
+        console.error('Failed to persist showFavouritesOnly to IndexedDB', err)
+      })
+    },
+    async hydrateSettings() {
+      try {
+        const [regionsRec, difficultiesRec, favFilterRec] = await Promise.all([
+          db.settings.get('selectedRegions'),
+          db.settings.get('selectedDifficulties'),
+          db.settings.get('showFavouritesOnly'),
+        ])
+        const regionsVal = regionsRec?.value
+        this.selectedRegions =
+          Array.isArray(regionsVal) && regionsVal.every((v) => typeof v === 'string')
+            ? new Set<string>(regionsVal as string[])
+            : new Set<string>()
+        const difficultiesVal = difficultiesRec?.value
+        this.selectedDifficulties =
+          Array.isArray(difficultiesVal) && difficultiesVal.every((v) => typeof v === 'string')
+            ? new Set<string>(difficultiesVal as string[])
+            : new Set<string>()
+        const favFilterVal = favFilterRec?.value
+        this.showFavouritesOnly = typeof favFilterVal === 'boolean' ? favFilterVal : false
+      } catch (err) {
+        console.error('Failed to hydrate settings from IndexedDB', err)
+      }
     },
     toggleFavourite(beachId: string) {
       if (this.favourites.has(beachId)) {

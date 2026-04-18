@@ -20,7 +20,7 @@
         "Typecheck passes (cd ui && yarn typecheck)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "The db.settings table (Dexie, primary key 'key') is already declared in ui/src/db.ts — no schema migration. Filter logic lives entirely in the displayedBeaches getter; do not mutate state.beaches. Existing toggleFavouritesFilter already exists — extend it to persist, don't replace it."
     },
     {
@@ -35,7 +35,7 @@
         "Verify in browser using dev-browser skill: open the app, toggle favourites-only (and later after US-003, toggle some region/difficulty filters), reload the page, confirm the filters are still applied"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (hydrateSettings must exist). The existing hydrateFavourites call is likely in App.vue or a setup in main.ts — search and mirror the pattern exactly."
     },
     {
@@ -56,7 +56,7 @@
         "Verify in browser using dev-browser skill: render the sheet in HomeView (open it via a temporary button or after US-004), toggle a region checkbox, confirm the visible beach list updates; tap Clear all, confirm both Sets empty"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001. Use native <input type='checkbox'> styled with scoped SCSS — do not create a new Lit component. The favourites-only toggle stays in the header; it is NOT inside this sheet."
     },
     {
@@ -75,7 +75,7 @@
         "Verify in browser using dev-browser skill: click the filter button, sheet opens; select a region; tap Done; sheet closes; dot badge appears on the filter button; beach list is filtered to that region"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003 (FilterSheet component). Do not restyle the existing favourites, install, or refresh buttons — only add the new filter button alongside them. The favourites-only toggle still counts toward activeFilterCount even though its control is outside the sheet."
     },
     {
@@ -90,7 +90,7 @@
         "Verify in browser using dev-browser skill: activate filters that produce zero matches (e.g. pick a region and a difficulty combination no beach satisfies); the new empty state appears; clicking 'Clear filters' restores the full list"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (activeFilterCount, clearFilters) and US-004 (filter button uses same icon). Condition ordering matters — keep the favourites-only empty state check first so it still fires on its own; the new state fires when any OTHER filter contributes to zero results."
     }
   ]

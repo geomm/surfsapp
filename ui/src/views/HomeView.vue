@@ -7,10 +7,12 @@ import { degreesToCompass } from '../utils/compass'
 import { formatRelativeTime, isStale } from '../utils/time'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { useInstallPrompt } from '../composables/useInstallPrompt'
+import FilterSheet from '../components/FilterSheet.vue'
 
 const beachStore = useBeachStore()
 const router = useRouter()
 const scrollRoot = ref<HTMLElement | null>(null)
+const filterSheetOpen = ref(false)
 
 function openBeach(b: Beach) {
   router.push({ name: 'beach-detail', params: { id: b.id } })
@@ -96,6 +98,15 @@ function toggleFav(b: Beach) {
         <surf-icon name="heart"></surf-icon>
       </button>
       <button
+        type="button"
+        class="filter-btn"
+        aria-label="Open filters"
+        @click="filterSheetOpen = true"
+      >
+        <surf-icon name="sliders-horizontal"></surf-icon>
+        <span v-if="beachStore.activeFilterCount > 0" class="filter-badge" aria-hidden="true"></span>
+      </button>
+      <button
         v-if="canInstall"
         class="install-btn"
         type="button"
@@ -134,7 +145,12 @@ function toggleFav(b: Beach) {
       </div>
 
       <div
-        v-else-if="beachStore.showFavouritesOnly && beachStore.displayedBeaches.length === 0"
+        v-else-if="
+          beachStore.showFavouritesOnly &&
+          beachStore.selectedRegions.size === 0 &&
+          beachStore.selectedDifficulties.size === 0 &&
+          beachStore.displayedBeaches.length === 0
+        "
         class="empty-state"
       >
         <surf-icon name="heart" size="48"></surf-icon>
@@ -142,6 +158,23 @@ function toggleFav(b: Beach) {
         <p class="empty-subtext">Tap the heart on any beach to save it here</p>
         <surf-button variant="secondary" @click="beachStore.toggleFavouritesFilter()">
           Show all beaches
+        </surf-button>
+      </div>
+
+      <div
+        v-else-if="
+          beachStore.beaches.length > 0 &&
+          beachStore.displayedBeaches.length === 0 &&
+          beachStore.activeFilterCount > 0 &&
+          (beachStore.selectedRegions.size > 0 || beachStore.selectedDifficulties.size > 0)
+        "
+        class="empty-state"
+      >
+        <surf-icon name="sliders-horizontal" size="48"></surf-icon>
+        <h2 class="empty-title">No beaches match your filters</h2>
+        <p class="empty-subtext">Try removing a filter or clearing them all</p>
+        <surf-button variant="secondary" @click="beachStore.clearFilters()">
+          Clear filters
         </surf-button>
       </div>
 
@@ -190,6 +223,8 @@ function toggleFav(b: Beach) {
         </li>
       </ul>
     </main>
+
+    <FilterSheet :open="filterSheetOpen" @close="filterSheetOpen = false" />
   </div>
 </template>
 
@@ -256,6 +291,30 @@ function toggleFav(b: Beach) {
 
 .fav-filter-btn-on {
   color: var(--color-surf-poor);
+}
+
+.filter-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-surf-very-good);
 }
 
 .content {

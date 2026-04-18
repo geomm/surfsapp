@@ -274,6 +274,21 @@
   - Phase 9's minimal manifest had no `description`, `orientation`, `scope`, `start_url`, `categories`, `lang`, or `icons` — Phase 10 adds them. Manual browser verification still needed (open DevTools → Application → Manifest in a `yarn preview` session and confirm zero warnings).
 ---
 
+## 2026-04-19 - US-001 (Phase 11)
+- Branch ralph/phase-11-filters created from main.
+- Extended beachStore state with selectedRegions: Set<string> and selectedDifficulties: Set<string>.
+- displayedBeaches getter rewritten as a single filter chain: region AND difficulty AND favourites; empty Sets mean no filter.
+- Added getters: activeFilterCount, availableRegions, availableDifficulties.
+- Added actions: toggleRegion, toggleDifficulty, clearFilters (clears regions, difficulties, AND showFavouritesOnly), hydrateSettings (reads the 3 keys from db.settings with defensive fallbacks).
+- Extended toggleFavouritesFilter to persist to db.settings under key 'showFavouritesOnly'.
+- Files changed: ui/src/stores/beachStore.ts, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - SettingRecord stores `value: unknown` — hydrateSettings must type-narrow (Array.isArray + every typeof 'string' for arrays; typeof 'boolean' for the favourites flag) before populating state.
+  - All db.settings.put() writes are fire-and-forget with .catch(console.error), matching the Phase 8 favourites persistence pattern.
+  - Pinia options-API Set mutations (.add/.delete) trigger reactivity without needing to reassign the Set (matches existing `favourites` toggle pattern).
+---
+
 ## 2026-04-18 - US-001 (Phase 10)
 - Branch ralph/phase-10-pwa-installation created from main.
 - Installed @vite-pwa/assets-generator@1.0.2 as dev dependency in ui/.
@@ -288,4 +303,50 @@
   - minimal2023Preset produces pwa-64x64 in addition to 192/512 (the preset's transparent.sizes = [64, 192, 512]). Keep or filter depending on manifest expectations.
   - sharp-ico bundles its own libvips which clashes at runtime with the top-level @img/sharp-libvips (prints an objc class duplicate warning). Cosmetic — generator still runs cleanly.
   - The generator also prints ready-to-paste <link> tags for the head and a manifest icons JSON snippet — capture these for US-002 / US-003.
+---
+
+## 2026-04-19 - US-002 (Phase 11)
+- ui/src/main.ts: replaced the single `hydrateFavourites().finally(mount)` chain with `Promise.allSettled([hydrateFavourites(), hydrateSettings()]).finally(mount)` so filter state is hydrated alongside favourites before the first render.
+- allSettled chosen (over Promise.all) because either hydration is already try/catch'd internally; allSettled just ensures one rejecting won't prevent the other from running — `.finally(mount)` guarantees the app mounts either way, matching the US-003 (Phase 8) pattern.
+- Files changed: ui/src/main.ts, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (toggle favourites-only, reload, confirm filter stays applied; after US-003 repeat with region/difficulty filters).
+  - main.ts is the canonical hydration site for pre-mount store warmup — future persisted-state features should add another hydrate call into the same Promise.allSettled array rather than re-introducing an App.vue onMounted hook (Vue parent onMounted runs AFTER children, so it would race HomeView's fetchBeaches).
+---
+
+## 2026-04-19 - US-004 (Phase 11)
+- ui/src/components/lit/surf-icon.ts: registered the 'sliders-horizontal' icon (imported SlidersHorizontal from lucide).
+- HomeView.vue: imported FilterSheet and added local `filterSheetOpen = ref(false)`. Added a new <button class="filter-btn"> between the favourites toggle and the install button: surf-icon name="sliders-horizontal", aria-label="Open filters", 44x44 touch target, transparent background; clicking sets filterSheetOpen.value = true. A small <span class="filter-badge"> dot appears top-right of the icon when beachStore.activeFilterCount > 0 (var(--color-surf-very-good), absolutely positioned). Rendered <FilterSheet :open="filterSheetOpen" @close="filterSheetOpen = false" /> at the end of the template.
+- Files changed: ui/src/components/lit/surf-icon.ts, ui/src/views/HomeView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (open sheet, pick a region, confirm dot badge appears).
+  - lucide exports SlidersHorizontal (PascalCase); the surf-icon registry key uses kebab-case ('sliders-horizontal').
+  - The filter button must be placed BETWEEN .fav-filter-btn and .install-btn — .fav-filter-btn already has `margin-left: auto` so the new button naturally groups with the rightmost cluster without further layout tweaks.
+  - The badge dot is a span with `position: absolute` inside a `position: relative` button; an empty span styled as a circle is enough — no count text per the PRD.
+---
+
+## 2026-04-19 - US-005 (Phase 11)
+- HomeView.vue: tightened the existing favourites-only empty state condition to also require `selectedRegions.size === 0 && selectedDifficulties.size === 0` so it only fires when favourites-only is the SOLE active filter — prevents regression where the heart-empty state would mask a region/difficulty-driven empty list.
+- Added a new v-else-if 'No beaches match your filters' empty state directly after it: <surf-icon name="sliders-horizontal" size="48">, h2, p, and a secondary <surf-button> wired to beachStore.clearFilters(). Reuses the existing .empty-state class so visual styling matches the favourites empty state exactly.
+- Condition for the new block: beaches.length > 0 AND displayedBeaches.length === 0 AND activeFilterCount > 0 AND (selectedRegions.size > 0 OR selectedDifficulties.size > 0). The last clause guarantees the new state ONLY fires when a region/difficulty is contributing — the favourites-alone case is still handled by the prior block.
+- Phase 11 Filters is now complete — all 5 stories pass.
+- Files changed: ui/src/views/HomeView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (pick a region+difficulty combination that no beach satisfies, confirm new state appears; click 'Clear filters', list returns).
+  - When adding a second mutually-exclusive empty state to a v-if/v-else-if chain, tighten the earlier branch's condition so the more-specific later branch can match — Vue stops at the first true branch. The PRD's 'keep the favourites-only check first' guidance only works because the favourites condition is now strictly favourites-alone.
+  - Pinia options-API state Set sizes (`state.selectedRegions.size`) are reactive in templates without any wrapper; the same pattern HomeView already used for `favourites.has(id)`.
+---
+
+## 2026-04-19 - US-003 (Phase 11)
+- Created ui/src/components/FilterSheet.vue (Vue SFC) wrapping <surf-bottom-sheet title="Filters">. Takes `open: boolean` prop; emits `close` when Done is tapped or the underlying sheet dispatches `sheet-close` (backdrop / Escape).
+- Two stacked sections: Region + Difficulty. Each renders native <input type="checkbox"> rows inside <label> wrappers (44px min touch target). Region labels use beachStore.availableRegions verbatim; difficulty labels are capitalise()d display-only while the stored value in selectedDifficulties stays lowercased.
+- Change handler on each checkbox calls beachStore.toggleRegion / toggleDifficulty (which already handle add/remove + persistence).
+- Footer has two <surf-button>s: 'Clear all' (variant secondary) calls beachStore.clearFilters() without closing the sheet; 'Done' (primary) emits close.
+- Empty-state fallback: when availableRegions or availableDifficulties is empty, the section shows a 'No options available' paragraph instead of the list.
+- Files changed: ui/src/components/FilterSheet.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed once US-004 adds the trigger button (no entry point yet from HomeView).
+  - surf-bottom-sheet emits `sheet-close` (NOT `close`) — Vue wrappers must listen to `@sheet-close` and re-emit `close` upward so consumers see a normal `close` event. The PRD's 'consume the close event from surf-bottom-sheet' wording is slightly misleading; the actual event name is `sheet-close` (see ui/src/components/lit/surf-bottom-sheet.ts:96).
+  - Vue `defineEmits` typed signatures use `(e: 'close'): void` call-signature style; TS enforces the emit payload.
+  - `accent-color: var(--color-primary)` on checkboxes picks up the existing theme without a custom checkmark component.
 ---
