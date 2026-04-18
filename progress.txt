@@ -384,3 +384,13 @@
   - When layering an env() safe-area inset on top of an existing token-based padding, the longhand override (padding-bottom) must come AFTER the shorthand — CSS reads top to bottom; reversing would silently discard the calc.
   - surf-bottom-sheet is the only Lit component rendering a sheet surface in this project — safe to assume any future sheet variant either reuses it or inherits this rule.
 ---
+
+## 2026-04-19 - US-004 (Phase 12)
+- HomeView.vue and BeachDetailView.vue each gain an `@media all and (display-mode: standalone)` block inside their scoped <style> that overrides `.header` padding-top to `calc(var(--space-4) + env(safe-area-inset-top) + var(--space-2))`. Extra var(--space-2) breathing room only applies when launched as an installed PWA; browser view is unchanged.
+- Chose option (a) per PRD: per-view scoped @media rules. A global rule in _base.scss wouldn't reach the scoped `.header` class without :deep()/:global() plumbing.
+- Files changed: ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools → Rendering → Emulate CSS media feature `display-mode: standalone` → confirm extra header top padding applies; toggle back to `browser` → confirm it doesn't).
+  - Scoped <style> blocks in Vue SFCs can host their own @media queries — they're still attribute-scoped to the component, so two separate views can each define a `.header` rule without collision.
+  - The PRD-preferred option (a) — per-view scoped rules — is the right default for Vue scoped styles; option (b) would require hoisting `.header` to a global class or using a :deep()/:global() escape hatch that breaks encapsulation.
+---

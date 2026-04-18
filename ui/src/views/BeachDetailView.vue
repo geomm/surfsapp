@@ -245,6 +245,12 @@ onBeforeUnmount(() => {
   margin: 0 auto;
 }
 
+@media all and (display-mode: standalone) {
+  .header {
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top) + var(--space-2));
+  }
+}
+
 .back-btn {
   background: transparent;
   border: none;

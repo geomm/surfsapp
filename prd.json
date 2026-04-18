@@ -63,7 +63,7 @@
         "Verify in browser using dev-browser skill: open DevTools → Rendering → 'Emulate CSS media feature display-mode' → set to 'standalone'; confirm the extra header padding applies. Toggle back to 'browser'; confirm it does NOT apply"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002 (safe-area baseline). iOS Safari doesn't preview standalone mode inside the browser, but Chromium's media emulator works for verification. Prefer option (a) — per-view scoped rules — since .header is a scoped class and a global rule won't reach it without :deep() or :global()."
     },
     {

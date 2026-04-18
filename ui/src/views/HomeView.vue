@@ -247,6 +247,12 @@ function toggleFav(b: Beach) {
   margin: 0 auto;
 }
 
+@media all and (display-mode: standalone) {
+  .header {
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top) + var(--space-2));
+  }
+}
+
 .title {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
