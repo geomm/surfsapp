@@ -97,7 +97,7 @@
         "Verify in browser using dev-browser skill: in DevTools throttling set to Offline, reload the home page; confirm the new error state appears with icon + message + Retry button. Switch back to Online, tap Retry; list loads. Repeat for a beach detail page"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "The lucide icon is named `cloud-off` (package export: CloudOff). If missing from the surf-icon registry, add it following the existing pattern used for heart, download, sliders-horizontal, etc."
     },
     {

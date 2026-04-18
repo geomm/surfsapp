@@ -408,3 +408,15 @@
   - When adding reduced-motion fallbacks, set the static background explicitly to `--color-neutral-100` — relying on the mid-animation state would leave the bar invisible against the surface at certain frames.
   - The skeleton card uses `background: var(--color-surface)` + `border: 1px solid var(--color-border)` + `border-radius: 12px` to match surf-card's rendered chrome without wrapping a real `<surf-card>` (which would pull in extra slot/padding behaviour).
 ---
+
+## 2026-04-19 - US-006
+- Registered `cloud-off` in ui/src/components/lit/surf-icon.ts (imported `CloudOff` from lucide).
+- HomeView error block restructured to use .empty-state pattern: cloud-off icon (48), "Can't load beaches" heading, friendly subtext, de-emphasised raw error line, Retry button. Dropped old .state/.error styles; added .error-detail.
+- BeachDetailView error block restructured with same pattern: "Can't load this beach" heading. Added .empty-state / .empty-title / .empty-subtext / .error-detail styles (not previously present in the scoped block).
+- Files changed: ui/src/components/lit/surf-icon.ts, ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification needed (DevTools → Offline → reload, confirm error state, toggle back Online → Retry).
+  - HomeView's scoped styles already had `.empty-state` / `.empty-title` / `.empty-subtext` (from the favourites/filter empty states) — reused them directly for the error block, no duplication needed. BeachDetailView had no such rules, so they were added locally. Keep them in sync if either file's empty pattern evolves.
+  - Lit icon registry additions only need the import + one line in the ICONS map; no Vue-side registration required because <surf-icon> is a custom element.
+  - `role="alert"` on the error container is enough for screen-reader announcement; a separate aria-live is unnecessary because Retry is focusable and the raw error text is visible.
+---

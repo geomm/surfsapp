@@ -142,8 +142,11 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div v-else-if="beachStore.detailError" class="state">
-        <p class="error">{{ beachStore.detailError }}</p>
+      <div v-else-if="beachStore.detailError" class="empty-state" role="alert">
+        <surf-icon name="cloud-off" size="48"></surf-icon>
+        <h2 class="empty-title">Can't load this beach</h2>
+        <p class="empty-subtext">Check your connection and try again.</p>
+        <p class="error-detail">{{ beachStore.detailError }}</p>
         <surf-button @click="retry">Retry</surf-button>
       </div>
 
@@ -291,15 +294,39 @@ onBeforeUnmount(() => {
   margin: 0 auto;
 }
 
-.state {
-  padding: var(--space-6) 0;
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
   text-align: center;
+  min-height: 60vh;
   color: var(--color-text-secondary);
 }
 
-.error {
-  color: var(--color-surf-poor);
-  margin-bottom: var(--space-3);
+.empty-state surf-icon {
+  color: var(--color-text-secondary);
+}
+
+.empty-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.empty-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.error-detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
 .hero {

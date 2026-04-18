@@ -158,8 +158,11 @@ function toggleFav(b: Beach) {
         </li>
       </ul>
 
-      <div v-else-if="beachStore.error" class="state">
-        <p class="error">{{ beachStore.error }}</p>
+      <div v-else-if="beachStore.error" class="empty-state" role="alert">
+        <surf-icon name="cloud-off" size="48"></surf-icon>
+        <h2 class="empty-title">Can't load beaches</h2>
+        <p class="empty-subtext">Check your connection and try again.</p>
+        <p class="error-detail">{{ beachStore.error }}</p>
         <surf-button @click="retry">Retry</surf-button>
       </div>
 
@@ -352,15 +355,10 @@ function toggleFav(b: Beach) {
   margin: 0 auto;
 }
 
-.state {
-  padding: var(--space-6) 0;
-  text-align: center;
+.error-detail {
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-}
-
-.error {
-  color: var(--color-surf-poor);
-  margin-bottom: var(--space-3);
+  margin: 0;
 }
 
 .beach-list {
