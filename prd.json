@@ -47,7 +47,7 @@
         "Verify in browser using dev-browser skill (inspect <head> and confirm all meta/link tags are present with correct values)"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (favicon.ico, apple-touch-icon-180x180.png, logo.svg must exist). These tags supplement the manifest — iOS Safari primarily reads apple-touch-icon and apple-mobile-web-app-* meta tags, not the manifest icons array."
     },
     {

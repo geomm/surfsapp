@@ -20,3 +20,17 @@ Started: Mon Apr 07 2026
 - Router at ui/src/router.ts — routes: /, /design, /components
 - No Pinia installed yet — US-001 will add it
 - ui/src/main.ts is the app entry point
+- Vite serves ui/public/* at the site root; reference static assets as `/filename.ext` (not `/public/...`)
+
+## 2026-04-18 - US-003
+- Added iOS-specific meta tags, favicon links, and apple-touch-icon to ui/index.html <head>
+- Preserved existing <title> and viewport meta tags
+- Added theme-color (#1a73e8) and description meta tags
+- Typecheck passes (vue-tsc --noEmit)
+- Files changed: ui/index.html
+- **Learnings for future iterations:**
+  - ui/index.html is minimal; head only has charset, viewport, and title by default
+  - Vite serves /public/* at the site root, so /favicon.ico, /logo.svg, /apple-touch-icon-180x180.png paths resolve correctly
+  - iOS Safari primarily reads apple-touch-icon link and apple-mobile-web-app-* meta tags, not the manifest icons — both are needed for full cross-platform coverage
+  - Manual browser verification still needed (no MCP browser tools available this run)
+---
