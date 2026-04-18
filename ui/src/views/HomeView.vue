@@ -145,7 +145,12 @@ function toggleFav(b: Beach) {
       </div>
 
       <div
-        v-else-if="beachStore.showFavouritesOnly && beachStore.displayedBeaches.length === 0"
+        v-else-if="
+          beachStore.showFavouritesOnly &&
+          beachStore.selectedRegions.size === 0 &&
+          beachStore.selectedDifficulties.size === 0 &&
+          beachStore.displayedBeaches.length === 0
+        "
         class="empty-state"
       >
         <surf-icon name="heart" size="48"></surf-icon>
@@ -153,6 +158,23 @@ function toggleFav(b: Beach) {
         <p class="empty-subtext">Tap the heart on any beach to save it here</p>
         <surf-button variant="secondary" @click="beachStore.toggleFavouritesFilter()">
           Show all beaches
+        </surf-button>
+      </div>
+
+      <div
+        v-else-if="
+          beachStore.beaches.length > 0 &&
+          beachStore.displayedBeaches.length === 0 &&
+          beachStore.activeFilterCount > 0 &&
+          (beachStore.selectedRegions.size > 0 || beachStore.selectedDifficulties.size > 0)
+        "
+        class="empty-state"
+      >
+        <surf-icon name="sliders-horizontal" size="48"></surf-icon>
+        <h2 class="empty-title">No beaches match your filters</h2>
+        <p class="empty-subtext">Try removing a filter or clearing them all</p>
+        <surf-button variant="secondary" @click="beachStore.clearFilters()">
+          Clear filters
         </surf-button>
       </div>
 

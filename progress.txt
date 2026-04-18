@@ -325,6 +325,18 @@
   - The badge dot is a span with `position: absolute` inside a `position: relative` button; an empty span styled as a circle is enough — no count text per the PRD.
 ---
 
+## 2026-04-19 - US-005 (Phase 11)
+- HomeView.vue: tightened the existing favourites-only empty state condition to also require `selectedRegions.size === 0 && selectedDifficulties.size === 0` so it only fires when favourites-only is the SOLE active filter — prevents regression where the heart-empty state would mask a region/difficulty-driven empty list.
+- Added a new v-else-if 'No beaches match your filters' empty state directly after it: <surf-icon name="sliders-horizontal" size="48">, h2, p, and a secondary <surf-button> wired to beachStore.clearFilters(). Reuses the existing .empty-state class so visual styling matches the favourites empty state exactly.
+- Condition for the new block: beaches.length > 0 AND displayedBeaches.length === 0 AND activeFilterCount > 0 AND (selectedRegions.size > 0 OR selectedDifficulties.size > 0). The last clause guarantees the new state ONLY fires when a region/difficulty is contributing — the favourites-alone case is still handled by the prior block.
+- Phase 11 Filters is now complete — all 5 stories pass.
+- Files changed: ui/src/views/HomeView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (pick a region+difficulty combination that no beach satisfies, confirm new state appears; click 'Clear filters', list returns).
+  - When adding a second mutually-exclusive empty state to a v-if/v-else-if chain, tighten the earlier branch's condition so the more-specific later branch can match — Vue stops at the first true branch. The PRD's 'keep the favourites-only check first' guidance only works because the favourites condition is now strictly favourites-alone.
+  - Pinia options-API state Set sizes (`state.selectedRegions.size`) are reactive in templates without any wrapper; the same pattern HomeView already used for `favourites.has(id)`.
+---
+
 ## 2026-04-19 - US-003 (Phase 11)
 - Created ui/src/components/FilterSheet.vue (Vue SFC) wrapping <surf-bottom-sheet title="Filters">. Takes `open: boolean` prop; emits `close` when Done is tapped or the underlying sheet dispatches `sheet-close` (backdrop / Escape).
 - Two stacked sections: Region + Difficulty. Each renders native <input type="checkbox"> rows inside <label> wrappers (44px min touch target). Region labels use beachStore.availableRegions verbatim; difficulty labels are capitalise()d display-only while the stored value in selectedDifficulties stays lowercased.

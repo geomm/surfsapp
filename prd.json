@@ -90,7 +90,7 @@
         "Verify in browser using dev-browser skill: activate filters that produce zero matches (e.g. pick a region and a difficulty combination no beach satisfies); the new empty state appears; clicking 'Clear filters' restores the full list"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (activeFilterCount, clearFilters) and US-004 (filter button uses same icon). Condition ordering matters — keep the favourites-only empty state check first so it still fires on its own; the new state fires when any OTHER filter contributes to zero results."
     }
   ]
