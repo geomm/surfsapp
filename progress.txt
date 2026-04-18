@@ -5,6 +5,8 @@
 - IndexedDB via Dexie: `ui/src/db.ts` exports `db` (SurfsAppDB) with `favourites` (&beachId) and `settings` (&key) tables. Import as `import { db } from '../db'` from stores/components.
 - Vue parent `onMounted` fires AFTER child `onMounted`, so any startup work that must complete BEFORE child components mount (e.g. hydrating store from IndexedDB before HomeView's fetchBeaches) must run in main.ts before `app.mount()`, not in App.vue's onMounted.
 - To use a Pinia store inside main.ts (before mount), pass the pinia instance explicitly: `useBeachStore(pinia)`.
+- PWA assets generated via `yarn generate-pwa-assets` (runs `pwa-assets-generator`) in ui/; config in ui/pwa-assets.config.ts. Source SVG is ui/public/logo.svg.
+- Default maskable asset name from @vite-pwa/assets-generator is `maskable-icon-...png`; override via preset.assetName to emit `pwa-maskable-...png` if the manifest expects that convention.
 
 ## 2026-04-08 - US-001
 - Installed pinia in ui/ and registered createPinia() in ui/src/main.ts.
@@ -259,4 +261,20 @@
   - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools offline toggle — banner should slide down and content should push down, not be overlapped).
   - onScopeDispose from 'vue' works inside composables without an explicit component context; it ties cleanup to the current effect scope (in this case the setup function of App.vue).
   - App.vue was previously template-only with just <RouterView />; this is the first time it holds app-chrome. Future banners (US-006 update banner) should render in this same location and share the 40px fixed-top banner pattern.
+---
+
+## 2026-04-18 - US-001 (Phase 10)
+- Branch ralph/phase-10-pwa-installation created from main.
+- Installed @vite-pwa/assets-generator@1.0.2 as dev dependency in ui/.
+- Created ui/public/logo.svg: 512x512 viewBox, rounded-square background #1a73e8, two stacked white wave silhouettes (the back wave at 0.65 opacity for depth). No gradients, no text, geometric Bézier curves only. 15 lines.
+- Created ui/pwa-assets.config.ts using minimal2023Preset spread + override maskable sizes to [192, 512] (the preset only ships 512) and override assetName to emit pwa-maskable-* instead of the default maskable-icon-* prefix. Source image public/logo.svg, headLinkOptions preset '2023'.
+- Added "generate-pwa-assets": "pwa-assets-generator" script to ui/package.json.
+- Running yarn generate-pwa-assets produced ui/public/: pwa-64x64.png (bonus from preset), pwa-192x192.png, pwa-512x512.png, pwa-maskable-192x192.png, pwa-maskable-512x512.png, favicon.ico, apple-touch-icon-180x180.png.
+- Files changed: ui/package.json, ui/yarn.lock, ui/public/logo.svg, ui/public/*.png, ui/public/favicon.ico, ui/pwa-assets.config.ts, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - @vite-pwa/assets-generator v1 does NOT export createAppIconsOnlyPreset; use minimal2023Preset and customise. The preset exports live in @vite-pwa/assets-generator/config (alongside defineConfig), NOT the root package.
+  - minimal2023Preset produces pwa-64x64 in addition to 192/512 (the preset's transparent.sizes = [64, 192, 512]). Keep or filter depending on manifest expectations.
+  - sharp-ico bundles its own libvips which clashes at runtime with the top-level @img/sharp-libvips (prints an objc class duplicate warning). Cosmetic — generator still runs cleanly.
+  - The generator also prints ready-to-paste <link> tags for the head and a manifest icons JSON snippet — capture these for US-002 / US-003.
 ---

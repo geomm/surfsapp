@@ -1,108 +1,90 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-9-offline-first",
-  "description": "Phase 9 — Offline First. Service worker via vite-plugin-pwa, IndexedDB caching of beaches and forecasts, network-first fetch with fallback, offline banner, and prompt-to-update banner.",
+  "branchName": "ralph/phase-10-pwa-installation",
+  "description": "Phase 10 — PWA Installation. Generate icon asset set, expand manifest, add iOS meta tags and splash screens, and wire a custom Install app button using beforeinstallprompt.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Install vite-plugin-pwa and configure service worker",
-      "description": "As a developer, I need a service worker registered so the app shell is cached and the app loads offline.",
+      "title": "Generate placeholder icon asset set",
+      "description": "As a developer, I need a consistent set of app icons so the manifest can reference real image files.",
       "acceptanceCriteria": [
-        "vite-plugin-pwa installed via yarn add -D vite-plugin-pwa in ui/",
-        "vite.config.ts updated: import VitePWA from vite-plugin-pwa and add to plugins array",
-        "PWA config: registerType 'prompt', workbox.globPatterns ['**/*.{js,css,html,ico,png,svg,woff2}']",
-        "manifest section with name 'surfsapp', short_name 'surfsapp', theme_color '#1a73e8', background_color '#ffffff', display 'standalone'",
-        "Add type reference for vite-plugin-pwa/vue in env.d.ts or vite-env.d.ts (/// <reference types='vite-plugin-pwa/vue' />) so virtual:pwa-register/vue imports typecheck",
+        "@vite-pwa/assets-generator installed as a dev dependency via yarn add -D @vite-pwa/assets-generator in ui/",
+        "ui/public/logo.svg created — a simple placeholder: a blue rounded-square background (#1a73e8) with a stylised white wave silhouette centered, 512x512 viewBox, no text, no gradients, clean geometric shapes",
+        "ui/pwa-assets.config.ts created using createAppIconsOnlyPreset (or minimal2023Preset's app icons) from @vite-pwa/assets-generator/config with source image public/logo.svg",
+        "Script added to ui/package.json: 'generate-pwa-assets': 'pwa-assets-generator'",
+        "Running yarn generate-pwa-assets produces these files in ui/public/: pwa-192x192.png, pwa-512x512.png, pwa-maskable-192x192.png, pwa-maskable-512x512.png, favicon.ico, apple-touch-icon-180x180.png",
+        "Generated PNG files committed to the repo",
         "Typecheck passes"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Do NOT add icon files — Phase 10 handles icons. The manifest can reference placeholder paths. registerType 'prompt' means the new SW waits for user action before activating (US-006 builds the prompt UI). Service worker only works in production builds (yarn build && yarn preview), not dev mode."
+      "notes": "Use a hand-written SVG for the logo — keep it under 50 lines, no gradients. The generator handles producing all PNG sizes plus maskable variants with safe-area padding automatically. Run the generator script from the ui/ directory."
     },
     {
       "id": "US-002",
-      "title": "Extend Dexie schema for beaches and forecasts cache",
-      "description": "As a developer, I need IndexedDB tables to cache API responses so the app can serve data offline.",
+      "title": "Expand PWA manifest in vite.config.ts",
+      "description": "As a user, I want the installed app to show a proper icon, name, and metadata so it feels like a native app.",
       "acceptanceCriteria": [
-        "ui/src/db.ts updated: Dexie version bumped to 2",
-        "New table beachesCache with schema '&id' — stores full Beach objects",
-        "New table forecastsCache with schema '&beachId' — stores full ForecastSnapshot objects",
-        "TypeScript interfaces added: BeachCacheRecord (same shape as Beach) and ForecastCacheRecord (same shape as ForecastSnapshot)",
-        "Tables typed on the SurfsAppDB class: db.beachesCache and db.forecastsCache are fully typed",
-        "Existing v1 tables (favourites, settings) preserved in the v2 upgrade — v1 stores definition repeated in v2",
-        "Typecheck passes"
+        "ui/vite.config.ts manifest config expanded with: name 'surfsapp — Greek Surf Conditions', short_name 'surfsapp', description 'Surf conditions and forecasts for beaches across Greece. Offline-ready.', theme_color '#1a73e8', background_color '#ffffff', display 'standalone', orientation 'portrait', scope '/', start_url '/', categories ['sports', 'weather', 'travel'], lang 'en'",
+        "icons array added with four entries: { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: 'pwa-maskable-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (open Chrome DevTools Application tab, confirm manifest loads without errors and all icon entries resolve)"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Dexie requires repeating all stores in each version declaration. Import Beach and ForecastSnapshot types from types/beach.ts."
+      "passes": false,
+      "notes": "Depends on US-001 (icon PNGs must exist in public/). Service worker only works in production builds — run yarn build && yarn preview to verify the manifest."
     },
     {
       "id": "US-003",
-      "title": "Cache beaches and forecasts on successful fetch",
-      "description": "As a user, I want the app to save the latest data locally so it's available when I'm offline.",
+      "title": "Add iOS meta tags and favicon to index.html",
+      "description": "As an iOS user, I want Add to Home Screen to use the correct icon and launch the app in standalone mode.",
       "acceptanceCriteria": [
-        "In beachStore.fetchBeaches(): after successful API response and enrichment, write all beaches to db.beachesCache via db.beachesCache.bulkPut(enriched)",
-        "In beachStore.fetchBeaches(): for each beach where the forecast fetch succeeded, write the forecast to db.forecastsCache via db.forecastsCache.put(forecast) — the forecast object must include beachId",
-        "In beachStore.fetchBeachDetail(id): after successful API response, write beach to db.beachesCache.put(beach) and forecast to db.forecastsCache.put(forecast)",
-        "All IndexedDB writes are fire-and-forget (.catch(console.error)) — never block UI on cache writes",
-        "Typecheck passes"
+        "ui/index.html <head> updated with: <link rel='icon' href='/favicon.ico' sizes='48x48'>, <link rel='icon' href='/logo.svg' type='image/svg+xml'>, <link rel='apple-touch-icon' href='/apple-touch-icon-180x180.png'>",
+        "iOS-specific meta tags added: <meta name='apple-mobile-web-app-capable' content='yes'>, <meta name='apple-mobile-web-app-status-bar-style' content='default'>, <meta name='apple-mobile-web-app-title' content='surfsapp'>",
+        "Also added: <meta name='theme-color' content='#1a73e8'>, <meta name='description' content='Surf conditions and forecasts for beaches across Greece. Offline-ready.'>",
+        "Existing <title> and viewport meta tags preserved",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (inspect <head> and confirm all meta/link tags are present with correct values)"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "The forecast object from GET /beaches/:id/forecast already contains beachId. For the listing enrichment, you need to store the raw forecast response before extracting swell/wind fields — capture it in the per-beach map callback."
+      "passes": false,
+      "notes": "Depends on US-001 (favicon.ico, apple-touch-icon-180x180.png, logo.svg must exist). These tags supplement the manifest — iOS Safari primarily reads apple-touch-icon and apple-mobile-web-app-* meta tags, not the manifest icons array."
     },
     {
       "id": "US-004",
-      "title": "Network-first fetch with IndexedDB fallback",
-      "description": "As a user, I want the app to show cached data when I'm offline so I can still check conditions.",
+      "title": "Generate iOS splash screens and wire apple-touch-startup-image links",
+      "description": "As an iOS user, I want a polished splash screen when launching the installed app so it feels native.",
       "acceptanceCriteria": [
-        "In beachStore.fetchBeaches(): wrap existing network fetch in try/catch; on network failure, read from db.beachesCache.toArray() and for each cached beach read its forecast from db.forecastsCache.get(beach.id); enrich cached beaches the same way as network beaches (swell/wind/bestWindow extraction from forecast); set this.beaches from cache",
-        "If both network and cache fail (no cached data), set this.error to 'No internet connection and no cached data available'",
-        "In beachStore.fetchBeachDetail(id): on network failure, read from db.beachesCache.get(id) and db.forecastsCache.get(id); set selectedBeach and selectedForecast from cache",
-        "If detail cache miss, set detailError to 'No internet connection and no cached data for this beach'",
-        "Typecheck passes"
+        "ui/pwa-assets.config.ts updated to use a preset that also generates iOS splash screens (e.g. minimal2023Preset or createAppIconsAndSplashScreensPreset with appropriate options)",
+        "Running yarn generate-pwa-assets produces iOS splash PNGs in ui/public/ covering at least: iPhone 14/15 (1170x2532), iPhone 14/15 Pro Max (1290x2796), iPad 10.9in (1640x2360), iPad Pro 12.9in (2048x2732) — portrait orientation",
+        "ui/index.html <head> updated with <link rel='apple-touch-startup-image' ...> entries for each generated splash screen, each with a matching media query for the target device (device-width, device-height, -webkit-device-pixel-ratio, orientation)",
+        "Generated splash PNG files committed to the repo",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill (open the built app in preview mode, confirm the splash PNG files exist at their public paths)"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "The enrichment logic (extracting swell/wind/bestWindow from forecast hourlyForecasts and dailySummaries) must work identically for both network and cached data. Consider extracting a helper function to avoid duplication."
+      "passes": false,
+      "notes": "The @vite-pwa/assets-generator output includes an HTML snippet for the splash <link> tags — copy it verbatim into index.html rather than hand-writing the media queries. Splash screens only activate when the app is launched from the iOS home screen in standalone mode."
     },
     {
       "id": "US-005",
-      "title": "Offline banner",
-      "description": "As a user, I want to know when I'm offline so I understand the data may be stale.",
+      "title": "Install prompt composable and Install app button in home header",
+      "description": "As a user, I want a clear Install app button so I can add surfsapp to my home screen without hunting through the browser menu.",
       "acceptanceCriteria": [
-        "ui/src/composables/useOnlineStatus.ts created: exports a reactive isOnline ref tracking navigator.onLine, listens to window online/offline events, cleans up listeners on scope dispose",
-        "App.vue imports useOnlineStatus and renders a top banner when !isOnline",
-        "Banner has amber/yellow background (--color-surf-maybe or #f59e0b), white bold text, full-width, fixed to top with z-index above header",
-        "Banner text: 'You're offline — showing cached data'",
-        "Banner has a slide-down CSS transition when appearing (~200ms) and slide-up when disappearing",
-        "When banner is visible, page content shifts down (not overlapped) — use a top padding/margin on the app container equal to the banner height",
-        "Banner disappears immediately when connectivity returns",
+        "ui/src/composables/useInstallPrompt.ts created: exports canInstall (reactive boolean ref, true when a beforeinstallprompt event has been captured) and promptInstall (function that calls prompt() on the captured event, awaits userChoice, then clears the captured event)",
+        "Composable listens for beforeinstallprompt on window and calls preventDefault() to stash the event; listens for appinstalled event to clear canInstall",
+        "Composable cleans up event listeners via onScopeDispose",
+        "Composable also checks window.matchMedia('(display-mode: standalone)').matches — if true, canInstall stays false (app already installed)",
+        "HomeView.vue header gets a new icon button using <surf-icon name='download'> (fall back to 'plus' if download is not in the icon registry), styled consistently with the other header icon buttons (≥44x44px touch target), placed between the favourites toggle and the refresh button",
+        "Button is visible only when canInstall.value === true",
+        "Button has aria-label='Install app'",
+        "Clicking the button calls promptInstall()",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "navigator.onLine is not 100% reliable (captive portals) but is sufficient for MVP. Use onScopeDispose from Vue to clean up event listeners."
-    },
-    {
-      "id": "US-006",
-      "title": "Prompt-to-update banner for new service worker",
-      "description": "As a user, I want to know when a new version of the app is available so I can update.",
-      "acceptanceCriteria": [
-        "ui/src/composables/useServiceWorker.ts created: imports useRegisterSW from virtual:pwa-register/vue, exposes needRefresh (boolean ref) and updateServiceWorker (function)",
-        "App.vue imports useServiceWorker and renders a top banner when needRefresh is true",
-        "Banner has blue/primary background, white text: 'New version available' with a <surf-button> labelled 'Refresh' that calls updateServiceWorker(true)",
-        "If both offline banner and update banner would show simultaneously, offline banner takes priority (update banner hidden)",
-        "Banner has the same slide-down/slide-up animation style as the offline banner",
-        "Page content shifts down when banner is visible",
-        "After clicking Refresh, the page reloads with the new service worker active",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "virtual:pwa-register/vue is provided by vite-plugin-pwa and requires registerType 'prompt' (set in US-001). This composable only works in production builds — in dev mode needRefresh will always be false. Ensure the type reference from US-001 is in place so the import typechecks."
+      "passes": false,
+      "notes": "beforeinstallprompt only fires in Chromium browsers (Chrome, Edge, Samsung Internet). Safari/iOS never fire it — the button simply won't appear there, which is expected. Test in Chrome DevTools Application tab with the 'Add to homescreen' link, or after meeting all install criteria in a production build."
     }
   ]
 }
