@@ -198,7 +198,7 @@ function toggleFav(b: Beach) {
                   <surf-icon name="heart"></surf-icon>
                 </button>
                 <surf-badge :variant="badgeVariant(beach)">
-                  <template v-if="beach.currentScore !== null">{{ beach.currentScore }}</template>
+                  <template v-if="beach.currentScore !== null">{{ beach.currentScore }}%</template>
                   <template v-else>No data</template>
                 </surf-badge>
               </div>

@@ -16,7 +16,7 @@ defineProps<{
           <div class="dom">{{ formatDayOfMonth(day.date) }}</div>
         </div>
         <surf-badge :variant="day.overallLabel ?? 'neutral'">
-          {{ day.peakScore ?? '' }}
+          <template v-if="day.peakScore != null">{{ day.peakScore }}%</template>
         </surf-badge>
       </div>
       <div class="window">
