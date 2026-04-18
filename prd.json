@@ -81,7 +81,7 @@
         "Verify in browser using dev-browser skill: throttle the network to Slow 3G in DevTools, reload the home page; the skeleton cards appear until data arrives, then are replaced by real cards. Repeat for a beach detail page"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Keep animation subtle — a gentle opacity or background-position shimmer is enough. Heavy animation is distracting on mobile. No new component needed — both views can own their own skeleton markup."
     },
     {

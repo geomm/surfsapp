@@ -394,3 +394,17 @@
   - Scoped <style> blocks in Vue SFCs can host their own @media queries — they're still attribute-scoped to the component, so two separate views can each define a `.header` rule without collision.
   - The PRD-preferred option (a) — per-view scoped rules — is the right default for Vue scoped styles; option (b) would require hoisting `.header` to a global class or using a :deep()/:global() escape hatch that breaks encapsulation.
 ---
+
+## 2026-04-19 - US-005 (Phase 12)
+- HomeView.vue: replaced the `v-if="beachStore.loading"` 'Loading…' div with a `<ul class="beach-list skeleton-list">` of 4 skeleton cards that mirror the real beach-card layout (title bar ~60% + region bar ~40% stacked on the left, badge pill top-right, conditions bar ~80% underneath). Container carries `aria-busy="true" aria-live="polite"`; each card has `aria-hidden="true"` on its skeleton bars.
+- BeachDetailView.vue: replaced the detailLoading 'Loading…' state with a `.skeleton-hero` block: name bar (60%, 24px tall), region bar (40%), score bar (30%, 28px, with top margin), and a 3-line reasons block (90%, 70%, 90%). Same aria attributes.
+- Shared shimmer: linear-gradient background with 200% background-size animated via `@keyframes skeleton-shimmer` over 1.5s linear infinite (shifts background-position from 200% 0 to -200% 0). Base colour `--color-neutral-100`, shimmer highlight `--color-neutral-200` — the lightest/next tokens from the neutral palette in `ui/src/styles/tokens/_colors.scss`.
+- Reduced-motion: `@media (prefers-reduced-motion: reduce)` block in both views disables the animation and falls back to a flat `--color-neutral-100` background.
+- No new Lit component — all skeleton markup lives inline in each view's scoped template per PRD.
+- Files changed: ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools → Network → Slow 3G → reload / navigate to a beach; skeletons appear briefly then are replaced).
+  - For shimmer effects, a 200% background-size gradient translated via `background-position` is cheaper (GPU-friendly) than animating `background-color` or opacity per-frame, and keeps the same motion language across every skeleton bar.
+  - When adding reduced-motion fallbacks, set the static background explicitly to `--color-neutral-100` — relying on the mid-animation state would leave the bar invisible against the surface at certain frames.
+  - The skeleton card uses `background: var(--color-surface)` + `border: 1px solid var(--color-border)` + `border-radius: 12px` to match surf-card's rendered chrome without wrapping a real `<surf-card>` (which would pull in extra slot/padding behaviour).
+---

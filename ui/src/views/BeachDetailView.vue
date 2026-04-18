@@ -125,8 +125,21 @@ onBeforeUnmount(() => {
     </header>
 
     <main class="content">
-      <div v-if="beachStore.detailLoading && !beachStore.selectedBeach" class="state">
-        Loading…
+      <div
+        v-if="beachStore.detailLoading && !beachStore.selectedBeach"
+        class="skeleton-hero"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label="Loading beach"
+      >
+        <div class="skeleton-bar sk-name" aria-hidden="true"></div>
+        <div class="skeleton-bar sk-region" aria-hidden="true"></div>
+        <div class="skeleton-bar sk-score" aria-hidden="true"></div>
+        <div class="skeleton-reasons" aria-hidden="true">
+          <div class="skeleton-bar sk-reason-line"></div>
+          <div class="skeleton-bar sk-reason-line sk-reason-line-short"></div>
+          <div class="skeleton-bar sk-reason-line"></div>
+        </div>
       </div>
 
       <div v-else-if="beachStore.detailError" class="state">
@@ -441,5 +454,67 @@ onBeforeUnmount(() => {
 
 .reason-icon-con {
   color: var(--color-surf-poor);
+}
+
+.skeleton-hero {
+  padding: var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-bar {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 0%,
+    var(--color-neutral-200) 50%,
+    var(--color-neutral-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s linear infinite;
+}
+
+.sk-name {
+  width: 60%;
+  height: 24px;
+}
+
+.sk-region {
+  width: 40%;
+}
+
+.sk-score {
+  width: 30%;
+  height: 28px;
+  margin-top: var(--space-2);
+}
+
+.skeleton-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.sk-reason-line {
+  width: 90%;
+}
+
+.sk-reason-line-short {
+  width: 70%;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+    background: var(--color-neutral-100);
+  }
 }
 </style>
