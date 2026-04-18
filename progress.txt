@@ -274,6 +274,21 @@
   - Phase 9's minimal manifest had no `description`, `orientation`, `scope`, `start_url`, `categories`, `lang`, or `icons` — Phase 10 adds them. Manual browser verification still needed (open DevTools → Application → Manifest in a `yarn preview` session and confirm zero warnings).
 ---
 
+## 2026-04-19 - US-001 (Phase 11)
+- Branch ralph/phase-11-filters created from main.
+- Extended beachStore state with selectedRegions: Set<string> and selectedDifficulties: Set<string>.
+- displayedBeaches getter rewritten as a single filter chain: region AND difficulty AND favourites; empty Sets mean no filter.
+- Added getters: activeFilterCount, availableRegions, availableDifficulties.
+- Added actions: toggleRegion, toggleDifficulty, clearFilters (clears regions, difficulties, AND showFavouritesOnly), hydrateSettings (reads the 3 keys from db.settings with defensive fallbacks).
+- Extended toggleFavouritesFilter to persist to db.settings under key 'showFavouritesOnly'.
+- Files changed: ui/src/stores/beachStore.ts, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes.
+  - SettingRecord stores `value: unknown` — hydrateSettings must type-narrow (Array.isArray + every typeof 'string' for arrays; typeof 'boolean' for the favourites flag) before populating state.
+  - All db.settings.put() writes are fire-and-forget with .catch(console.error), matching the Phase 8 favourites persistence pattern.
+  - Pinia options-API Set mutations (.add/.delete) trigger reactivity without needing to reassign the Set (matches existing `favourites` toggle pattern).
+---
+
 ## 2026-04-18 - US-001 (Phase 10)
 - Branch ralph/phase-10-pwa-installation created from main.
 - Installed @vite-pwa/assets-generator@1.0.2 as dev dependency in ui/.

@@ -20,7 +20,7 @@
         "Typecheck passes (cd ui && yarn typecheck)"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "The db.settings table (Dexie, primary key 'key') is already declared in ui/src/db.ts — no schema migration. Filter logic lives entirely in the displayedBeaches getter; do not mutate state.beaches. Existing toggleFavouritesFilter already exists — extend it to persist, don't replace it."
     },
     {
