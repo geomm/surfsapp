@@ -51,6 +51,42 @@ Services:
 - Backend API: http://localhost:3000
 - MongoDB: localhost:27017
 
+## Common commands
+
+### Dev flow (hot reload, no service worker)
+
+```bash
+docker compose up                                    # start everything
+docker compose logs -f ui backend                    # tail logs
+docker compose exec ui yarn typecheck                # typecheck the frontend
+docker compose restart ui                            # pick up vite.config changes
+docker compose exec backend npm run seed             # reseed beaches
+```
+
+The UI runs `vite` in dev mode. Fast HMR, but the service worker is **not registered** and PWA install is unavailable.
+
+### Production build + preview (service worker live)
+
+Use this when testing offline-first behaviour, install prompts, or the update banner.
+
+```bash
+docker compose stop ui
+docker compose run --rm --service-ports ui sh -c "yarn build && yarn preview"
+```
+
+Serves the built `dist/` on port 5173 (same mapping as dev) with the service worker registered. Ctrl+C the container to stop, then `docker compose up -d ui` to return to dev mode.
+
+### Mobile testing over HTTPS
+
+Cloudflared gives you a trusted HTTPS URL pointing at the dev server — required for service worker registration and "Add to Home Screen" on iOS/Android.
+
+```bash
+brew install cloudflared
+cloudflared tunnel --url http://localhost:5173
+```
+
+Open the printed `https://*.trycloudflare.com` URL on your phone. API requests go through `/api` on the same tunnel (Vite proxies them to the backend).
+
 ## API endpoints
 
 | Method | Path | Description |

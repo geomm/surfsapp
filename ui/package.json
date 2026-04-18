@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 5173",
     "typecheck": "vue-tsc --noEmit",
     "generate-pwa-assets": "pwa-assets-generator"
   },
