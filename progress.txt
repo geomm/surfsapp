@@ -350,3 +350,88 @@
   - Vue `defineEmits` typed signatures use `(e: 'close'): void` call-signature style; TS enforces the emit payload.
   - `accent-color: var(--color-primary)` on checkboxes picks up the existing theme without a custom checkmark component.
 ---
+
+## 2026-04-19 - US-002 (Phase 12)
+- HomeView.vue & BeachDetailView.vue .header: padding-top/left/right now use calc(var(--space-4) + env(safe-area-inset-*)) so the header clears the notch/Dynamic Island and respects landscape side insets.
+- Both .content selectors gained padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom)) so the last item clears the iOS home indicator.
+- Existing layout (max-width 600px, margin 0 auto, gap, flex rules) preserved — only padding values changed.
+- Files changed: ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools device mode → iPhone 14 Pro; header clears status bar, content clears bottom).
+  - The shorthand `padding:` declaration must come BEFORE the longhand `padding-top/left/right/bottom` overrides — CSS reads top to bottom, so reordering would silently revert the safe-area calc.
+  - `.content` only needs padding-bottom (not horizontal) per PRD, since the existing `padding: 0 var(--space-4)` already provides side breathing room and the safe-area landscape insets are absorbed by the .header rule above.
+---
+
+## 2026-04-19 - US-001 (Phase 12)
+- Branch ralph/phase-12-mobile-polish created from main.
+- ui/index.html: viewport meta updated to include `viewport-fit=cover` so env(safe-area-inset-*) can resolve to non-zero on iOS.
+- ui/src/styles/base/_base.scss: body gains `-webkit-tap-highlight-color: transparent`, `-webkit-text-size-adjust: 100%`, `text-size-adjust: 100%`, `overscroll-behavior-y: none`. Existing body rules preserved.
+- Added a global `button` reset with `-webkit-tap-highlight-color: transparent` and `touch-action: manipulation` — kills the 300ms double-tap delay and grey tap flash on iOS without breaking the custom pull-to-refresh gesture (which lives on a scroll container, not a button).
+- Files changed: ui/index.html, ui/src/styles/base/_base.scss, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (tap a beach card rapidly → no grey flash / zoom; DevTools → inspect viewport meta).
+  - `touch-action: manipulation` is safe as a button default because it kills only double-tap zoom on the element; page-level pan/zoom still works. Do NOT upgrade this to `touch-action: none` globally — the Phase 6 pull-to-refresh composable relies on default touch behaviour on its scroll root.
+  - The SCSS partial lives at ui/src/styles/base/_base.scss; main.scss already imports it. No new `@use` needed.
+---
+
+## 2026-04-19 - US-003 (Phase 12)
+- ui/src/components/lit/surf-bottom-sheet.ts: .sheet gains `padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom))` after the shorthand `padding: var(--space-4)` so the existing uniform padding stays for top/left/right and only the bottom grows on iOS with a home indicator.
+- FilterSheet.vue footer is a normal flow child of the sheet body (not absolutely positioned), so the sheet's own bottom padding is sufficient — no FilterSheet change required per PRD.
+- Sheet transform/transition (translateY 100% → 0) is unaffected because padding is animated by box-size only.
+- Files changed: ui/src/components/lit/surf-bottom-sheet.ts, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools iPhone 14 Pro → open filter sheet → Done/Clear all sit above the simulated home indicator).
+  - When layering an env() safe-area inset on top of an existing token-based padding, the longhand override (padding-bottom) must come AFTER the shorthand — CSS reads top to bottom; reversing would silently discard the calc.
+  - surf-bottom-sheet is the only Lit component rendering a sheet surface in this project — safe to assume any future sheet variant either reuses it or inherits this rule.
+---
+
+## 2026-04-19 - US-004 (Phase 12)
+- HomeView.vue and BeachDetailView.vue each gain an `@media all and (display-mode: standalone)` block inside their scoped <style> that overrides `.header` padding-top to `calc(var(--space-4) + env(safe-area-inset-top) + var(--space-2))`. Extra var(--space-2) breathing room only applies when launched as an installed PWA; browser view is unchanged.
+- Chose option (a) per PRD: per-view scoped @media rules. A global rule in _base.scss wouldn't reach the scoped `.header` class without :deep()/:global() plumbing.
+- Files changed: ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools → Rendering → Emulate CSS media feature `display-mode: standalone` → confirm extra header top padding applies; toggle back to `browser` → confirm it doesn't).
+  - Scoped <style> blocks in Vue SFCs can host their own @media queries — they're still attribute-scoped to the component, so two separate views can each define a `.header` rule without collision.
+  - The PRD-preferred option (a) — per-view scoped rules — is the right default for Vue scoped styles; option (b) would require hoisting `.header` to a global class or using a :deep()/:global() escape hatch that breaks encapsulation.
+---
+
+## 2026-04-19 - US-005 (Phase 12)
+- HomeView.vue: replaced the `v-if="beachStore.loading"` 'Loading…' div with a `<ul class="beach-list skeleton-list">` of 4 skeleton cards that mirror the real beach-card layout (title bar ~60% + region bar ~40% stacked on the left, badge pill top-right, conditions bar ~80% underneath). Container carries `aria-busy="true" aria-live="polite"`; each card has `aria-hidden="true"` on its skeleton bars.
+- BeachDetailView.vue: replaced the detailLoading 'Loading…' state with a `.skeleton-hero` block: name bar (60%, 24px tall), region bar (40%), score bar (30%, 28px, with top margin), and a 3-line reasons block (90%, 70%, 90%). Same aria attributes.
+- Shared shimmer: linear-gradient background with 200% background-size animated via `@keyframes skeleton-shimmer` over 1.5s linear infinite (shifts background-position from 200% 0 to -200% 0). Base colour `--color-neutral-100`, shimmer highlight `--color-neutral-200` — the lightest/next tokens from the neutral palette in `ui/src/styles/tokens/_colors.scss`.
+- Reduced-motion: `@media (prefers-reduced-motion: reduce)` block in both views disables the animation and falls back to a flat `--color-neutral-100` background.
+- No new Lit component — all skeleton markup lives inline in each view's scoped template per PRD.
+- Files changed: ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools → Network → Slow 3G → reload / navigate to a beach; skeletons appear briefly then are replaced).
+  - For shimmer effects, a 200% background-size gradient translated via `background-position` is cheaper (GPU-friendly) than animating `background-color` or opacity per-frame, and keeps the same motion language across every skeleton bar.
+  - When adding reduced-motion fallbacks, set the static background explicitly to `--color-neutral-100` — relying on the mid-animation state would leave the bar invisible against the surface at certain frames.
+  - The skeleton card uses `background: var(--color-surface)` + `border: 1px solid var(--color-border)` + `border-radius: 12px` to match surf-card's rendered chrome without wrapping a real `<surf-card>` (which would pull in extra slot/padding behaviour).
+---
+
+## 2026-04-19 - US-006
+- Registered `cloud-off` in ui/src/components/lit/surf-icon.ts (imported `CloudOff` from lucide).
+- HomeView error block restructured to use .empty-state pattern: cloud-off icon (48), "Can't load beaches" heading, friendly subtext, de-emphasised raw error line, Retry button. Dropped old .state/.error styles; added .error-detail.
+- BeachDetailView error block restructured with same pattern: "Can't load this beach" heading. Added .empty-state / .empty-title / .empty-subtext / .error-detail styles (not previously present in the scoped block).
+- Files changed: ui/src/components/lit/surf-icon.ts, ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification needed (DevTools → Offline → reload, confirm error state, toggle back Online → Retry).
+  - HomeView's scoped styles already had `.empty-state` / `.empty-title` / `.empty-subtext` (from the favourites/filter empty states) — reused them directly for the error block, no duplication needed. BeachDetailView had no such rules, so they were added locally. Keep them in sync if either file's empty pattern evolves.
+  - Lit icon registry additions only need the import + one line in the ICONS map; no Vue-side registration required because <surf-icon> is a custom element.
+  - `role="alert"` on the error container is enough for screen-reader announcement; a separate aria-live is unnecessary because Retry is focusable and the raw error text is visible.
+---
+
+## 2026-04-19 - US-007 (Phase 12)
+- Landscape audit at 812×375 (iPhone X) and 926×428 (iPhone 14 Pro Max) via static analysis of the three target surfaces. No browser-emulation tooling available in this iteration; analysis based on existing CSS constraints.
+- HomeView: .header (max-width 600px, centered) holds title + 4 icon buttons (~300px) on a single row; .content (max-width 600px) keeps the beach list constrained; .empty-state min-height: 60vh (≈225–257px in landscape) still renders sensibly.
+- BeachDetailView: .header and .content max-width 600px; .hero .fav-btn is positioned right: 0 inside the centred 600px container so it stays anchored; BeachMap is a fixed 240px tall (not vh-relative — no landscape explosion); ForecastStrip is overflow-x: auto with min-width: 96px day cards (already horizontally scrollable).
+- FilterSheet: surf-bottom-sheet has max-height: 85vh + overflow-y: auto, so the two checkbox sections + footer scroll within the sheet on short landscape viewports. Rows are functional; not visibly cramped.
+- No code changes required — the existing max-width: 600px content container pattern (US-002) plus the sheet's max-height: 85vh + overflow-y: auto cover both audit viewports.
+- Phase 12 Mobile Polish is now complete — all 7 stories pass.
+- Files changed: prd.json (US-007 passes flipped to true).
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. No CSS changes; no further verification needed.
+  - The codebase's `max-width: 600px; margin: 0 auto;` content container pattern (in HomeView and BeachDetailView) is what saves landscape — content stays in a comfortable column even on a 926px wide viewport. Future top-level views should adopt the same pattern.
+  - BeachMap's fixed 240px height (rather than a vh-relative height) is what prevents the landscape "map explodes to full viewport" scenario the PRD warned about. Keep height literals (px) on map-like surfaces unless explicitly opting into vh.
+  - surf-bottom-sheet's `max-height: 85vh` + `overflow-y: auto` is sufficient for landscape — the sheet content scrolls inside the sheet without needing per-consumer max-width tweaks.
+---

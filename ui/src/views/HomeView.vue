@@ -137,10 +137,32 @@ function toggleFav(b: Beach) {
     </div>
 
     <main class="content">
-      <div v-if="beachStore.loading" class="state">Loading…</div>
+      <ul
+        v-if="beachStore.loading"
+        class="beach-list skeleton-list"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label="Loading beaches"
+      >
+        <li v-for="n in 4" :key="'sk-' + n" class="beach-item">
+          <div class="skeleton-card" aria-hidden="true">
+            <div class="skeleton-card-head">
+              <div class="skeleton-info">
+                <div class="skeleton-bar sk-title"></div>
+                <div class="skeleton-bar sk-region"></div>
+              </div>
+              <div class="skeleton-bar sk-badge"></div>
+            </div>
+            <div class="skeleton-bar sk-conditions"></div>
+          </div>
+        </li>
+      </ul>
 
-      <div v-else-if="beachStore.error" class="state">
-        <p class="error">{{ beachStore.error }}</p>
+      <div v-else-if="beachStore.error" class="empty-state" role="alert">
+        <surf-icon name="cloud-off" size="48"></surf-icon>
+        <h2 class="empty-title">Can't load beaches</h2>
+        <p class="empty-subtext">Check your connection and try again.</p>
+        <p class="error-detail">{{ beachStore.error }}</p>
         <surf-button @click="retry">Retry</surf-button>
       </div>
 
@@ -240,8 +262,17 @@ function toggleFav(b: Beach) {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4);
+  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+  padding-left: calc(var(--space-4) + env(safe-area-inset-left));
+  padding-right: calc(var(--space-4) + env(safe-area-inset-right));
   max-width: 600px;
   margin: 0 auto;
+}
+
+@media all and (display-mode: standalone) {
+  .header {
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top) + var(--space-2));
+  }
 }
 
 .title {
@@ -319,19 +350,15 @@ function toggleFav(b: Beach) {
 
 .content {
   padding: 0 var(--space-4) var(--space-6);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
   max-width: 600px;
   margin: 0 auto;
 }
 
-.state {
-  padding: var(--space-6) 0;
-  text-align: center;
+.error-detail {
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-}
-
-.error {
-  color: var(--color-surf-poor);
-  margin-bottom: var(--space-3);
+  margin: 0;
 }
 
 .beach-list {
@@ -481,5 +508,74 @@ function toggleFav(b: Beach) {
 .refresh-btn[disabled] {
   cursor: default;
   opacity: 0.8;
+}
+
+.skeleton-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.skeleton-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-bar {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 0%,
+    var(--color-neutral-200) 50%,
+    var(--color-neutral-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s linear infinite;
+}
+
+.sk-title {
+  width: 60%;
+  height: 18px;
+}
+
+.sk-region {
+  width: 40%;
+}
+
+.sk-badge {
+  width: 56px;
+  height: 24px;
+  border-radius: 12px;
+  flex: none;
+}
+
+.sk-conditions {
+  width: 80%;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+    background: var(--color-neutral-100);
+  }
 }
 </style>

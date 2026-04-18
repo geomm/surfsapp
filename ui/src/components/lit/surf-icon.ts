@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Download,
   SlidersHorizontal,
+  CloudOff,
 } from 'lucide'
 
 type IconNode = [string, Record<string, string>]
@@ -26,6 +27,7 @@ const ICONS: Record<string, IconNode[]> = {
   'refresh-cw': RefreshCw as unknown as IconNode[],
   download: Download as unknown as IconNode[],
   'sliders-horizontal': SlidersHorizontal as unknown as IconNode[],
+  'cloud-off': CloudOff as unknown as IconNode[],
 }
 
 function buildSvgChildren(nodes: IconNode[]): string {

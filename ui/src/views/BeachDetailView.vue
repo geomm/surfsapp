@@ -125,12 +125,28 @@ onBeforeUnmount(() => {
     </header>
 
     <main class="content">
-      <div v-if="beachStore.detailLoading && !beachStore.selectedBeach" class="state">
-        Loading…
+      <div
+        v-if="beachStore.detailLoading && !beachStore.selectedBeach"
+        class="skeleton-hero"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label="Loading beach"
+      >
+        <div class="skeleton-bar sk-name" aria-hidden="true"></div>
+        <div class="skeleton-bar sk-region" aria-hidden="true"></div>
+        <div class="skeleton-bar sk-score" aria-hidden="true"></div>
+        <div class="skeleton-reasons" aria-hidden="true">
+          <div class="skeleton-bar sk-reason-line"></div>
+          <div class="skeleton-bar sk-reason-line sk-reason-line-short"></div>
+          <div class="skeleton-bar sk-reason-line"></div>
+        </div>
       </div>
 
-      <div v-else-if="beachStore.detailError" class="state">
-        <p class="error">{{ beachStore.detailError }}</p>
+      <div v-else-if="beachStore.detailError" class="empty-state" role="alert">
+        <surf-icon name="cloud-off" size="48"></surf-icon>
+        <h2 class="empty-title">Can't load this beach</h2>
+        <p class="empty-subtext">Check your connection and try again.</p>
+        <p class="error-detail">{{ beachStore.detailError }}</p>
         <surf-button @click="retry">Retry</surf-button>
       </div>
 
@@ -238,8 +254,17 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
+  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+  padding-left: calc(var(--space-4) + env(safe-area-inset-left));
+  padding-right: calc(var(--space-4) + env(safe-area-inset-right));
   max-width: 600px;
   margin: 0 auto;
+}
+
+@media all and (display-mode: standalone) {
+  .header {
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top) + var(--space-2));
+  }
 }
 
 .back-btn {
@@ -264,19 +289,44 @@ onBeforeUnmount(() => {
 
 .content {
   padding: 0 var(--space-4) var(--space-6);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
   max-width: 600px;
   margin: 0 auto;
 }
 
-.state {
-  padding: var(--space-6) 0;
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
   text-align: center;
+  min-height: 60vh;
   color: var(--color-text-secondary);
 }
 
-.error {
-  color: var(--color-surf-poor);
-  margin-bottom: var(--space-3);
+.empty-state surf-icon {
+  color: var(--color-text-secondary);
+}
+
+.empty-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.empty-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.error-detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
 }
 
 .hero {
@@ -431,5 +481,67 @@ onBeforeUnmount(() => {
 
 .reason-icon-con {
   color: var(--color-surf-poor);
+}
+
+.skeleton-hero {
+  padding: var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-bar {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 0%,
+    var(--color-neutral-200) 50%,
+    var(--color-neutral-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s linear infinite;
+}
+
+.sk-name {
+  width: 60%;
+  height: 24px;
+}
+
+.sk-region {
+  width: 40%;
+}
+
+.sk-score {
+  width: 30%;
+  height: 28px;
+  margin-top: var(--space-2);
+}
+
+.skeleton-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.sk-reason-line {
+  width: 90%;
+}
+
+.sk-reason-line-short {
+  width: 70%;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar {
+    animation: none;
+    background: var(--color-neutral-100);
+  }
 }
 </style>
