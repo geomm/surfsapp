@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useBeachStore } from '../stores/beachStore'
 import { formatRelativeTime, isStale } from '../utils/time'
 import { classifyReason } from '../utils/reasons'
+import { degreesToCompass } from '../utils/compass'
 import BeachMap from '../components/BeachMap.vue'
 import ForecastStrip from '../components/ForecastStrip.vue'
 
@@ -40,6 +41,49 @@ const pros = computed(() =>
 const cons = computed(() =>
   currentReasons.value.filter((r) => classifyReason(r, currentScoreForClassify.value) === 'con')
 )
+
+const currentRaw = computed<Record<string, number>>(
+  () => beachStore.selectedForecast?.hourlyForecasts?.[0]?.rawData ?? {},
+)
+
+const todaySummary = computed(() => {
+  const summaries = beachStore.selectedForecast?.dailySummaries
+  if (!summaries || summaries.length === 0) return null
+  const today = new Date().toISOString().slice(0, 10)
+  return summaries.find((d) => typeof d?.date === 'string' && d.date.startsWith(today)) ?? summaries[0]
+})
+
+const hasForecast = computed(() => {
+  const r = currentRaw.value
+  return (
+    r.swell_wave_height != null &&
+    r.swell_wave_period != null &&
+    r.swell_wave_direction != null &&
+    r.wind_speed_10m != null &&
+    r.wind_direction_10m != null
+  )
+})
+
+const swellText = computed(() => {
+  const r = currentRaw.value
+  return `${r.swell_wave_height.toFixed(1)}m · ${Math.round(r.swell_wave_period)}s · ${degreesToCompass(r.swell_wave_direction)}`
+})
+
+const windText = computed(() => {
+  const r = currentRaw.value
+  return `${Math.round(r.wind_speed_10m)} km/h ${degreesToCompass(r.wind_direction_10m)}`
+})
+
+function hhmm(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+const bestWindowText = computed(() => {
+  const t = todaySummary.value
+  if (!t?.bestWindowStart || !t?.bestWindowEnd) return null
+  return `Best: ${hhmm(t.bestWindowStart)}–${hhmm(t.bestWindowEnd)}`
+})
 
 function goBack() {
   if (window.history.length > 1) {
@@ -105,7 +149,7 @@ onBeforeUnmount(() => {
         <div class="hero-region">{{ beach.region }}</div>
         <div class="score-row">
           <template v-if="beach.currentScore !== null">
-            <span class="score-num">{{ beach.currentScore }}</span>
+            <span class="score-num">{{ beach.currentScore }}%</span>
             <surf-badge :variant="beach.currentLabel ?? 'neutral'">
               {{ beach.currentLabel ?? '' }}
             </surf-badge>
@@ -114,6 +158,18 @@ onBeforeUnmount(() => {
             <surf-badge variant="neutral">No data</surf-badge>
           </template>
         </div>
+        <div v-if="hasForecast" class="conditions">
+          <span class="cond-item">
+            <surf-icon name="waves" size="16"></surf-icon>
+            <span>{{ swellText }}</span>
+          </span>
+          <span class="cond-item">
+            <surf-icon name="wind" size="16"></surf-icon>
+            <span>{{ windText }}</span>
+          </span>
+        </div>
+        <div v-else-if="beach.currentScore !== null" class="no-forecast">No forecast data</div>
+        <div v-if="bestWindowText" class="best-window">{{ bestWindowText }}</div>
         <div
           v-if="beach.currentScore !== null"
           class="staleness"
@@ -254,6 +310,32 @@ onBeforeUnmount(() => {
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: 1;
+}
+
+.conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin-top: var(--space-2);
+}
+
+.cond-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.no-forecast {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-2);
+}
+
+.best-window {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 .fav-btn {
