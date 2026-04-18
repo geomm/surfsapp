@@ -350,3 +350,15 @@
   - Vue `defineEmits` typed signatures use `(e: 'close'): void` call-signature style; TS enforces the emit payload.
   - `accent-color: var(--color-primary)` on checkboxes picks up the existing theme without a custom checkmark component.
 ---
+
+## 2026-04-19 - US-001 (Phase 12)
+- Branch ralph/phase-12-mobile-polish created from main.
+- ui/index.html: viewport meta updated to include `viewport-fit=cover` so env(safe-area-inset-*) can resolve to non-zero on iOS.
+- ui/src/styles/base/_base.scss: body gains `-webkit-tap-highlight-color: transparent`, `-webkit-text-size-adjust: 100%`, `text-size-adjust: 100%`, `overscroll-behavior-y: none`. Existing body rules preserved.
+- Added a global `button` reset with `-webkit-tap-highlight-color: transparent` and `touch-action: manipulation` — kills the 300ms double-tap delay and grey tap flash on iOS without breaking the custom pull-to-refresh gesture (which lives on a scroll container, not a button).
+- Files changed: ui/index.html, ui/src/styles/base/_base.scss, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (tap a beach card rapidly → no grey flash / zoom; DevTools → inspect viewport meta).
+  - `touch-action: manipulation` is safe as a button default because it kills only double-tap zoom on the element; page-level pan/zoom still works. Do NOT upgrade this to `touch-action: none` globally — the Phase 6 pull-to-refresh composable relies on default touch behaviour on its scroll root.
+  - The SCSS partial lives at ui/src/styles/base/_base.scss; main.scss already imports it. No new `@use` needed.
+---

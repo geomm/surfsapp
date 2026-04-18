@@ -1,97 +1,121 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-11-filters",
-  "description": "Phase 11 — Filters. Add region and difficulty filters to the beach listing via a bottom sheet opened from the header. Multi-select within each filter, AND across filters (region AND difficulty AND favourites), with selections persisted to IndexedDB.",
+  "branchName": "ralph/phase-12-mobile-polish",
+  "description": "Phase 12 — Mobile Polish. Safe-area insets, tap/scroll feel, standalone-mode CSS, skeleton loading states, polished error states, and a landscape audit. iOS Safari priority; no haptics; portrait lock stays.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Add region + difficulty filter state and persistence to beachStore",
-      "description": "As a developer, I need the store to manage region/difficulty selections and persist them to IndexedDB so filters survive reloads.",
+      "title": "Safe-area + global tap/scroll foundation",
+      "description": "As a developer, I need a baseline set of mobile-friendly CSS rules and a viewport config that enables safe-area insets, so every subsequent view can rely on them.",
       "acceptanceCriteria": [
-        "beachStore state extended with selectedRegions: Set<string> and selectedDifficulties: Set<string> (both initialised empty)",
-        "New actions: toggleRegion(region: string), toggleDifficulty(level: string), clearFilters() — clearFilters clears regions, difficulties, AND showFavouritesOnly",
-        "toggleRegion / toggleDifficulty add or remove the value from the Set and persist to db.settings under keys 'selectedRegions' and 'selectedDifficulties' (stored as arrays via Array.from(set) since IndexedDB cannot serialise Set)",
-        "toggleFavouritesFilter updated to also persist the new value to db.settings under key 'showFavouritesOnly'",
-        "displayedBeaches getter updated: a beach passes when (selectedRegions is empty OR selectedRegions has beach.region) AND (selectedDifficulties is empty OR selectedDifficulties has beach.skillLevel) AND (not showFavouritesOnly OR favourites has beach.id). Empty Sets mean no filter applied — they do NOT exclude all beaches",
-        "New getter activeFilterCount: number — returns count of active filters (selectedRegions.size > 0 counts 1, selectedDifficulties.size > 0 counts 1, showFavouritesOnly true counts 1 → max 3)",
-        "New getter availableRegions: string[] — unique sorted list of beach.region across state.beaches",
-        "New getter availableDifficulties: string[] — unique sorted list of beach.skillLevel across state.beaches",
-        "New action hydrateSettings() reads 'selectedRegions', 'selectedDifficulties', and 'showFavouritesOnly' from db.settings and populates state; defensively defaults to empty Sets / false if a stored value is missing, null, or not an array/boolean",
-        "Typecheck passes (cd ui && yarn typecheck)"
+        "ui/index.html viewport meta tag updated to <meta name='viewport' content='width=device-width, initial-scale=1.0, viewport-fit=cover' /> — without viewport-fit=cover, env(safe-area-inset-*) always resolves to 0 on iOS",
+        "ui/src/styles/base/_base.scss body selector gains: -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior-y: none;",
+        "_base.scss gains a button reset adding -webkit-tap-highlight-color: transparent; and touch-action: manipulation; (eliminates 300ms double-tap delay and grey tap flash)",
+        "Existing body rules (font-family, font-size, background-color, color) preserved",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: open the app, tap a beach card rapidly — no grey flash, no zoom; inspect <meta name='viewport'> and confirm viewport-fit=cover is present"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "The db.settings table (Dexie, primary key 'key') is already declared in ui/src/db.ts — no schema migration. Filter logic lives entirely in the displayedBeaches getter; do not mutate state.beaches. Existing toggleFavouritesFilter already exists — extend it to persist, don't replace it."
+      "notes": "touch-action: manipulation is the right default on buttons (allows pan/zoom at page level but kills double-tap zoom on the element itself). Do NOT apply touch-action: none globally — that would break the custom pull-to-refresh gesture."
     },
     {
       "id": "US-002",
-      "title": "Hydrate persisted filters on app startup",
-      "description": "As a user, I want my previously selected filters to still be applied when I reopen the app.",
+      "title": "Apply safe-area insets to HomeView and BeachDetailView",
+      "description": "As a user on iPhone with a notch, I want the app header and bottom content not to sit under the Dynamic Island/notch or home indicator.",
       "acceptanceCriteria": [
-        "The existing call site for beachStore.hydrateFavourites() is located (search ui/src for 'hydrateFavourites(') and beachStore.hydrateSettings() is invoked in the same place, before or alongside the favourites hydration",
-        "If no settings exist in IndexedDB yet, hydration silently succeeds with default empty filters (no thrown errors, no console errors)",
-        "Hydration failures are caught and logged to console.error; the app still renders and functions",
+        "HomeView.vue .header padding-top adjusted to: padding-top: calc(var(--space-4) + env(safe-area-inset-top));",
+        "HomeView.vue .header padding-left and padding-right adjusted to: padding-left: calc(var(--space-4) + env(safe-area-inset-left)); padding-right: calc(var(--space-4) + env(safe-area-inset-right));",
+        "HomeView.vue .content padding-bottom adjusted to: padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));",
+        "Same three adjustments applied to BeachDetailView.vue .header and .content",
+        "Existing max-width/margin/layout rules preserved — only padding values change",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: open the app, toggle favourites-only (and later after US-003, toggle some region/difficulty filters), reload the page, confirm the filters are still applied"
+        "Verify in browser using dev-browser skill: open Chrome DevTools device mode, emulate iPhone 14 Pro; confirm the header and content stay clear of the status bar area and the bottom of the viewport"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Depends on US-001 (hydrateSettings must exist). The existing hydrateFavourites call is likely in App.vue or a setup in main.ts — search and mirror the pattern exactly."
+      "passes": false,
+      "notes": "Depends on US-001 (viewport-fit=cover must be in place for env() to return non-zero values). Use calc() so existing spacing tokens continue to apply."
     },
     {
       "id": "US-003",
-      "title": "Build FilterSheet.vue with region + difficulty multi-select checkboxes",
-      "description": "As a user, I want a bottom sheet with clear checkboxes for each region and difficulty so I can pick multiple values.",
+      "title": "Safe-area for bottom sheets and FilterSheet footer",
+      "description": "As a user, I want bottom sheets not to bury their footer buttons under the iOS home indicator.",
       "acceptanceCriteria": [
-        "New component file ui/src/components/FilterSheet.vue (Vue SFC, NOT a Lit component) that wraps <surf-bottom-sheet>",
-        "Component accepts prop `open: boolean` and emits `close` event when user taps the Done button or the sheet's built-in close/backdrop (consume the close event from surf-bottom-sheet)",
-        "Sheet has title 'Filters'",
-        "Two vertically stacked sections inside the sheet: 'Region' (list of checkbox rows, one per value in beachStore.availableRegions) and 'Difficulty' (list of checkbox rows, one per value in beachStore.availableDifficulties)",
-        "Each region row's checkbox is checked when beachStore.selectedRegions has that value; clicking the row or checkbox calls beachStore.toggleRegion(region)",
-        "Each difficulty row's checkbox is checked when beachStore.selectedDifficulties has that value; clicking the row calls beachStore.toggleDifficulty(level). Display labels are capitalised (e.g. 'beginner' → 'Beginner') while the stored value stays lowercased",
-        "Each row is a tappable area with a minimum 44px touch target",
-        "Footer has two buttons: 'Clear all' calls beachStore.clearFilters() but does NOT close the sheet; 'Done' emits the close event",
-        "When beachStore.availableRegions or availableDifficulties is empty, that section shows a short 'No options available' message",
+        "ui/src/components/lit/surf-bottom-sheet.ts .sheet padding updated: keep padding: var(--space-4); then add padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));",
+        "ui/src/components/FilterSheet.vue — verify its Done/Clear-all footer is not obscured; if the sheet itself pads correctly, no further change required. If the footer is absolutely positioned, it must also honour env(safe-area-inset-bottom)",
+        "Backdrop full-screen styling unchanged",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: render the sheet in HomeView (open it via a temporary button or after US-004), toggle a region checkbox, confirm the visible beach list updates; tap Clear all, confirm both Sets empty"
+        "Verify in browser using dev-browser skill: emulate iPhone 14 Pro, open the filter sheet; the Done/Clear all buttons sit above the simulated home indicator area, not under it"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Depends on US-001. Use native <input type='checkbox'> styled with scoped SCSS — do not create a new Lit component. The favourites-only toggle stays in the header; it is NOT inside this sheet."
+      "passes": false,
+      "notes": "Depends on US-001. The existing bottom sheet already uses transform/transition from translateY(100%) → translateY(0); adjusting only the padding keeps those animations intact."
     },
     {
       "id": "US-004",
-      "title": "Add filter button to HomeView header with active-count indicator",
-      "description": "As a user, I want a clearly marked filter button in the header that shows when filters are active.",
+      "title": "Standalone-mode CSS for iOS status bar clearance",
+      "description": "As a user who installed surfsapp on iOS, I want the header to clear the iOS status bar cleanly instead of sitting under it when launching the installed app.",
       "acceptanceCriteria": [
-        "New <button> added to HomeView.vue header, placed BETWEEN the favourites toggle (.fav-filter-btn) and the install button (.install-btn)",
-        "Button renders <surf-icon name='sliders-horizontal'> (or 'filter' if sliders-horizontal is not available in the surf-icon registry — check ui/src/components/lit/surf-icon.ts and pick one; add it to the registry if missing by importing the matching lucide icon)",
-        "Button has aria-label='Open filters', minimum 44x44px touch target, and styling consistent with the adjacent header buttons (transparent background, var(--space-2) padding)",
-        "When beachStore.activeFilterCount > 0, a small coloured dot badge is rendered over the icon using an existing token (e.g. var(--color-surf-very-good) or a similar accent)",
-        "Local ref `filterSheetOpen = ref(false)` is added to HomeView.vue script setup",
-        "Clicking the button sets filterSheetOpen.value = true",
-        "<FilterSheet :open='filterSheetOpen' @close='filterSheetOpen = false' /> is rendered in HomeView.vue template, imported from the new component",
+        "_base.scss (or a new partial imported from main.scss) adds an @media all and (display-mode: standalone) block",
+        "Inside the block, the shared header selector (.header — present in both HomeView and BeachDetailView, and scoped per component — so the rule must target the class or be added in each view's <style scoped> block) gains an additional var(--space-2) top padding on top of the US-002 env(safe-area-inset-top) padding. Implement either by: (a) updating both HomeView.vue and BeachDetailView.vue scoped <style> blocks with their own @media (display-mode: standalone) rule, OR (b) making the rule global in _base.scss targeting .header (confirm no other .header collisions exist)",
+        "In regular browser (not standalone), the extra padding does NOT apply",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: click the filter button, sheet opens; select a region; tap Done; sheet closes; dot badge appears on the filter button; beach list is filtered to that region"
+        "Verify in browser using dev-browser skill: open DevTools → Rendering → 'Emulate CSS media feature display-mode' → set to 'standalone'; confirm the extra header padding applies. Toggle back to 'browser'; confirm it does NOT apply"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Depends on US-003 (FilterSheet component). Do not restyle the existing favourites, install, or refresh buttons — only add the new filter button alongside them. The favourites-only toggle still counts toward activeFilterCount even though its control is outside the sheet."
+      "passes": false,
+      "notes": "Depends on US-002 (safe-area baseline). iOS Safari doesn't preview standalone mode inside the browser, but Chromium's media emulator works for verification. Prefer option (a) — per-view scoped rules — since .header is a scoped class and a global rule won't reach it without :deep() or :global()."
     },
     {
       "id": "US-005",
-      "title": "Empty state when filters exclude every beach",
-      "description": "As a user, when my filters match no beaches, I want a clear message and a one-tap way to clear filters.",
+      "title": "Skeleton loading states for HomeView and BeachDetailView",
+      "description": "As a user waiting for data, I want a skeleton that mirrors the final layout so the screen feels responsive and intentional, not blank.",
       "acceptanceCriteria": [
-        "In HomeView.vue, a new empty-state block renders when beachStore.beaches.length > 0 AND beachStore.displayedBeaches.length === 0 AND beachStore.activeFilterCount > 0 AND the existing favourites-only empty state is NOT already showing (i.e. region OR difficulty filter is contributing to the emptiness, not favourites-only alone)",
-        "The new empty state mirrors the existing favourites empty state visually: centred <surf-icon name='sliders-horizontal'> (same icon as the filter button), an <h2> 'No beaches match your filters', a <p> 'Try removing a filter or clearing them all', and a <surf-button variant='secondary'> labelled 'Clear filters' that calls beachStore.clearFilters()",
-        "The existing favourites-only empty state continues to fire when only the favourites filter is active and it alone produces zero results — no regression",
+        "HomeView.vue loading state (currently <div v-if='beachStore.loading' class='state'>Loading…</div>) replaced with a list of 4 skeleton cards, each approximating the real beach-card layout: a title-width bar (~60% of card), a region-width bar (~40%), a badge-sized bar (top-right), and a conditions-line bar (~80%)",
+        "BeachDetailView.vue loading state replaced with a hero skeleton: a name-width bar, a region-width bar, a score-width bar, and 2-3 lines approximating the reasons disclosure",
+        "Skeleton bars animate with a subtle pulse or shimmer via CSS @keyframes (roughly 1.5s loop) using existing neutral tokens (check ui/src/styles/tokens/_colors.scss for --color-neutral-* values; use the lightest available as base and one step darker for the shimmer)",
+        "Skeleton container has aria-busy='true' aria-live='polite'; individual bars have aria-hidden='true'",
+        "Animation respects prefers-reduced-motion: a @media (prefers-reduced-motion: reduce) block inside the skeleton styles disables the keyframe animation",
+        "No new Lit component — skeletons are inline Vue markup with scoped styles",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: activate filters that produce zero matches (e.g. pick a region and a difficulty combination no beach satisfies); the new empty state appears; clicking 'Clear filters' restores the full list"
+        "Verify in browser using dev-browser skill: throttle the network to Slow 3G in DevTools, reload the home page; the skeleton cards appear until data arrives, then are replaced by real cards. Repeat for a beach detail page"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Depends on US-001 (activeFilterCount, clearFilters) and US-004 (filter button uses same icon). Condition ordering matters — keep the favourites-only empty state check first so it still fires on its own; the new state fires when any OTHER filter contributes to zero results."
+      "passes": false,
+      "notes": "Keep animation subtle — a gentle opacity or background-position shimmer is enough. Heavy animation is distracting on mobile. No new component needed — both views can own their own skeleton markup."
+    },
+    {
+      "id": "US-006",
+      "title": "Polished error states for HomeView and BeachDetailView",
+      "description": "As a user who hits a network or data error, I want a clear visual and a one-tap retry rather than a raw error string.",
+      "acceptanceCriteria": [
+        "HomeView.vue error state (the <div v-else-if='beachStore.error' class='state'> block) restructured to mirror the existing .empty-state pattern: a centred <surf-icon name='cloud-off' size='48'> icon, an <h2> 'Can't load beaches', a <p> containing a friendly, shortened version of beachStore.error, and the existing Retry <surf-button>",
+        "BeachDetailView.vue error state (<div v-else-if='beachStore.detailError'>) restructured with the same pattern: cloud-off icon, 'Can't load this beach' heading, friendly error line, Retry button",
+        "The cloud-off icon is registered in ui/src/components/lit/surf-icon.ts (import from lucide if missing)",
+        "Raw error string remains visible but de-emphasised (smaller font, --color-text-secondary), not styled as --color-surf-poor 'Error:' prefix",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: in DevTools throttling set to Offline, reload the home page; confirm the new error state appears with icon + message + Retry button. Switch back to Online, tap Retry; list loads. Repeat for a beach detail page"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The lucide icon is named `cloud-off` (package export: CloudOff). If missing from the surf-icon registry, add it following the existing pattern used for heart, download, sliders-horizontal, etc."
+    },
+    {
+      "id": "US-007",
+      "title": "Landscape audit and fixes at iPhone X and iPhone 14 Pro Max landscape viewports",
+      "description": "As a user who rotates their phone before installing, I want the app not to break obviously in landscape.",
+      "acceptanceCriteria": [
+        "Using Chrome DevTools device mode, audit HomeView at 812x375 (iPhone X landscape) and 926x428 (iPhone 14 Pro Max landscape): header stays on one row, cards flow correctly, scroll works, filter sheet opens without clipping",
+        "Audit BeachDetailView at the same viewports: hero layout doesn't clip, reasons disclosure expands correctly, map renders at a sensible height (if the map explodes to full viewport height in landscape, add max-height: 40vh on .beach-map-wrap — only if observed as broken), ForecastStrip remains horizontally scrollable",
+        "Audit FilterSheet at the same viewports: the existing max-height: 85vh on surf-bottom-sheet holds; if checkbox rows look cramped, add a max-width: 480px; margin: 0 auto; on the inner sheet content container",
+        "Every observed breakage is fixed with the minimum CSS required; the commit message documents each fix in one line",
+        "If no breakage is observed, the commit message says exactly 'Phase 12 landscape audit — no changes required'",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: toggle DevTools device mode to landscape for both iPhone X and iPhone 14 Pro Max; visually confirm all three surfaces (home, detail, filter sheet) render sensibly"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Manifest stays orientation: 'portrait' — landscape is a soft-support scenario for pre-install users only. Don't over-invest. Only fix what's visibly broken."
     }
   ]
 }

@@ -8,6 +8,15 @@ body {
   line-height: var(--line-height-normal);
   background-color: var(--color-background);
   color: var(--color-text-primary);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 a {
