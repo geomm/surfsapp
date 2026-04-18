@@ -6,6 +6,7 @@ import type { Beach } from '../types/beach'
 import { degreesToCompass } from '../utils/compass'
 import { formatRelativeTime, isStale } from '../utils/time'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
+import { useInstallPrompt } from '../composables/useInstallPrompt'
 
 const beachStore = useBeachStore()
 const router = useRouter()
@@ -19,6 +20,8 @@ const { isPulling, pullDistance, isRefreshing, trigger } = usePullToRefresh(scro
   threshold: 60,
   onRefresh: () => beachStore.fetchBeaches(),
 })
+
+const { canInstall, promptInstall } = useInstallPrompt()
 
 function hasForecast(b: Beach): boolean {
   return (
@@ -91,6 +94,15 @@ function toggleFav(b: Beach) {
         @click="beachStore.toggleFavouritesFilter()"
       >
         <surf-icon name="heart"></surf-icon>
+      </button>
+      <button
+        v-if="canInstall"
+        class="install-btn"
+        type="button"
+        aria-label="Install app"
+        @click="promptInstall"
+      >
+        <surf-icon name="download"></surf-icon>
       </button>
       <button
         class="refresh-btn"
@@ -208,6 +220,19 @@ function toggleFav(b: Beach) {
   background: transparent;
   border: none;
   padding: var(--space-2);
+  cursor: pointer;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.install-btn {
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
   cursor: pointer;
   color: var(--color-text-primary);
   display: inline-flex;

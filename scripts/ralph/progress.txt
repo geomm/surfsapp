@@ -8,7 +8,7 @@ Started: Mon Apr 07 2026
 - Vue custom element config in vite.config.ts: isCustomElement: (tag) => tag.startsWith('surf-')
 - Lit Web Components use `declare` + constructor pattern for reactive properties (not class field initializers)
 - Available Lit components: surf-card (clickable, padding), surf-badge (variant, size), surf-icon (name, size, color), surf-button, surf-bottom-sheet
-- surf-icon available names: waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw
+- surf-icon available names: waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw, download
 - surf-badge variant values: 'very-good', 'good', 'maybe', 'poor', 'neutral' — these map directly to currentLabel from the API
 - Design tokens: CSS custom properties on :root — --space-N, --font-size-X, --color-*, --font-weight-*
 - SCSS $variables for breakpoints (not CSS custom props — can't use in @media)
@@ -20,3 +20,44 @@ Started: Mon Apr 07 2026
 - Router at ui/src/router.ts — routes: /, /design, /components
 - No Pinia installed yet — US-001 will add it
 - ui/src/main.ts is the app entry point
+- Vite serves ui/public/* at the site root; reference static assets as `/filename.ext` (not `/public/...`)
+
+## 2026-04-18 - US-005
+- Created ui/src/composables/useInstallPrompt.ts: captures `beforeinstallprompt`, exposes `canInstall` ref + `promptInstall()` action, listens for `appinstalled`, suppresses prompt when display-mode is standalone, cleans up listeners via onScopeDispose
+- Added `download` icon to surf-icon registry (lucide Download)
+- Added Install app icon button to HomeView header (between favourites filter and refresh), visible only when canInstall === true, aria-label='Install app', 44x44 touch target
+- Typecheck passes
+- Files changed: ui/src/composables/useInstallPrompt.ts (new), ui/src/components/lit/surf-icon.ts, ui/src/views/HomeView.vue
+- Manual browser verification needed (no MCP browser tools available); test in Chrome via DevTools "Application > Manifest > Add to homescreen" link or in a production build
+- **Learnings for future iterations:**
+  - `beforeinstallprompt` is non-standard — type with a local interface that extends Event with `prompt()` and `userChoice` (Promise<{outcome,platform}>) rather than reaching for ambient DOM types
+  - The captured event is single-use: after calling prompt() + awaiting userChoice, browsers won't re-fire beforeinstallprompt for the same session, so clear the ref alongside the local variable
+  - `(display-mode: standalone)` matchMedia check during composable init is the cleanest way to suppress the install button when the app is already launched as a PWA
+---
+
+## 2026-04-18 - US-004
+- Updated ui/pwa-assets.config.ts to use combinePresetAndAppleSplashScreens with 4 devices: iPhone 14 (1170x2532), iPhone 14 Pro Max (1290x2796), iPad Air 10.9" (1640x2360), iPad Pro 12.9" (2048x2732)
+- Configured splash background color to match theme (#1a73e8)
+- Ran yarn generate-pwa-assets — produced 8 splash PNGs (portrait + landscape for each device)
+- Added 8 apple-touch-startup-image link tags to ui/index.html <head> (portrait and landscape for each device)
+- Typecheck passes
+- Files changed: ui/pwa-assets.config.ts, ui/index.html, ui/public/apple-splash-*.png (8 new files)
+- **Learnings for future iterations:**
+  - @vite-pwa/assets-generator emits an HTML snippet for the <link> tags, but the snippet's href paths include "-light-" (e.g. apple-splash-portrait-light-1170x2532.png) even though the generator only writes files WITHOUT the "-light-" prefix when no dark image is configured. Do NOT copy the snippet verbatim — strip "-light-" from hrefs, or configure a darkImageResolver to produce both.
+  - combinePresetAndAppleSplashScreens(preset, options, devices) wraps minimal2023Preset and adds appleSplashScreens — pass the device name array as the third argument.
+  - AppleDeviceName options come from Object.keys(appleSplashScreenSizes). iPhone 14/15 and iPhone 14/15 Pro Max share sizes; use 'iPhone 14'/'iPhone 14 Pro Max' for stable names.
+  - linkMediaOptions.basePath='/' keeps Vite's public-root-serving convention.
+---
+
+## 2026-04-18 - US-003
+- Added iOS-specific meta tags, favicon links, and apple-touch-icon to ui/index.html <head>
+- Preserved existing <title> and viewport meta tags
+- Added theme-color (#1a73e8) and description meta tags
+- Typecheck passes (vue-tsc --noEmit)
+- Files changed: ui/index.html
+- **Learnings for future iterations:**
+  - ui/index.html is minimal; head only has charset, viewport, and title by default
+  - Vite serves /public/* at the site root, so /favicon.ico, /logo.svg, /apple-touch-icon-180x180.png paths resolve correctly
+  - iOS Safari primarily reads apple-touch-icon link and apple-mobile-web-app-* meta tags, not the manifest icons — both are needed for full cross-platform coverage
+  - Manual browser verification still needed (no MCP browser tools available this run)
+---
