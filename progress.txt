@@ -373,3 +373,14 @@
   - `touch-action: manipulation` is safe as a button default because it kills only double-tap zoom on the element; page-level pan/zoom still works. Do NOT upgrade this to `touch-action: none` globally — the Phase 6 pull-to-refresh composable relies on default touch behaviour on its scroll root.
   - The SCSS partial lives at ui/src/styles/base/_base.scss; main.scss already imports it. No new `@use` needed.
 ---
+
+## 2026-04-19 - US-003 (Phase 12)
+- ui/src/components/lit/surf-bottom-sheet.ts: .sheet gains `padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom))` after the shorthand `padding: var(--space-4)` so the existing uniform padding stays for top/left/right and only the bottom grows on iOS with a home indicator.
+- FilterSheet.vue footer is a normal flow child of the sheet body (not absolutely positioned), so the sheet's own bottom padding is sufficient — no FilterSheet change required per PRD.
+- Sheet transform/transition (translateY 100% → 0) is unaffected because padding is animated by box-size only.
+- Files changed: ui/src/components/lit/surf-bottom-sheet.ts, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools iPhone 14 Pro → open filter sheet → Done/Clear all sit above the simulated home indicator).
+  - When layering an env() safe-area inset on top of an existing token-based padding, the longhand override (padding-bottom) must come AFTER the shorthand — CSS reads top to bottom; reversing would silently discard the calc.
+  - surf-bottom-sheet is the only Lit component rendering a sheet surface in this project — safe to assume any future sheet variant either reuses it or inherits this rule.
+---

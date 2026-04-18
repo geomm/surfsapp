@@ -43,6 +43,7 @@ class SurfBottomSheet extends LitElement {
       max-height: 85vh;
       overflow-y: auto;
       padding: var(--space-4);
+      padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
       z-index: 101;
       transform: translateY(100%);
       transition: transform 250ms ease;

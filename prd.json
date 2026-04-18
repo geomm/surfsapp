@@ -48,7 +48,7 @@
         "Verify in browser using dev-browser skill: emulate iPhone 14 Pro, open the filter sheet; the Done/Clear all buttons sit above the simulated home indicator area, not under it"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001. The existing bottom sheet already uses transform/transition from translateY(100%) → translateY(0); adjusting only the padding keeps those animations intact."
     },
     {
