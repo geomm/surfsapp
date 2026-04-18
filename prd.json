@@ -31,7 +31,7 @@
         "Verify in browser using dev-browser skill (open Chrome DevTools Application tab, confirm manifest loads without errors and all icon entries resolve)"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (icon PNGs must exist in public/). Service worker only works in production builds — run yarn build && yarn preview to verify the manifest."
     },
     {

@@ -263,6 +263,17 @@
   - App.vue was previously template-only with just <RouterView />; this is the first time it holds app-chrome. Future banners (US-006 update banner) should render in this same location and share the 40px fixed-top banner pattern.
 ---
 
+## 2026-04-18 - US-002 (Phase 10)
+- Expanded ui/vite.config.ts VitePWA manifest from minimal (name/short_name/theme/bg/display) to the full Phase 10 set: name 'surfsapp — Greek Surf Conditions', description, orientation 'portrait', scope '/', start_url '/', categories ['sports','weather','travel'], lang 'en', and a 4-entry icons array (pwa-192/512 'any' + pwa-maskable-192/512 'maskable').
+- Verified by running `yarn build` — dist/manifest.webmanifest contains all expected fields and resolves the four PNGs generated in US-001.
+- Files changed: ui/vite.config.ts, prd.json
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes; `yarn build` emits dist/manifest.webmanifest cleanly.
+  - VitePWA's `manifest` option accepts the standard W3C manifest fields directly — no plugin-specific transformations needed.
+  - The icons array `src` paths are relative to the public directory root, so `'pwa-192x192.png'` (no leading slash) maps to `/pwa-192x192.png` at runtime.
+  - Phase 9's minimal manifest had no `description`, `orientation`, `scope`, `start_url`, `categories`, `lang`, or `icons` — Phase 10 adds them. Manual browser verification still needed (open DevTools → Application → Manifest in a `yarn preview` session and confirm zero warnings).
+---
+
 ## 2026-04-18 - US-001 (Phase 10)
 - Branch ralph/phase-10-pwa-installation created from main.
 - Installed @vite-pwa/assets-generator@1.0.2 as dev dependency in ui/.
