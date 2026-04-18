@@ -314,6 +314,17 @@
   - main.ts is the canonical hydration site for pre-mount store warmup — future persisted-state features should add another hydrate call into the same Promise.allSettled array rather than re-introducing an App.vue onMounted hook (Vue parent onMounted runs AFTER children, so it would race HomeView's fetchBeaches).
 ---
 
+## 2026-04-19 - US-004 (Phase 11)
+- ui/src/components/lit/surf-icon.ts: registered the 'sliders-horizontal' icon (imported SlidersHorizontal from lucide).
+- HomeView.vue: imported FilterSheet and added local `filterSheetOpen = ref(false)`. Added a new <button class="filter-btn"> between the favourites toggle and the install button: surf-icon name="sliders-horizontal", aria-label="Open filters", 44x44 touch target, transparent background; clicking sets filterSheetOpen.value = true. A small <span class="filter-badge"> dot appears top-right of the icon when beachStore.activeFilterCount > 0 (var(--color-surf-very-good), absolutely positioned). Rendered <FilterSheet :open="filterSheetOpen" @close="filterSheetOpen = false" /> at the end of the template.
+- Files changed: ui/src/components/lit/surf-icon.ts, ui/src/views/HomeView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (open sheet, pick a region, confirm dot badge appears).
+  - lucide exports SlidersHorizontal (PascalCase); the surf-icon registry key uses kebab-case ('sliders-horizontal').
+  - The filter button must be placed BETWEEN .fav-filter-btn and .install-btn — .fav-filter-btn already has `margin-left: auto` so the new button naturally groups with the rightmost cluster without further layout tweaks.
+  - The badge dot is a span with `position: absolute` inside a `position: relative` button; an empty span styled as a circle is enough — no count text per the PRD.
+---
+
 ## 2026-04-19 - US-003 (Phase 11)
 - Created ui/src/components/FilterSheet.vue (Vue SFC) wrapping <surf-bottom-sheet title="Filters">. Takes `open: boolean` prop; emits `close` when Done is tapped or the underlying sheet dispatches `sheet-close` (backdrop / Escape).
 - Two stacked sections: Region + Difficulty. Each renders native <input type="checkbox"> rows inside <label> wrappers (44px min touch target). Region labels use beachStore.availableRegions verbatim; difficulty labels are capitalise()d display-only while the stored value in selectedDifficulties stays lowercased.

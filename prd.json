@@ -75,7 +75,7 @@
         "Verify in browser using dev-browser skill: click the filter button, sheet opens; select a region; tap Done; sheet closes; dot badge appears on the filter button; beach list is filtered to that region"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003 (FilterSheet component). Do not restyle the existing favourites, install, or refresh buttons — only add the new filter button alongside them. The favourites-only toggle still counts toward activeFilterCount even though its control is outside the sheet."
     },
     {

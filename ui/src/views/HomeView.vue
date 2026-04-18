@@ -7,10 +7,12 @@ import { degreesToCompass } from '../utils/compass'
 import { formatRelativeTime, isStale } from '../utils/time'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { useInstallPrompt } from '../composables/useInstallPrompt'
+import FilterSheet from '../components/FilterSheet.vue'
 
 const beachStore = useBeachStore()
 const router = useRouter()
 const scrollRoot = ref<HTMLElement | null>(null)
+const filterSheetOpen = ref(false)
 
 function openBeach(b: Beach) {
   router.push({ name: 'beach-detail', params: { id: b.id } })
@@ -94,6 +96,15 @@ function toggleFav(b: Beach) {
         @click="beachStore.toggleFavouritesFilter()"
       >
         <surf-icon name="heart"></surf-icon>
+      </button>
+      <button
+        type="button"
+        class="filter-btn"
+        aria-label="Open filters"
+        @click="filterSheetOpen = true"
+      >
+        <surf-icon name="sliders-horizontal"></surf-icon>
+        <span v-if="beachStore.activeFilterCount > 0" class="filter-badge" aria-hidden="true"></span>
       </button>
       <button
         v-if="canInstall"
@@ -190,6 +201,8 @@ function toggleFav(b: Beach) {
         </li>
       </ul>
     </main>
+
+    <FilterSheet :open="filterSheetOpen" @close="filterSheetOpen = false" />
   </div>
 </template>
 
@@ -256,6 +269,30 @@ function toggleFav(b: Beach) {
 
 .fav-filter-btn-on {
   color: var(--color-surf-poor);
+}
+
+.filter-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-surf-very-good);
 }
 
 .content {
