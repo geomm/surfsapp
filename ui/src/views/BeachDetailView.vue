@@ -238,6 +238,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
+  padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+  padding-left: calc(var(--space-4) + env(safe-area-inset-left));
+  padding-right: calc(var(--space-4) + env(safe-area-inset-right));
   max-width: 600px;
   margin: 0 auto;
 }
@@ -264,6 +267,7 @@ onBeforeUnmount(() => {
 
 .content {
   padding: 0 var(--space-4) var(--space-6);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
   max-width: 600px;
   margin: 0 auto;
 }

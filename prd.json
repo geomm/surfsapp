@@ -33,7 +33,7 @@
         "Verify in browser using dev-browser skill: open Chrome DevTools device mode, emulate iPhone 14 Pro; confirm the header and content stay clear of the status bar area and the bottom of the viewport"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (viewport-fit=cover must be in place for env() to return non-zero values). Use calc() so existing spacing tokens continue to apply."
     },
     {

@@ -351,6 +351,17 @@
   - `accent-color: var(--color-primary)` on checkboxes picks up the existing theme without a custom checkmark component.
 ---
 
+## 2026-04-19 - US-002 (Phase 12)
+- HomeView.vue & BeachDetailView.vue .header: padding-top/left/right now use calc(var(--space-4) + env(safe-area-inset-*)) so the header clears the notch/Dynamic Island and respects landscape side insets.
+- Both .content selectors gained padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom)) so the last item clears the iOS home indicator.
+- Existing layout (max-width 600px, margin 0 auto, gap, flex rules) preserved — only padding values changed.
+- Files changed: ui/src/views/HomeView.vue, ui/src/views/BeachDetailView.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (DevTools device mode → iPhone 14 Pro; header clears status bar, content clears bottom).
+  - The shorthand `padding:` declaration must come BEFORE the longhand `padding-top/left/right/bottom` overrides — CSS reads top to bottom, so reordering would silently revert the safe-area calc.
+  - `.content` only needs padding-bottom (not horizontal) per PRD, since the existing `padding: 0 var(--space-4)` already provides side breathing room and the safe-area landscape insets are absorbed by the .header rule above.
+---
+
 ## 2026-04-19 - US-001 (Phase 12)
 - Branch ralph/phase-12-mobile-polish created from main.
 - ui/index.html: viewport meta updated to include `viewport-fit=cover` so env(safe-area-inset-*) can resolve to non-zero on iOS.
