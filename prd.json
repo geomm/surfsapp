@@ -63,7 +63,7 @@
         "Verify in browser using dev-browser skill (open the built app in preview mode, confirm the splash PNG files exist at their public paths)"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The @vite-pwa/assets-generator output includes an HTML snippet for the splash <link> tags — copy it verbatim into index.html rather than hand-writing the media queries. Splash screens only activate when the app is launched from the iOS home screen in standalone mode."
     },
     {

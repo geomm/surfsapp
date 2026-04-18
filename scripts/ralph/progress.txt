@@ -22,6 +22,20 @@ Started: Mon Apr 07 2026
 - ui/src/main.ts is the app entry point
 - Vite serves ui/public/* at the site root; reference static assets as `/filename.ext` (not `/public/...`)
 
+## 2026-04-18 - US-004
+- Updated ui/pwa-assets.config.ts to use combinePresetAndAppleSplashScreens with 4 devices: iPhone 14 (1170x2532), iPhone 14 Pro Max (1290x2796), iPad Air 10.9" (1640x2360), iPad Pro 12.9" (2048x2732)
+- Configured splash background color to match theme (#1a73e8)
+- Ran yarn generate-pwa-assets — produced 8 splash PNGs (portrait + landscape for each device)
+- Added 8 apple-touch-startup-image link tags to ui/index.html <head> (portrait and landscape for each device)
+- Typecheck passes
+- Files changed: ui/pwa-assets.config.ts, ui/index.html, ui/public/apple-splash-*.png (8 new files)
+- **Learnings for future iterations:**
+  - @vite-pwa/assets-generator emits an HTML snippet for the <link> tags, but the snippet's href paths include "-light-" (e.g. apple-splash-portrait-light-1170x2532.png) even though the generator only writes files WITHOUT the "-light-" prefix when no dark image is configured. Do NOT copy the snippet verbatim — strip "-light-" from hrefs, or configure a darkImageResolver to produce both.
+  - combinePresetAndAppleSplashScreens(preset, options, devices) wraps minimal2023Preset and adds appleSplashScreens — pass the device name array as the third argument.
+  - AppleDeviceName options come from Object.keys(appleSplashScreenSizes). iPhone 14/15 and iPhone 14/15 Pro Max share sizes; use 'iPhone 14'/'iPhone 14 Pro Max' for stable names.
+  - linkMediaOptions.basePath='/' keeps Vite's public-root-serving convention.
+---
+
 ## 2026-04-18 - US-003
 - Added iOS-specific meta tags, favicon links, and apple-touch-icon to ui/index.html <head>
 - Preserved existing <title> and viewport meta tags
