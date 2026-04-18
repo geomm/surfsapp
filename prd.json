@@ -83,7 +83,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "beforeinstallprompt only fires in Chromium browsers (Chrome, Edge, Samsung Internet). Safari/iOS never fire it — the button simply won't appear there, which is expected. Test in Chrome DevTools Application tab with the 'Add to homescreen' link, or after meeting all install criteria in a production build."
     }
   ]

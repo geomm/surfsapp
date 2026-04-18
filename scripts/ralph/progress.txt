@@ -8,7 +8,7 @@ Started: Mon Apr 07 2026
 - Vue custom element config in vite.config.ts: isCustomElement: (tag) => tag.startsWith('surf-')
 - Lit Web Components use `declare` + constructor pattern for reactive properties (not class field initializers)
 - Available Lit components: surf-card (clickable, padding), surf-badge (variant, size), surf-icon (name, size, color), surf-button, surf-bottom-sheet
-- surf-icon available names: waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw
+- surf-icon available names: waves, heart, map-pin, wind, star, chevron-right, arrow-left, refresh-cw, download
 - surf-badge variant values: 'very-good', 'good', 'maybe', 'poor', 'neutral' — these map directly to currentLabel from the API
 - Design tokens: CSS custom properties on :root — --space-N, --font-size-X, --color-*, --font-weight-*
 - SCSS $variables for breakpoints (not CSS custom props — can't use in @media)
@@ -21,6 +21,19 @@ Started: Mon Apr 07 2026
 - No Pinia installed yet — US-001 will add it
 - ui/src/main.ts is the app entry point
 - Vite serves ui/public/* at the site root; reference static assets as `/filename.ext` (not `/public/...`)
+
+## 2026-04-18 - US-005
+- Created ui/src/composables/useInstallPrompt.ts: captures `beforeinstallprompt`, exposes `canInstall` ref + `promptInstall()` action, listens for `appinstalled`, suppresses prompt when display-mode is standalone, cleans up listeners via onScopeDispose
+- Added `download` icon to surf-icon registry (lucide Download)
+- Added Install app icon button to HomeView header (between favourites filter and refresh), visible only when canInstall === true, aria-label='Install app', 44x44 touch target
+- Typecheck passes
+- Files changed: ui/src/composables/useInstallPrompt.ts (new), ui/src/components/lit/surf-icon.ts, ui/src/views/HomeView.vue
+- Manual browser verification needed (no MCP browser tools available); test in Chrome via DevTools "Application > Manifest > Add to homescreen" link or in a production build
+- **Learnings for future iterations:**
+  - `beforeinstallprompt` is non-standard — type with a local interface that extends Event with `prompt()` and `userChoice` (Promise<{outcome,platform}>) rather than reaching for ambient DOM types
+  - The captured event is single-use: after calling prompt() + awaiting userChoice, browsers won't re-fire beforeinstallprompt for the same session, so clear the ref alongside the local variable
+  - `(display-mode: standalone)` matchMedia check during composable init is the cleanest way to suppress the install button when the app is already launched as a PWA
+---
 
 ## 2026-04-18 - US-004
 - Updated ui/pwa-assets.config.ts to use combinePresetAndAppleSplashScreens with 4 devices: iPhone 14 (1170x2532), iPhone 14 Pro Max (1290x2796), iPad Air 10.9" (1640x2360), iPad Pro 12.9" (2048x2732)
