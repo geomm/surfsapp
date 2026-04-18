@@ -1,90 +1,97 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-10-pwa-installation",
-  "description": "Phase 10 — PWA Installation. Generate icon asset set, expand manifest, add iOS meta tags and splash screens, and wire a custom Install app button using beforeinstallprompt.",
+  "branchName": "ralph/phase-11-filters",
+  "description": "Phase 11 — Filters. Add region and difficulty filters to the beach listing via a bottom sheet opened from the header. Multi-select within each filter, AND across filters (region AND difficulty AND favourites), with selections persisted to IndexedDB.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Generate placeholder icon asset set",
-      "description": "As a developer, I need a consistent set of app icons so the manifest can reference real image files.",
+      "title": "Add region + difficulty filter state and persistence to beachStore",
+      "description": "As a developer, I need the store to manage region/difficulty selections and persist them to IndexedDB so filters survive reloads.",
       "acceptanceCriteria": [
-        "@vite-pwa/assets-generator installed as a dev dependency via yarn add -D @vite-pwa/assets-generator in ui/",
-        "ui/public/logo.svg created — a simple placeholder: a blue rounded-square background (#1a73e8) with a stylised white wave silhouette centered, 512x512 viewBox, no text, no gradients, clean geometric shapes",
-        "ui/pwa-assets.config.ts created using createAppIconsOnlyPreset (or minimal2023Preset's app icons) from @vite-pwa/assets-generator/config with source image public/logo.svg",
-        "Script added to ui/package.json: 'generate-pwa-assets': 'pwa-assets-generator'",
-        "Running yarn generate-pwa-assets produces these files in ui/public/: pwa-192x192.png, pwa-512x512.png, pwa-maskable-192x192.png, pwa-maskable-512x512.png, favicon.ico, apple-touch-icon-180x180.png",
-        "Generated PNG files committed to the repo",
-        "Typecheck passes"
+        "beachStore state extended with selectedRegions: Set<string> and selectedDifficulties: Set<string> (both initialised empty)",
+        "New actions: toggleRegion(region: string), toggleDifficulty(level: string), clearFilters() — clearFilters clears regions, difficulties, AND showFavouritesOnly",
+        "toggleRegion / toggleDifficulty add or remove the value from the Set and persist to db.settings under keys 'selectedRegions' and 'selectedDifficulties' (stored as arrays via Array.from(set) since IndexedDB cannot serialise Set)",
+        "toggleFavouritesFilter updated to also persist the new value to db.settings under key 'showFavouritesOnly'",
+        "displayedBeaches getter updated: a beach passes when (selectedRegions is empty OR selectedRegions has beach.region) AND (selectedDifficulties is empty OR selectedDifficulties has beach.skillLevel) AND (not showFavouritesOnly OR favourites has beach.id). Empty Sets mean no filter applied — they do NOT exclude all beaches",
+        "New getter activeFilterCount: number — returns count of active filters (selectedRegions.size > 0 counts 1, selectedDifficulties.size > 0 counts 1, showFavouritesOnly true counts 1 → max 3)",
+        "New getter availableRegions: string[] — unique sorted list of beach.region across state.beaches",
+        "New getter availableDifficulties: string[] — unique sorted list of beach.skillLevel across state.beaches",
+        "New action hydrateSettings() reads 'selectedRegions', 'selectedDifficulties', and 'showFavouritesOnly' from db.settings and populates state; defensively defaults to empty Sets / false if a stored value is missing, null, or not an array/boolean",
+        "Typecheck passes (cd ui && yarn typecheck)"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Use a hand-written SVG for the logo — keep it under 50 lines, no gradients. The generator handles producing all PNG sizes plus maskable variants with safe-area padding automatically. Run the generator script from the ui/ directory."
+      "passes": false,
+      "notes": "The db.settings table (Dexie, primary key 'key') is already declared in ui/src/db.ts — no schema migration. Filter logic lives entirely in the displayedBeaches getter; do not mutate state.beaches. Existing toggleFavouritesFilter already exists — extend it to persist, don't replace it."
     },
     {
       "id": "US-002",
-      "title": "Expand PWA manifest in vite.config.ts",
-      "description": "As a user, I want the installed app to show a proper icon, name, and metadata so it feels like a native app.",
+      "title": "Hydrate persisted filters on app startup",
+      "description": "As a user, I want my previously selected filters to still be applied when I reopen the app.",
       "acceptanceCriteria": [
-        "ui/vite.config.ts manifest config expanded with: name 'surfsapp — Greek Surf Conditions', short_name 'surfsapp', description 'Surf conditions and forecasts for beaches across Greece. Offline-ready.', theme_color '#1a73e8', background_color '#ffffff', display 'standalone', orientation 'portrait', scope '/', start_url '/', categories ['sports', 'weather', 'travel'], lang 'en'",
-        "icons array added with four entries: { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: 'pwa-maskable-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' }, { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill (open Chrome DevTools Application tab, confirm manifest loads without errors and all icon entries resolve)"
+        "The existing call site for beachStore.hydrateFavourites() is located (search ui/src for 'hydrateFavourites(') and beachStore.hydrateSettings() is invoked in the same place, before or alongside the favourites hydration",
+        "If no settings exist in IndexedDB yet, hydration silently succeeds with default empty filters (no thrown errors, no console errors)",
+        "Hydration failures are caught and logged to console.error; the app still renders and functions",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: open the app, toggle favourites-only (and later after US-003, toggle some region/difficulty filters), reload the page, confirm the filters are still applied"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Depends on US-001 (icon PNGs must exist in public/). Service worker only works in production builds — run yarn build && yarn preview to verify the manifest."
+      "passes": false,
+      "notes": "Depends on US-001 (hydrateSettings must exist). The existing hydrateFavourites call is likely in App.vue or a setup in main.ts — search and mirror the pattern exactly."
     },
     {
       "id": "US-003",
-      "title": "Add iOS meta tags and favicon to index.html",
-      "description": "As an iOS user, I want Add to Home Screen to use the correct icon and launch the app in standalone mode.",
+      "title": "Build FilterSheet.vue with region + difficulty multi-select checkboxes",
+      "description": "As a user, I want a bottom sheet with clear checkboxes for each region and difficulty so I can pick multiple values.",
       "acceptanceCriteria": [
-        "ui/index.html <head> updated with: <link rel='icon' href='/favicon.ico' sizes='48x48'>, <link rel='icon' href='/logo.svg' type='image/svg+xml'>, <link rel='apple-touch-icon' href='/apple-touch-icon-180x180.png'>",
-        "iOS-specific meta tags added: <meta name='apple-mobile-web-app-capable' content='yes'>, <meta name='apple-mobile-web-app-status-bar-style' content='default'>, <meta name='apple-mobile-web-app-title' content='surfsapp'>",
-        "Also added: <meta name='theme-color' content='#1a73e8'>, <meta name='description' content='Surf conditions and forecasts for beaches across Greece. Offline-ready.'>",
-        "Existing <title> and viewport meta tags preserved",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill (inspect <head> and confirm all meta/link tags are present with correct values)"
+        "New component file ui/src/components/FilterSheet.vue (Vue SFC, NOT a Lit component) that wraps <surf-bottom-sheet>",
+        "Component accepts prop `open: boolean` and emits `close` event when user taps the Done button or the sheet's built-in close/backdrop (consume the close event from surf-bottom-sheet)",
+        "Sheet has title 'Filters'",
+        "Two vertically stacked sections inside the sheet: 'Region' (list of checkbox rows, one per value in beachStore.availableRegions) and 'Difficulty' (list of checkbox rows, one per value in beachStore.availableDifficulties)",
+        "Each region row's checkbox is checked when beachStore.selectedRegions has that value; clicking the row or checkbox calls beachStore.toggleRegion(region)",
+        "Each difficulty row's checkbox is checked when beachStore.selectedDifficulties has that value; clicking the row calls beachStore.toggleDifficulty(level). Display labels are capitalised (e.g. 'beginner' → 'Beginner') while the stored value stays lowercased",
+        "Each row is a tappable area with a minimum 44px touch target",
+        "Footer has two buttons: 'Clear all' calls beachStore.clearFilters() but does NOT close the sheet; 'Done' emits the close event",
+        "When beachStore.availableRegions or availableDifficulties is empty, that section shows a short 'No options available' message",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: render the sheet in HomeView (open it via a temporary button or after US-004), toggle a region checkbox, confirm the visible beach list updates; tap Clear all, confirm both Sets empty"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Depends on US-001 (favicon.ico, apple-touch-icon-180x180.png, logo.svg must exist). These tags supplement the manifest — iOS Safari primarily reads apple-touch-icon and apple-mobile-web-app-* meta tags, not the manifest icons array."
+      "passes": false,
+      "notes": "Depends on US-001. Use native <input type='checkbox'> styled with scoped SCSS — do not create a new Lit component. The favourites-only toggle stays in the header; it is NOT inside this sheet."
     },
     {
       "id": "US-004",
-      "title": "Generate iOS splash screens and wire apple-touch-startup-image links",
-      "description": "As an iOS user, I want a polished splash screen when launching the installed app so it feels native.",
+      "title": "Add filter button to HomeView header with active-count indicator",
+      "description": "As a user, I want a clearly marked filter button in the header that shows when filters are active.",
       "acceptanceCriteria": [
-        "ui/pwa-assets.config.ts updated to use a preset that also generates iOS splash screens (e.g. minimal2023Preset or createAppIconsAndSplashScreensPreset with appropriate options)",
-        "Running yarn generate-pwa-assets produces iOS splash PNGs in ui/public/ covering at least: iPhone 14/15 (1170x2532), iPhone 14/15 Pro Max (1290x2796), iPad 10.9in (1640x2360), iPad Pro 12.9in (2048x2732) — portrait orientation",
-        "ui/index.html <head> updated with <link rel='apple-touch-startup-image' ...> entries for each generated splash screen, each with a matching media query for the target device (device-width, device-height, -webkit-device-pixel-ratio, orientation)",
-        "Generated splash PNG files committed to the repo",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill (open the built app in preview mode, confirm the splash PNG files exist at their public paths)"
+        "New <button> added to HomeView.vue header, placed BETWEEN the favourites toggle (.fav-filter-btn) and the install button (.install-btn)",
+        "Button renders <surf-icon name='sliders-horizontal'> (or 'filter' if sliders-horizontal is not available in the surf-icon registry — check ui/src/components/lit/surf-icon.ts and pick one; add it to the registry if missing by importing the matching lucide icon)",
+        "Button has aria-label='Open filters', minimum 44x44px touch target, and styling consistent with the adjacent header buttons (transparent background, var(--space-2) padding)",
+        "When beachStore.activeFilterCount > 0, a small coloured dot badge is rendered over the icon using an existing token (e.g. var(--color-surf-very-good) or a similar accent)",
+        "Local ref `filterSheetOpen = ref(false)` is added to HomeView.vue script setup",
+        "Clicking the button sets filterSheetOpen.value = true",
+        "<FilterSheet :open='filterSheetOpen' @close='filterSheetOpen = false' /> is rendered in HomeView.vue template, imported from the new component",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: click the filter button, sheet opens; select a region; tap Done; sheet closes; dot badge appears on the filter button; beach list is filtered to that region"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "The @vite-pwa/assets-generator output includes an HTML snippet for the splash <link> tags — copy it verbatim into index.html rather than hand-writing the media queries. Splash screens only activate when the app is launched from the iOS home screen in standalone mode."
+      "passes": false,
+      "notes": "Depends on US-003 (FilterSheet component). Do not restyle the existing favourites, install, or refresh buttons — only add the new filter button alongside them. The favourites-only toggle still counts toward activeFilterCount even though its control is outside the sheet."
     },
     {
       "id": "US-005",
-      "title": "Install prompt composable and Install app button in home header",
-      "description": "As a user, I want a clear Install app button so I can add surfsapp to my home screen without hunting through the browser menu.",
+      "title": "Empty state when filters exclude every beach",
+      "description": "As a user, when my filters match no beaches, I want a clear message and a one-tap way to clear filters.",
       "acceptanceCriteria": [
-        "ui/src/composables/useInstallPrompt.ts created: exports canInstall (reactive boolean ref, true when a beforeinstallprompt event has been captured) and promptInstall (function that calls prompt() on the captured event, awaits userChoice, then clears the captured event)",
-        "Composable listens for beforeinstallprompt on window and calls preventDefault() to stash the event; listens for appinstalled event to clear canInstall",
-        "Composable cleans up event listeners via onScopeDispose",
-        "Composable also checks window.matchMedia('(display-mode: standalone)').matches — if true, canInstall stays false (app already installed)",
-        "HomeView.vue header gets a new icon button using <surf-icon name='download'> (fall back to 'plus' if download is not in the icon registry), styled consistently with the other header icon buttons (≥44x44px touch target), placed between the favourites toggle and the refresh button",
-        "Button is visible only when canInstall.value === true",
-        "Button has aria-label='Install app'",
-        "Clicking the button calls promptInstall()",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "In HomeView.vue, a new empty-state block renders when beachStore.beaches.length > 0 AND beachStore.displayedBeaches.length === 0 AND beachStore.activeFilterCount > 0 AND the existing favourites-only empty state is NOT already showing (i.e. region OR difficulty filter is contributing to the emptiness, not favourites-only alone)",
+        "The new empty state mirrors the existing favourites empty state visually: centred <surf-icon name='sliders-horizontal'> (same icon as the filter button), an <h2> 'No beaches match your filters', a <p> 'Try removing a filter or clearing them all', and a <surf-button variant='secondary'> labelled 'Clear filters' that calls beachStore.clearFilters()",
+        "The existing favourites-only empty state continues to fire when only the favourites filter is active and it alone produces zero results — no regression",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: activate filters that produce zero matches (e.g. pick a region and a difficulty combination no beach satisfies); the new empty state appears; clicking 'Clear filters' restores the full list"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "beforeinstallprompt only fires in Chromium browsers (Chrome, Edge, Samsung Internet). Safari/iOS never fire it — the button simply won't appear there, which is expected. Test in Chrome DevTools Application tab with the 'Add to homescreen' link, or after meeting all install criteria in a production build."
+      "passes": false,
+      "notes": "Depends on US-001 (activeFilterCount, clearFilters) and US-004 (filter button uses same icon). Condition ordering matters — keep the favourites-only empty state check first so it still fires on its own; the new state fires when any OTHER filter contributes to zero results."
     }
   ]
 }
