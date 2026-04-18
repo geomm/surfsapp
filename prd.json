@@ -35,7 +35,7 @@
         "Verify in browser using dev-browser skill: open the app, toggle favourites-only (and later after US-003, toggle some region/difficulty filters), reload the page, confirm the filters are still applied"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001 (hydrateSettings must exist). The existing hydrateFavourites call is likely in App.vue or a setup in main.ts — search and mirror the pattern exactly."
     },
     {

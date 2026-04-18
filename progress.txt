@@ -304,3 +304,12 @@
   - sharp-ico bundles its own libvips which clashes at runtime with the top-level @img/sharp-libvips (prints an objc class duplicate warning). Cosmetic — generator still runs cleanly.
   - The generator also prints ready-to-paste <link> tags for the head and a manifest icons JSON snippet — capture these for US-002 / US-003.
 ---
+
+## 2026-04-19 - US-002 (Phase 11)
+- ui/src/main.ts: replaced the single `hydrateFavourites().finally(mount)` chain with `Promise.allSettled([hydrateFavourites(), hydrateSettings()]).finally(mount)` so filter state is hydrated alongside favourites before the first render.
+- allSettled chosen (over Promise.all) because either hydration is already try/catch'd internally; allSettled just ensures one rejecting won't prevent the other from running — `.finally(mount)` guarantees the app mounts either way, matching the US-003 (Phase 8) pattern.
+- Files changed: ui/src/main.ts, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (toggle favourites-only, reload, confirm filter stays applied; after US-003 repeat with region/difficulty filters).
+  - main.ts is the canonical hydration site for pre-mount store warmup — future persisted-state features should add another hydrate call into the same Promise.allSettled array rather than re-introducing an App.vue onMounted hook (Vue parent onMounted runs AFTER children, so it would race HomeView's fetchBeaches).
+---

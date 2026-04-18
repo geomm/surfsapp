@@ -11,9 +11,9 @@ const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia).use(router)
 
-// Hydrate favourites from IndexedDB before mounting so the first render
-// reflects persisted state and HomeView's fetchBeaches sees them.
+// Hydrate favourites + filter settings from IndexedDB before mounting so the
+// first render reflects persisted state and HomeView's fetchBeaches sees them.
 const beachStore = useBeachStore(pinia)
-beachStore.hydrateFavourites().finally(() => {
+Promise.allSettled([beachStore.hydrateFavourites(), beachStore.hydrateSettings()]).finally(() => {
   app.mount('#app')
 })
