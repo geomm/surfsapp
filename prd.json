@@ -56,7 +56,7 @@
         "Verify in browser using dev-browser skill: render the sheet in HomeView (open it via a temporary button or after US-004), toggle a region checkbox, confirm the visible beach list updates; tap Clear all, confirm both Sets empty"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001. Use native <input type='checkbox'> styled with scoped SCSS — do not create a new Lit component. The favourites-only toggle stays in the header; it is NOT inside this sheet."
     },
     {

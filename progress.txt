@@ -313,3 +313,17 @@
   - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed (toggle favourites-only, reload, confirm filter stays applied; after US-003 repeat with region/difficulty filters).
   - main.ts is the canonical hydration site for pre-mount store warmup — future persisted-state features should add another hydrate call into the same Promise.allSettled array rather than re-introducing an App.vue onMounted hook (Vue parent onMounted runs AFTER children, so it would race HomeView's fetchBeaches).
 ---
+
+## 2026-04-19 - US-003 (Phase 11)
+- Created ui/src/components/FilterSheet.vue (Vue SFC) wrapping <surf-bottom-sheet title="Filters">. Takes `open: boolean` prop; emits `close` when Done is tapped or the underlying sheet dispatches `sheet-close` (backdrop / Escape).
+- Two stacked sections: Region + Difficulty. Each renders native <input type="checkbox"> rows inside <label> wrappers (44px min touch target). Region labels use beachStore.availableRegions verbatim; difficulty labels are capitalise()d display-only while the stored value in selectedDifficulties stays lowercased.
+- Change handler on each checkbox calls beachStore.toggleRegion / toggleDifficulty (which already handle add/remove + persistence).
+- Footer has two <surf-button>s: 'Clear all' (variant secondary) calls beachStore.clearFilters() without closing the sheet; 'Done' (primary) emits close.
+- Empty-state fallback: when availableRegions or availableDifficulties is empty, the section shows a 'No options available' paragraph instead of the list.
+- Files changed: ui/src/components/FilterSheet.vue, prd.json.
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. Manual browser verification still needed once US-004 adds the trigger button (no entry point yet from HomeView).
+  - surf-bottom-sheet emits `sheet-close` (NOT `close`) — Vue wrappers must listen to `@sheet-close` and re-emit `close` upward so consumers see a normal `close` event. The PRD's 'consume the close event from surf-bottom-sheet' wording is slightly misleading; the actual event name is `sheet-close` (see ui/src/components/lit/surf-bottom-sheet.ts:96).
+  - Vue `defineEmits` typed signatures use `(e: 'close'): void` call-signature style; TS enforces the emit payload.
+  - `accent-color: var(--color-primary)` on checkboxes picks up the existing theme without a custom checkmark component.
+---
