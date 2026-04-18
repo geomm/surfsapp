@@ -114,7 +114,7 @@
         "Verify in browser using dev-browser skill: toggle DevTools device mode to landscape for both iPhone X and iPhone 14 Pro Max; visually confirm all three surfaces (home, detail, filter sheet) render sensibly"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Manifest stays orientation: 'portrait' — landscape is a soft-support scenario for pre-install users only. Don't over-invest. Only fix what's visibly broken."
     }
   ]

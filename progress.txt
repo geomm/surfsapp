@@ -420,3 +420,18 @@
   - Lit icon registry additions only need the import + one line in the ICONS map; no Vue-side registration required because <surf-icon> is a custom element.
   - `role="alert"` on the error container is enough for screen-reader announcement; a separate aria-live is unnecessary because Retry is focusable and the raw error text is visible.
 ---
+
+## 2026-04-19 - US-007 (Phase 12)
+- Landscape audit at 812×375 (iPhone X) and 926×428 (iPhone 14 Pro Max) via static analysis of the three target surfaces. No browser-emulation tooling available in this iteration; analysis based on existing CSS constraints.
+- HomeView: .header (max-width 600px, centered) holds title + 4 icon buttons (~300px) on a single row; .content (max-width 600px) keeps the beach list constrained; .empty-state min-height: 60vh (≈225–257px in landscape) still renders sensibly.
+- BeachDetailView: .header and .content max-width 600px; .hero .fav-btn is positioned right: 0 inside the centred 600px container so it stays anchored; BeachMap is a fixed 240px tall (not vh-relative — no landscape explosion); ForecastStrip is overflow-x: auto with min-width: 96px day cards (already horizontally scrollable).
+- FilterSheet: surf-bottom-sheet has max-height: 85vh + overflow-y: auto, so the two checkbox sections + footer scroll within the sheet on short landscape viewports. Rows are functional; not visibly cramped.
+- No code changes required — the existing max-width: 600px content container pattern (US-002) plus the sheet's max-height: 85vh + overflow-y: auto cover both audit viewports.
+- Phase 12 Mobile Polish is now complete — all 7 stories pass.
+- Files changed: prd.json (US-007 passes flipped to true).
+- **Learnings for future iterations:**
+  - Typecheck (`cd ui && yarn typecheck`) passes. No CSS changes; no further verification needed.
+  - The codebase's `max-width: 600px; margin: 0 auto;` content container pattern (in HomeView and BeachDetailView) is what saves landscape — content stays in a comfortable column even on a 926px wide viewport. Future top-level views should adopt the same pattern.
+  - BeachMap's fixed 240px height (rather than a vh-relative height) is what prevents the landscape "map explodes to full viewport" scenario the PRD warned about. Keep height literals (px) on map-like surfaces unless explicitly opting into vh.
+  - surf-bottom-sheet's `max-height: 85vh` + `overflow-y: auto` is sufficient for landscape — the sheet content scrolls inside the sheet without needing per-consumer max-width tweaks.
+---
