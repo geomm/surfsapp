@@ -14,6 +14,8 @@
 - Cluster + non-cluster filters: `['has', 'point_count']` for clusters, `['!', ['has', 'point_count']]` for individual features. Add layers in render order — clusters and individual circles are mutually exclusive via the filters, so order matters only for stacking with future overlays.
 - Persist UI state in `db.settings` (key/value table) with typed validators when reading. Narrow `unknown` values through type guards like `isValidCenter` / `isValidZoom` — do NOT cast with `as`. Match the pattern used by `hydrateSettings` in beachStore.ts.
 - Debounce high-frequency map event writes (`moveend` fires continuously during panning) with a `setTimeout` handle stored at module scope; clear it in `onBeforeUnmount` to avoid writes-after-unmount.
+- `surf-button` exposes its inner button element as `part="button"` — target it from outside with `surf-button::part(button) { ... }` to override width/size. Host is `display: inline-flex` by default; for full-width usage also set host `display: block; width: 100%`.
+- MapLibre layer click handlers receive features in `e.features` (typed as `MapGeoJSONFeature[] | undefined`); `properties` is `Record<string, any>` so narrow with `typeof`.
 
 ## 2026-04-19 - US-001
 - Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
@@ -92,4 +94,20 @@
   - Read settings BEFORE `new maplibregl.Map({...})` so the initial camera is correct on the very first paint — passing center/zoom after construction would cause a visible jump.
   - `db.settings` values are typed as `unknown`; validators should check structural shape AND numeric ranges (|lng|≤180, |lat|≤90, zoom 0–24) so a stale or corrupted record can't crash the map init.
   - Re-checked `container.value` after the awaited settings reads because the view could in theory be unmounted between mount and hydration resolving.
+---
+
+## 2026-04-19 - US-006
+- Added a click handler on the `beach-markers` layer in MapView.vue that resolves `feature.properties.id` back to a beach from `beachStore.beaches`, stores it in a `selectedBeach` ref, and opens a `surf-bottom-sheet`.
+- Preview content mirrors the HomeView card surface: name (h2) + region (subtitle), `surf-badge` with currentLabel/currentScore as `{n}%` (or "No data"), swell/wind lines using the same `degreesToCompass` helper + the same `hasForecast`/`swellText`/`windText` shape as HomeView, staleness line via `formatRelativeTime`, and a full-width primary `surf-button` "View details" that calls `router.push({ name: 'beach-detail', params: { id } })`.
+- Sheet close (`@sheet-close`) clears both `sheetOpen` and `selectedBeach` so focus returns to the map with no navigation.
+- Marker cursor flips to pointer on hover to match the cluster-hover behaviour.
+- To make the primary button visually span the sheet width, added `part="button"` to the inner `<button>` inside `surf-button` and targeted it via `surf-button::part(button) { width: 100% }`. This is a tiny, reusable design-system addition rather than a MapView-only hack.
+- Files changed: `ui/src/views/MapView.vue`, `ui/src/components/lit/surf-button.ts`, `prd.json`, `progress.txt`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): tap any marker, sheet opens with name/region/score/conditions/"View details"; tap the button, router navigates to `beach-detail`.
+- **Learnings for future iterations:**
+  - Web Component shadow DOM blocks external styling — expose the inner control via `part="..."` so callers can size/style it with `::part(name)` in scoped styles. This is the idiomatic pattern and beats per-site wrappers.
+  - Don't duplicate the HomeView condition helpers in more than one place long-term — if a third view needs them, extract `hasForecast`, `swellText`, `windText` into a small module under `ui/src/utils/` (not done in this story since only two call sites exist).
+  - The bottom-sheet backdrop + Escape already dispatch `sheet-close` via the Lit component, so the Vue parent only needs the event handler to clear state — no extra keydown wiring.
+  - Feature properties from MapLibre are loosely typed — narrow with `typeof beachId !== 'string'` before using them as keys.
 ---

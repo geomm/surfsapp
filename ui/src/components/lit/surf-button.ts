@@ -91,6 +91,7 @@ class SurfButton extends LitElement {
   render() {
     return html`
       <button
+        part="button"
         class="variant-${this.variant} size-${this.size}"
         type="${this.type}"
         ?disabled="${this.disabled}"

@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useBeachStore } from '../stores/beachStore'
 import { db } from '../db'
 import type { Beach } from '../types/beach'
+import { degreesToCompass } from '../utils/compass'
+import { formatRelativeTime } from '../utils/time'
 import ViewSwitcherFab from '../components/ViewSwitcherFab.vue'
 
 const beachStore = useBeachStore()
+const router = useRouter()
 const container = ref<HTMLDivElement | null>(null)
+const selectedBeach = ref<Beach | null>(null)
+const sheetOpen = ref(false)
 let map: maplibregl.Map | null = null
 let beachesPlotted = false
 let hasPersistedCamera = false
@@ -186,6 +192,61 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
   mapInstance.on('mouseleave', CLUSTER_CIRCLE_LAYER, () => {
     mapInstance.getCanvas().style.cursor = ''
   })
+
+  mapInstance.on('click', BEACH_CIRCLE_LAYER, (e) => {
+    const feature = e.features?.[0]
+    if (!feature) return
+    const beachId = feature.properties?.id
+    if (typeof beachId !== 'string') return
+    const beach = beachStore.beaches.find((b) => b.id === beachId)
+    if (!beach) return
+    selectedBeach.value = beach
+    sheetOpen.value = true
+  })
+
+  mapInstance.on('mouseenter', BEACH_CIRCLE_LAYER, () => {
+    mapInstance.getCanvas().style.cursor = 'pointer'
+  })
+  mapInstance.on('mouseleave', BEACH_CIRCLE_LAYER, () => {
+    mapInstance.getCanvas().style.cursor = ''
+  })
+}
+
+function hasForecast(b: Beach): boolean {
+  return (
+    b.swellHeight != null &&
+    b.swellPeriod != null &&
+    b.swellDirection != null &&
+    b.windSpeed != null &&
+    b.windDirection != null
+  )
+}
+
+function swellText(b: Beach): string {
+  return `${(b.swellHeight as number).toFixed(1)}m · ${Math.round(b.swellPeriod as number)}s · ${degreesToCompass(b.swellDirection as number)}`
+}
+
+function windText(b: Beach): string {
+  return `${Math.round(b.windSpeed as number)} km/h ${degreesToCompass(b.windDirection as number)}`
+}
+
+const selectedBadgeVariant = computed(() => selectedBeach.value?.currentLabel ?? 'neutral')
+const selectedStaleness = computed(() => {
+  const b = selectedBeach.value
+  if (!b?.lastUpdated) return 'No data yet'
+  return formatRelativeTime(b.lastUpdated)
+})
+
+function onSheetClose() {
+  sheetOpen.value = false
+  selectedBeach.value = null
+}
+
+function openSelectedDetail() {
+  const b = selectedBeach.value
+  if (!b) return
+  sheetOpen.value = false
+  router.push({ name: 'beach-detail', params: { id: b.id } })
 }
 
 function plotBeaches(beaches: Beach[]) {
@@ -285,6 +346,35 @@ onBeforeUnmount(() => {
   <main class="map-view">
     <div ref="container" class="map-canvas"></div>
     <ViewSwitcherFab />
+    <surf-bottom-sheet :open="sheetOpen" @sheet-close="onSheetClose">
+      <div v-if="selectedBeach" class="preview">
+        <div class="preview-head">
+          <div class="preview-info">
+            <h2 class="preview-name">{{ selectedBeach.name }}</h2>
+            <p class="preview-region">{{ selectedBeach.region }}</p>
+          </div>
+          <surf-badge :variant="selectedBadgeVariant">
+            <template v-if="selectedBeach.currentScore !== null">{{ selectedBeach.currentScore }}%</template>
+            <template v-else>No data</template>
+          </surf-badge>
+        </div>
+        <div v-if="hasForecast(selectedBeach)" class="preview-conditions">
+          <span class="preview-cond">
+            <surf-icon name="waves" size="16"></surf-icon>
+            <span>{{ swellText(selectedBeach) }}</span>
+          </span>
+          <span class="preview-cond">
+            <surf-icon name="wind" size="16"></surf-icon>
+            <span>{{ windText(selectedBeach) }}</span>
+          </span>
+        </div>
+        <div v-else class="preview-no-forecast">No forecast data</div>
+        <p class="preview-staleness">{{ selectedStaleness }}</p>
+        <div class="preview-footer">
+          <surf-button variant="primary" @click="openSelectedDetail">View details</surf-button>
+        </div>
+      </div>
+    </surf-bottom-sheet>
   </main>
 </template>
 
@@ -301,5 +391,76 @@ onBeforeUnmount(() => {
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.preview-name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.preview-region {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.preview-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.preview-cond {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.preview-no-forecast {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.preview-staleness {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.preview-footer {
+  display: flex;
+  padding-top: var(--space-2);
+}
+
+.preview-footer surf-button {
+  display: block;
+  width: 100%;
+}
+
+.preview-footer surf-button::part(button) {
+  width: 100%;
 }
 </style>

@@ -108,7 +108,7 @@
         "Verify in browser using dev-browser skill: tap any marker; bottom sheet opens with name/region/score/conditions/View details; tap 'View details' navigates to the beach detail route"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003. Don't duplicate helpers — import or recreate the same computed pattern used in HomeView."
     },
     {
