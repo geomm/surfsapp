@@ -3,3 +3,21 @@
 - Lit components registered via `./components/lit/index` import in ui/src/main.ts.
 - Pinia uses Options API `defineStore` style for this project.
 - IndexedDB via Dexie: `ui/src/db.ts` exports `db` (SurfsAppDB) with `favourites` (&beachId) and `settings` (&key) tables. Import as `import { db } from '../db'` from stores/components.
+- New lucide icons: import in `ui/src/components/lit/surf-icon.ts`, add to ICONS map keyed by kebab-case name. Lucide exports `Map` and `List` as PascalCase.
+- Route names are referenced via `router.push({ name: 'xxx' })`. Existing names: `beach-detail`. Phase 13 adds `beach-map`.
+- FAB / overlay pattern: position fixed, use env(safe-area-inset-*) on offsets, `--color-ocean-800` is the brand accent.
+
+## 2026-04-19 - US-001
+- Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
+- Created `ui/src/views/MapView.vue` placeholder (real map comes in US-002).
+- Created `ui/src/components/ViewSwitcherFab.vue`: 56px circular fixed bottom-right FAB, ocean-800 background, white icon. Reads current route to flip between `map` and `list` icons + aria labels and navigates accordingly.
+- Registered lucide `Map` and `List` icons in `surf-icon.ts` as `map` / `list`.
+- Mounted `ViewSwitcherFab` in HomeView (hidden when `beachStore.loading` or `beachStore.error`) and inside MapView itself (always visible there).
+- Files changed: `ui/src/router.ts`, `ui/src/components/lit/surf-icon.ts`, `ui/src/views/HomeView.vue`. New: `ui/src/views/MapView.vue`, `ui/src/components/ViewSwitcherFab.vue`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): confirm tap on FAB navigates / and /map both ways and FAB hides during home loading/error states.
+- **Learnings for future iterations:**
+  - The FAB is mounted per-view so each view controls its own visibility. If future stories need the FAB on a third route, mount it there too rather than centralising in App.vue.
+  - `surf-icon` color defaults to `currentColor`; for the FAB I passed `color="#ffffff"` explicitly because the FAB also sets `color: #ffffff` so currentColor would have worked, but the explicit prop is clearer.
+  - When the route has a `name`, prefer `router.push({ name })` to keep URL changes loose-coupled.
+---

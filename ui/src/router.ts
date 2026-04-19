@@ -12,6 +12,11 @@ const router = createRouter({
       name: 'beach-detail',
       component: () => import('./views/BeachDetailView.vue'),
     },
+    {
+      path: '/map',
+      name: 'beach-map',
+      component: () => import('./views/MapView.vue'),
+    },
     { path: '/design', component: DesignPreview },
     { path: '/components', component: ComponentsPreview },
   ],

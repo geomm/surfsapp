@@ -19,7 +19,7 @@
         "Verify in browser using dev-browser skill: tap FAB on home, map route opens; tap FAB on map, list route returns"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
