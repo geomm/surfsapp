@@ -38,7 +38,7 @@
         "Verify in browser using dev-browser skill: navigate to /map; confirm every beach appears as a marker and the map is zoomed to fit all beaches"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

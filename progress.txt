@@ -6,6 +6,8 @@
 - New lucide icons: import in `ui/src/components/lit/surf-icon.ts`, add to ICONS map keyed by kebab-case name. Lucide exports `Map` and `List` as PascalCase.
 - Route names are referenced via `router.push({ name: 'xxx' })`. Existing names: `beach-detail`. Phase 13 adds `beach-map`.
 - FAB / overlay pattern: position fixed, use env(safe-area-inset-*) on offsets, `--color-ocean-800` is the brand accent.
+- MapLibre: import `'maplibre-gl/dist/maplibre-gl.css'` in any view that mounts a map (BeachMap.vue does NOT — it relies on the importer to provide CSS). Without it controls/markers render unstyled.
+- Beach coords on `Beach` type are `{ lat, lon }`; MapLibre expects `[lon, lat]` order — easy to flip by mistake.
 
 ## 2026-04-19 - US-001
 - Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
@@ -20,4 +22,19 @@
   - The FAB is mounted per-view so each view controls its own visibility. If future stories need the FAB on a third route, mount it there too rather than centralising in App.vue.
   - `surf-icon` color defaults to `currentColor`; for the FAB I passed `color="#ffffff"` explicitly because the FAB also sets `color: #ffffff` so currentColor would have worked, but the explicit prop is clearer.
   - When the route has a `name`, prefer `router.push({ name })` to keep URL changes loose-coupled.
+---
+
+## 2026-04-19 - US-002
+- Replaced MapView placeholder with a full-viewport MapLibre map.
+- On mount: triggers `beachStore.fetchBeaches()` if `beaches.length === 0`, initialises the map with the same `https://demotiles.maplibre.org/style.json` style used by BeachMap.vue, default center on Greece (~Athens) at zoom 5 as a holding view until beaches arrive.
+- When the map's `load` event fires (or when beaches arrive after load), drops a default `maplibregl.Marker` for each beach and calls `map.fitBounds(bounds, { padding: 48, animate: false })` over every `[lon, lat]`. Plotting is gated by a `beachesPlotted` flag so it only runs once per mount (US-005 will wire persisted camera to skip the fitBounds branch).
+- Cleans up markers and `map.remove()` in `onBeforeUnmount`.
+- Files changed: `ui/src/views/MapView.vue`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): confirm /map shows every beach as a marker fitted to the bounds.
+- **Learnings for future iterations:**
+  - Importing `maplibre-gl/dist/maplibre-gl.css` is required at the importing module level for native controls to render — BeachMap.vue gets away without it because it has no controls and only one marker, but the dedicated map view needs it.
+  - The `Beach.coords` shape is `{ lat, lon }` and MapLibre wants `[lon, lat]`; reusing the same `[lon, lat]` projection for both marker placement and `bounds.extend()` keeps the call sites symmetric.
+  - Because beach data may load before OR after the map, both paths (`map.on('load', ...)` for first plot, plus a `watch` on `beachStore.beaches`) are needed; gate plotting with a flag so we don't re-fit/re-mark when the store array reference changes during refresh.
+  - US-003 will swap these per-beach Markers for a GeoJSON source + circle/symbol layers, so do not over-invest in marker styling here.
 ---
