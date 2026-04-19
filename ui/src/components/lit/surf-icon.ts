@@ -14,6 +14,7 @@ import {
   CloudOff,
   Map,
   List,
+  LocateFixed,
 } from 'lucide'
 
 type IconNode = [string, Record<string, string>]
@@ -32,6 +33,7 @@ const ICONS: Record<string, IconNode[]> = {
   'cloud-off': CloudOff as unknown as IconNode[],
   map: Map as unknown as IconNode[],
   list: List as unknown as IconNode[],
+  'locate-fixed': LocateFixed as unknown as IconNode[],
 }
 
 function buildSvgChildren(nodes: IconNode[]): string {

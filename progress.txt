@@ -14,6 +14,7 @@
 - Cluster + non-cluster filters: `['has', 'point_count']` for clusters, `['!', ['has', 'point_count']]` for individual features. Add layers in render order — clusters and individual circles are mutually exclusive via the filters, so order matters only for stacking with future overlays.
 - Persist UI state in `db.settings` (key/value table) with typed validators when reading. Narrow `unknown` values through type guards like `isValidCenter` / `isValidZoom` — do NOT cast with `as`. Match the pattern used by `hydrateSettings` in beachStore.ts.
 - Debounce high-frequency map event writes (`moveend` fires continuously during panning) with a `setTimeout` handle stored at module scope; clear it in `onBeforeUnmount` to avoid writes-after-unmount.
+- Auto-dismissing transient notices (e.g. geolocation error) follow the same module-scoped `setTimeout` handle pattern: clear-then-restart on each show, and clear in `onBeforeUnmount` so a 4s timer can't fire on a torn-down view.
 - `surf-button` exposes its inner button element as `part="button"` — target it from outside with `surf-button::part(button) { ... }` to override width/size. Host is `display: inline-flex` by default; for full-width usage also set host `display: block; width: 100%`.
 - MapLibre layer click handlers receive features in `e.features` (typed as `MapGeoJSONFeature[] | undefined`); `properties` is `Record<string, any>` so narrow with `typeof`.
 
@@ -110,4 +111,21 @@
   - Don't duplicate the HomeView condition helpers in more than one place long-term — if a third view needs them, extract `hasForecast`, `swellText`, `windText` into a small module under `ui/src/utils/` (not done in this story since only two call sites exist).
   - The bottom-sheet backdrop + Escape already dispatch `sheet-close` via the Lit component, so the Vue parent only needs the event handler to clear state — no extra keydown wiring.
   - Feature properties from MapLibre are loosely typed — narrow with `typeof beachId !== 'string'` before using them as keys.
+---
+
+## 2026-04-19 - US-007
+- Registered lucide `LocateFixed` icon in `surf-icon.ts` as `locate-fixed`.
+- Added a 44×44 circular `locate-btn` in MapView.vue at top-right (positioned absolute inside `.map-view`, honouring `env(safe-area-inset-top/right)`), white background with `--color-ocean-800` border and icon.
+- Click handler `handleLocateMe` calls `navigator.geolocation.getCurrentPosition` with `{ timeout: 10000 }`. While in flight, a `locating` ref disables pointer-events on the button and drops the icon to `opacity: 0.5` via a `locate-btn--locating` class.
+- On success: `map.easeTo({ center: [longitude, latitude], zoom: Math.max(map.getZoom(), 11) })`. Both success and error paths clear `locating`.
+- On error / permission denial / missing geolocation API: shows a small inline notice anchored just below the button, role=status + aria-live=polite, "Can't access your location". Auto-dismisses after 4s via a module-scoped `locateErrorTimer`; restarting before the timeout resets the timer.
+- `onBeforeUnmount` clears `locateErrorTimer` and resets both reactive flags so a pending timer can't fire after teardown.
+- Files changed: `ui/src/components/lit/surf-icon.ts`, `ui/src/views/MapView.vue`, `prd.json`, `progress.txt`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): override geolocation in DevTools → Sensors to a Greek coordinate; tap the locate button and confirm map eases to that location at zoom ≥ 11; deny permission and confirm the inline notice appears and auto-dismisses after 4s.
+- **Learnings for future iterations:**
+  - The map controls live INSIDE `.map-view` (positioned absolute) rather than fixed to the viewport, so they don't fight with the viewport-level `ViewSwitcherFab`. The map view is `width: 100vw; height: 100vh; overflow: hidden` so absolute and fixed coincide visually but absolute keeps z-index scoped to the view.
+  - Map-overlay buttons sit at `z-index: 800` (below the FAB at 900) so the bottom-right FAB stays on top of any future top-right stacks.
+  - `navigator.geolocation.getCurrentPosition` only accepts a `PositionOptions` object — there's no callback signature. Pass `{ timeout: 10000 }` directly; do not wrap in a Promise unless you need it elsewhere.
+  - Future US-009 wind-arrow toggle button should also use `position: absolute` inside `.map-view` and stack `top: calc(... + 52px)` below the locate button (44px height + 8px gap).
 ---

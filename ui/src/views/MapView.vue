@@ -15,10 +15,13 @@ const router = useRouter()
 const container = ref<HTMLDivElement | null>(null)
 const selectedBeach = ref<Beach | null>(null)
 const sheetOpen = ref(false)
+const locating = ref(false)
+const locateError = ref(false)
 let map: maplibregl.Map | null = null
 let beachesPlotted = false
 let hasPersistedCamera = false
 let persistTimer: ReturnType<typeof setTimeout> | null = null
+let locateErrorTimer: ReturnType<typeof setTimeout> | null = null
 
 const BEACH_SOURCE_ID = 'beaches'
 const BEACH_CIRCLE_LAYER = 'beach-markers'
@@ -249,6 +252,40 @@ function openSelectedDetail() {
   router.push({ name: 'beach-detail', params: { id: b.id } })
 }
 
+function showLocateError() {
+  locateError.value = true
+  if (locateErrorTimer !== null) clearTimeout(locateErrorTimer)
+  locateErrorTimer = setTimeout(() => {
+    locateError.value = false
+    locateErrorTimer = null
+  }, 4000)
+}
+
+function handleLocateMe() {
+  if (locating.value) return
+  if (!navigator.geolocation) {
+    showLocateError()
+    return
+  }
+  locating.value = true
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      locating.value = false
+      if (!map) return
+      const { longitude, latitude } = position.coords
+      map.easeTo({
+        center: [longitude, latitude],
+        zoom: Math.max(map.getZoom(), 11),
+      })
+    },
+    () => {
+      locating.value = false
+      showLocateError()
+    },
+    { timeout: 10000 },
+  )
+}
+
 function plotBeaches(beaches: Beach[]) {
   if (!map || beachesPlotted) return
   const data = toFeatureCollection(beaches)
@@ -333,18 +370,37 @@ onBeforeUnmount(() => {
     clearTimeout(persistTimer)
     persistTimer = null
   }
+  if (locateErrorTimer !== null) {
+    clearTimeout(locateErrorTimer)
+    locateErrorTimer = null
+  }
   if (map) {
     map.remove()
     map = null
   }
   beachesPlotted = false
   hasPersistedCamera = false
+  locating.value = false
+  locateError.value = false
 })
 </script>
 
 <template>
   <main class="map-view">
     <div ref="container" class="map-canvas"></div>
+    <button
+      type="button"
+      class="locate-btn"
+      :class="{ 'locate-btn--locating': locating }"
+      :aria-busy="locating"
+      aria-label="Centre map on my location"
+      @click="handleLocateMe"
+    >
+      <surf-icon name="locate-fixed" :size="20"></surf-icon>
+    </button>
+    <div v-if="locateError" class="locate-error" role="status" aria-live="polite">
+      Can't access your location
+    </div>
     <ViewSwitcherFab />
     <surf-bottom-sheet :open="sheetOpen" @sheet-close="onSheetClose">
       <div v-if="selectedBeach" class="preview">
@@ -391,6 +447,52 @@ onBeforeUnmount(() => {
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.locate-btn {
+  position: absolute;
+  top: var(--space-3);
+  top: calc(var(--space-3) + env(safe-area-inset-top));
+  right: var(--space-3);
+  right: calc(var(--space-3) + env(safe-area-inset-right));
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid var(--color-ocean-800);
+  color: var(--color-ocean-800);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 800;
+}
+
+.locate-btn:active {
+  transform: scale(0.96);
+}
+
+.locate-btn--locating {
+  pointer-events: none;
+}
+
+.locate-btn--locating surf-icon {
+  opacity: 0.5;
+}
+
+.locate-error {
+  position: absolute;
+  top: calc(var(--space-3) + env(safe-area-inset-top) + 52px);
+  right: calc(var(--space-3) + env(safe-area-inset-right));
+  background: var(--color-surf-maybe);
+  color: #ffffff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 800;
 }
 
 .preview {

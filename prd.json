@@ -128,7 +128,7 @@
         "Verify in browser using dev-browser skill: use DevTools → Sensors → override geolocation to a Greek coordinate; tap 'locate me' and confirm the map eases to that location at zoom ≥ 11"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002."
     },
     {
