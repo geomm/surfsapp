@@ -161,7 +161,8 @@ onBeforeUnmount(() => {
         >
           <surf-icon name="heart"></surf-icon>
         </button>
-        <div class="hero-name">{{ beach.name }}</div>
+        <!-- @NOTE: Commenting out the name below in order to test visualy ONLY th H1  -->
+        <!-- <div class="hero-name">{{ beach.name }}</div> -->
         <div class="hero-region">{{ beach.region }}</div>
         <div class="score-row">
           <template v-if="beach.currentScore !== null">
@@ -280,10 +281,11 @@ onBeforeUnmount(() => {
 }
 
 .title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   color: var(--color-ocean-800);
   margin: 0;
+  letter-spacing: -1px;
 }
 
 .content {
@@ -330,7 +332,7 @@ onBeforeUnmount(() => {
 
 .hero {
   position: relative;
-  padding: var(--space-4) 0;
+  padding: 0px 0px var(--space-4) 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -345,6 +347,7 @@ onBeforeUnmount(() => {
 .hero-region {
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
+  padding: var(--space-2) 0px 0px;
 }
 
 .score-row {
@@ -389,7 +392,6 @@ onBeforeUnmount(() => {
 
 .fav-btn {
   position: absolute;
-  top: var(--space-3);
   right: 0;
   background: transparent;
   border: none;

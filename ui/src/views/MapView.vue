@@ -26,6 +26,7 @@ let hasPersistedCamera = false
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let locateErrorTimer: ReturnType<typeof setTimeout> | null = null
 let arrowImage: HTMLImageElement | null = null
+let userLocationMarker: maplibregl.Marker | null = null
 
 const BEACH_SOURCE_ID = 'beaches'
 const BEACH_CIRCLE_LAYER = 'beach-markers'
@@ -39,9 +40,10 @@ const MAP_ZOOM_KEY = 'mapZoom'
 const WIND_OVERLAY_KEY = 'mapWindOverlay'
 const PERSIST_DEBOUNCE_MS = 400
 
-// Upward-pointing arrow (north). icon-rotate is applied clockwise from this baseline,
-// so a windDirection of 90° rotates the arrow to point east. windDirection here is the
-// meteorological convention: bearing the wind is coming FROM (e.g. 270° = westerly wind).
+// Upward-pointing arrow (north) baseline. windDirection is meteorological: the bearing
+// wind is coming FROM (e.g. 0° = northerly wind, blowing southward). The arrow should
+// show where the wind is going, so we rotate by windDirection + 180° — an N wind (0°)
+// then points down (180°) toward the south.
 const ARROW_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
   '<path d="M20 4 L32 30 L20 24 L8 30 Z" fill="#1a5a8a" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>' +
@@ -255,7 +257,7 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
       filter: ['all', ['!', ['has', 'point_count']], ['has', 'windSpeed'], ['has', 'windDirection']],
       layout: {
         'icon-image': ARROW_IMAGE_ID,
-        'icon-rotate': ['get', 'windDirection'],
+        'icon-rotate': ['+', ['get', 'windDirection'], 180],
         'icon-size': ['interpolate', ['linear'], ['get', 'windSpeed'], 0, 0.5, 30, 1.0],
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
@@ -341,6 +343,26 @@ function handleLocateMe() {
       locating.value = false
       if (!map) return
       const { longitude, latitude } = position.coords
+      if (userLocationMarker) {
+        userLocationMarker.setLngLat([longitude, latitude])
+      } else {
+        const el = document.createElement('div')
+        el.setAttribute(
+          'style',
+          [
+            'width: 18px',
+            'height: 18px',
+            'border-radius: 50%',
+            'background: #1a73e8',
+            'border: 3px solid #ffffff',
+            'box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3)',
+            'box-sizing: border-box',
+          ].join(';'),
+        )
+        userLocationMarker = new maplibregl.Marker({ element: el })
+          .setLngLat([longitude, latitude])
+          .addTo(map)
+      }
       map.easeTo({
         center: [longitude, latitude],
         zoom: Math.max(map.getZoom(), 11),
@@ -445,6 +467,10 @@ onBeforeUnmount(() => {
   if (locateErrorTimer !== null) {
     clearTimeout(locateErrorTimer)
     locateErrorTimer = null
+  }
+  if (userLocationMarker) {
+    userLocationMarker.remove()
+    userLocationMarker = null
   }
   if (map) {
     map.remove()

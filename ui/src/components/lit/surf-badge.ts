@@ -25,6 +25,7 @@ class SurfBadge extends LitElement {
       justify-content: center;
       font-weight: var(--font-weight-semibold);
       white-space: nowrap;
+      line-height: 90%;
     }
     .badge.size-sm {
       font-size: var(--font-size-xs);
