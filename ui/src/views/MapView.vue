@@ -9,9 +9,11 @@ import type { Beach } from '../types/beach'
 import { degreesToCompass } from '../utils/compass'
 import { formatRelativeTime } from '../utils/time'
 import ViewSwitcherFab from '../components/ViewSwitcherFab.vue'
+import { useOnlineStatus } from '../composables/useOnlineStatus'
 
 const beachStore = useBeachStore()
 const router = useRouter()
+const { isOnline } = useOnlineStatus()
 const container = ref<HTMLDivElement | null>(null)
 const selectedBeach = ref<Beach | null>(null)
 const sheetOpen = ref(false)
@@ -252,6 +254,10 @@ function openSelectedDetail() {
   router.push({ name: 'beach-detail', params: { id: b.id } })
 }
 
+function backToList() {
+  router.push('/')
+}
+
 function showLocateError() {
   locateError.value = true
   if (locateErrorTimer !== null) clearTimeout(locateErrorTimer)
@@ -388,6 +394,14 @@ onBeforeUnmount(() => {
 <template>
   <main class="map-view">
     <div ref="container" class="map-canvas"></div>
+    <div v-if="!isOnline" class="offline-map-banner" role="status" aria-live="polite">
+      <p class="offline-map-banner__text">
+        Map needs internet — tiles won't load. Your cached beach data is still available on the list view.
+      </p>
+      <surf-button variant="secondary" size="sm" class="offline-map-banner__button" @click="backToList">
+        Back to list
+      </surf-button>
+    </div>
     <button
       type="button"
       class="locate-btn"
@@ -447,6 +461,34 @@ onBeforeUnmount(() => {
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.offline-map-banner {
+  position: absolute;
+  top: 0;
+  top: env(safe-area-inset-top);
+  left: 0;
+  right: 0;
+  z-index: 850;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--color-surf-maybe);
+  color: #ffffff;
+  padding: var(--space-3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.offline-map-banner__text {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  flex: 1;
+}
+
+.offline-map-banner__button {
+  flex-shrink: 0;
 }
 
 .locate-btn {

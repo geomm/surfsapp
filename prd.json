@@ -147,7 +147,7 @@
         "Verify in browser using dev-browser skill: DevTools Network → Offline, navigate to /map; banner appears; tap 'Back to list' returns to '/'"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002. Coexists with the app-level offline banner in App.vue."
     },
     {

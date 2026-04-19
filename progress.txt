@@ -17,6 +17,7 @@
 - Auto-dismissing transient notices (e.g. geolocation error) follow the same module-scoped `setTimeout` handle pattern: clear-then-restart on each show, and clear in `onBeforeUnmount` so a 4s timer can't fire on a torn-down view.
 - `surf-button` exposes its inner button element as `part="button"` — target it from outside with `surf-button::part(button) { ... }` to override width/size. Host is `display: inline-flex` by default; for full-width usage also set host `display: block; width: 100%`.
 - MapLibre layer click handlers receive features in `e.features` (typed as `MapGeoJSONFeature[] | undefined`); `properties` is `Record<string, any>` so narrow with `typeof`.
+- Online/offline state: use `useOnlineStatus()` from `ui/src/composables/useOnlineStatus.ts` — it returns a reactive `isOnline` ref and self-cleans via `onScopeDispose`. Don't poll `navigator.onLine`.
 
 ## 2026-04-19 - US-001
 - Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
@@ -128,4 +129,20 @@
   - Map-overlay buttons sit at `z-index: 800` (below the FAB at 900) so the bottom-right FAB stays on top of any future top-right stacks.
   - `navigator.geolocation.getCurrentPosition` only accepts a `PositionOptions` object — there's no callback signature. Pass `{ timeout: 10000 }` directly; do not wrap in a Promise unless you need it elsewhere.
   - Future US-009 wind-arrow toggle button should also use `position: absolute` inside `.map-view` and stack `top: calc(... + 52px)` below the locate button (44px height + 8px gap).
+---
+
+## 2026-04-19 - US-008
+- MapView.vue now imports `useOnlineStatus` and renders a map-specific offline banner whenever `!isOnline` (on mount or whenever it flips false during the session).
+- Banner copy: "Map needs internet — tiles won't load. Your cached beach data is still available on the list view."
+- Layout: full-width row inside `.map-view`, position absolute at the top, honouring `env(safe-area-inset-top)`. Background `--color-surf-maybe`, white text, mirrors the App.vue offline banner styling. Includes a `surf-button variant="secondary" size="sm"` "Back to list" CTA that calls `router.push('/')`.
+- Banner sits above the map (z-index 850, between the locate-btn at 800 and the FAB at 900) but the map underneath stays mounted and interactive in the area not covered by the banner.
+- Banner disappears automatically when `online` event flips `isOnline` true — no extra teardown needed because the `useOnlineStatus` composable already self-cleans via `onScopeDispose`.
+- Coexists with the app-level offline banner in App.vue: the app banner stays at the very top (it's `position: fixed`), and `.app-shell--banner` already pushes the routed view down by 40px, so the map-specific banner sits below the app banner without overlap.
+- Files changed: `ui/src/views/MapView.vue`, `prd.json`, `progress.txt`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): DevTools Network → Offline, navigate to /map; banner appears with "Back to list" CTA; tap returns to /; flip back to Online and confirm banner disappears.
+- **Learnings for future iterations:**
+  - `useOnlineStatus` is the canonical online/offline composable — don't poll `navigator.onLine`; subscribe via the composable so the `online`/`offline` events drive a Vue ref and `onScopeDispose` handles cleanup automatically.
+  - Map-overlay z-index stack so far: locate-btn 800, offline-map-banner 850, ViewSwitcherFab 900, App.vue banners 1000. Future overlays should slot between these without resorting to higher numbers.
+  - Inline `top: 0; top: env(safe-area-inset-top);` is the existing safe-area progressive-enhancement pattern in this view — browsers without env() pick up the first value, modern ones pick up the second.
 ---
