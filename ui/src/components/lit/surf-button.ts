@@ -70,8 +70,8 @@ class SurfButton extends LitElement {
 
     button.variant-secondary {
       background: transparent;
-      color: var(--color-primary);
-      border: 1px solid var(--color-primary);
+      color: var(--color-ocean-800);
+      border: 1px solid var(--color-ocean-800);
       border-radius: 8px;
     }
     button.variant-secondary:hover:not(:disabled) {

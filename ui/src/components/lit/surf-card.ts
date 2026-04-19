@@ -12,7 +12,7 @@ class SurfCard extends LitElement {
   constructor() {
     super()
     this.clickable = false
-    this.padding = 'md'
+    this.padding = 'sm'
   }
 
   static styles = css`
@@ -22,8 +22,9 @@ class SurfCard extends LitElement {
     .card {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
-      border-radius: 12px;
+      border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      position: relative;
     }
     .card.padding-sm {
       padding: var(--space-3);
