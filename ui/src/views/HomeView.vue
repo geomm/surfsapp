@@ -24,7 +24,7 @@ const { isPulling, pullDistance, isRefreshing, trigger } = usePullToRefresh(scro
   onRefresh: () => beachStore.fetchBeaches(),
 })
 
-const { canInstall, promptInstall } = useInstallPrompt()
+const { canInstall, promptInstall, showIosGuide, dismissIosGuide } = useInstallPrompt()
 
 function hasForecast(b: Beach): boolean {
   return (
@@ -87,7 +87,7 @@ function toggleFav(b: Beach) {
 <template>
   <div ref="scrollRoot" class="home">
     <header class="header">
-      <h1 class="title">surfsapp</h1>
+      <h1 class="title"><img src="/logo.svg" width="24px" height="24px" alt="surfsapp" />surfsapp</h1>
       <button
         type="button"
         class="fav-filter-btn"
@@ -249,6 +249,25 @@ function toggleFav(b: Beach) {
 
     <FilterSheet :open="filterSheetOpen" @close="filterSheetOpen = false" />
 
+    <surf-bottom-sheet
+      :open="showIosGuide"
+      @close="dismissIosGuide"
+    >
+      <div class="ios-guide">
+        <h2 class="ios-guide-title">Install surfsapp</h2>
+        <p class="ios-guide-step">
+          1. Tap the <strong>Share</strong> button in Safari's toolbar.
+        </p>
+        <p class="ios-guide-step">
+          2. Choose <strong>Add to Home Screen</strong>.
+        </p>
+        <p class="ios-guide-step">
+          3. Tap <strong>Add</strong> — surfsapp will launch fullscreen from your home screen.
+        </p>
+        <surf-button class="ios-guide-close" @click="dismissIosGuide">Got it</surf-button>
+      </div>
+    </surf-bottom-sheet>
+
     <ViewSwitcherFab v-if="!beachStore.loading && !beachStore.error" />
   </div>
 </template>
@@ -257,6 +276,31 @@ function toggleFav(b: Beach) {
 .home {
   font-family: var(--font-family-base);
   min-height: 100vh;
+}
+
+.ios-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.ios-guide-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
+  color: var(--color-ocean-800);
+}
+
+.ios-guide-step {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-normal);
+}
+
+.ios-guide-close {
+  margin-top: var(--space-3);
+  align-self: flex-end;
 }
 
 .header {
@@ -279,9 +323,13 @@ function toggleFav(b: Beach) {
 
 .title {
   font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   color: var(--color-ocean-800);
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -1px;
 }
 
 .refresh-btn {

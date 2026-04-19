@@ -36,7 +36,9 @@ function handleRefresh() {
 
 <style>
 html {
-  background-image: url('./assets/background-waves.jpg');
+  /* @NOTE: leaving the comment below for visualvalidation. Clean up if not useful  */
+  /* background: linear-gradient(rgb(90 255 0 / 39%), rgba(255, 0, 0, 0.4)), url('./assets/background-waves.jpg'); */
+  background: linear-gradient(rgb(233 255 0 / 44%), rgba(255, 0, 0, 0.4)), url(/src/assets/background-waves.jpg);
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
