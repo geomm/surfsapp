@@ -3,6 +3,7 @@ import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useBeachStore } from '../stores/beachStore'
+import { db } from '../db'
 import type { Beach } from '../types/beach'
 import ViewSwitcherFab from '../components/ViewSwitcherFab.vue'
 
@@ -10,12 +11,34 @@ const beachStore = useBeachStore()
 const container = ref<HTMLDivElement | null>(null)
 let map: maplibregl.Map | null = null
 let beachesPlotted = false
+let hasPersistedCamera = false
+let persistTimer: ReturnType<typeof setTimeout> | null = null
 
 const BEACH_SOURCE_ID = 'beaches'
 const BEACH_CIRCLE_LAYER = 'beach-markers'
 const BEACH_LABEL_LAYER = 'beach-marker-labels'
 const CLUSTER_CIRCLE_LAYER = 'beach-clusters'
 const CLUSTER_COUNT_LAYER = 'beach-cluster-count'
+const MAP_CENTER_KEY = 'mapCenter'
+const MAP_ZOOM_KEY = 'mapZoom'
+const PERSIST_DEBOUNCE_MS = 400
+
+function isValidCenter(v: unknown): v is [number, number] {
+  return (
+    Array.isArray(v) &&
+    v.length === 2 &&
+    typeof v[0] === 'number' &&
+    typeof v[1] === 'number' &&
+    Number.isFinite(v[0]) &&
+    Number.isFinite(v[1]) &&
+    Math.abs(v[0]) <= 180 &&
+    Math.abs(v[1]) <= 90
+  )
+}
+
+function isValidZoom(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24
+}
 
 type LabelKey = 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral'
 type ResolvedColors = Record<LabelKey, string> & { cluster: string }
@@ -172,12 +195,33 @@ function plotBeaches(beaches: Beach[]) {
 
   addBeachLayers(map, data)
 
-  const bounds = new maplibregl.LngLatBounds()
-  for (const feature of data.features) {
-    bounds.extend(feature.geometry.coordinates as [number, number])
+  if (!hasPersistedCamera) {
+    const bounds = new maplibregl.LngLatBounds()
+    for (const feature of data.features) {
+      bounds.extend(feature.geometry.coordinates as [number, number])
+    }
+    map.fitBounds(bounds, { padding: 48, animate: false })
   }
-  map.fitBounds(bounds, { padding: 48, animate: false })
   beachesPlotted = true
+}
+
+function schedulePersistCamera() {
+  if (!map) return
+  if (persistTimer !== null) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    if (!map) return
+    const center = map.getCenter()
+    const zoom = map.getZoom()
+    db.settings
+      .put({ key: MAP_CENTER_KEY, value: [center.lng, center.lat] })
+      .catch((err) => {
+        console.error('Failed to persist mapCenter to IndexedDB', err)
+      })
+    db.settings.put({ key: MAP_ZOOM_KEY, value: zoom }).catch((err) => {
+      console.error('Failed to persist mapZoom to IndexedDB', err)
+    })
+  }, PERSIST_DEBOUNCE_MS)
 }
 
 onMounted(async () => {
@@ -186,16 +230,30 @@ onMounted(async () => {
   }
 
   if (!container.value) return
+
+  const [centerRec, zoomRec] = await Promise.all([
+    db.settings.get(MAP_CENTER_KEY).catch(() => undefined),
+    db.settings.get(MAP_ZOOM_KEY).catch(() => undefined),
+  ])
+  const centerVal = centerRec?.value
+  const zoomVal = zoomRec?.value
+  const persistedCenter = isValidCenter(centerVal) ? centerVal : null
+  const persistedZoom = isValidZoom(zoomVal) ? zoomVal : null
+  hasPersistedCamera = persistedCenter !== null && persistedZoom !== null
+
+  if (!container.value) return
   map = new maplibregl.Map({
     container: container.value,
     style: 'https://demotiles.maplibre.org/style.json',
-    center: [23.7275, 37.9838],
-    zoom: 5,
+    center: hasPersistedCamera && persistedCenter ? persistedCenter : [23.7275, 37.9838],
+    zoom: hasPersistedCamera && persistedZoom !== null ? persistedZoom : 5,
   })
 
   map.on('load', () => {
     plotBeaches(beachStore.beaches)
   })
+
+  map.on('moveend', schedulePersistCamera)
 })
 
 watch(
@@ -210,11 +268,16 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (persistTimer !== null) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
   if (map) {
     map.remove()
     map = null
   }
   beachesPlotted = false
+  hasPersistedCamera = false
 })
 </script>
 

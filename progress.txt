@@ -12,6 +12,8 @@
 - Demotiles style glyphs include `Noto Sans Regular` — use it as the `text-font` value for symbol layers there. Other demotiles fonts are not guaranteed.
 - maplibre-gl v5 `GeoJSONSource.getClusterExpansionZoom(clusterId)` returns a Promise<number> (not a callback). Cast `map.getSource(id)` to `maplibregl.GeoJSONSource` to access cluster helpers.
 - Cluster + non-cluster filters: `['has', 'point_count']` for clusters, `['!', ['has', 'point_count']]` for individual features. Add layers in render order — clusters and individual circles are mutually exclusive via the filters, so order matters only for stacking with future overlays.
+- Persist UI state in `db.settings` (key/value table) with typed validators when reading. Narrow `unknown` values through type guards like `isValidCenter` / `isValidZoom` — do NOT cast with `as`. Match the pattern used by `hydrateSettings` in beachStore.ts.
+- Debounce high-frequency map event writes (`moveend` fires continuously during panning) with a `setTimeout` handle stored at module scope; clear it in `onBeforeUnmount` to avoid writes-after-unmount.
 
 ## 2026-04-19 - US-001
 - Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
@@ -73,4 +75,21 @@
   - `getClusterExpansionZoom` is Promise-based in maplibre-gl v5 — older callback-style examples online are stale.
   - When extending `ResolvedColors`, prefer adding the new key (e.g. `cluster`) to the same `resolveLabelColors` reader so all paint colours are sourced from one place.
   - The cluster layers go on the same source — no separate source needed; the source just needs `cluster: true` flipped on at creation time.
+---
+
+## 2026-04-19 - US-005
+- MapView.vue now hydrates persisted camera state from `db.settings` before constructing the MapLibre map:
+  - Reads `mapCenter` (expected `[lng, lat]`) and `mapZoom` in parallel via `db.settings.get`.
+  - Narrows the `unknown` values through `isValidCenter` / `isValidZoom` type guards (no `as` casts, no `any`). Invalid or missing values fall back to the default Athens/zoom-5 holding view AND trigger the US-002 fitBounds path.
+  - Tracks `hasPersistedCamera` at module scope; `plotBeaches` skips the `fitBounds` branch when persisted camera was applied, so the user's last view is preserved.
+- Added a `moveend` handler that debounces writes by 400 ms via a `setTimeout` handle (`persistTimer`). Each fire writes both `{ key: 'mapCenter', value: [lng, lat] }` and `{ key: 'mapZoom', value: zoom }` to `db.settings`.
+- `onBeforeUnmount` clears the pending timer so writes don't land after the component tears down, and resets `hasPersistedCamera` / `beachesPlotted` for the next mount.
+- Files changed: `ui/src/views/MapView.vue`, `prd.json`, `progress.txt`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): pan + zoom on /map, navigate to /, return to /map — camera should be where it was left.
+- **Learnings for future iterations:**
+  - `fitBounds` itself fires `moveend`, so the first persist write captures the fit-to-bounds camera — that's actually the desired "initial view" for next visit. No extra flag needed to suppress it.
+  - Read settings BEFORE `new maplibregl.Map({...})` so the initial camera is correct on the very first paint — passing center/zoom after construction would cause a visible jump.
+  - `db.settings` values are typed as `unknown`; validators should check structural shape AND numeric ranges (|lng|≤180, |lat|≤90, zoom 0–24) so a stale or corrupted record can't crash the map init.
+  - Re-checked `container.value` after the awaited settings reads because the view could in theory be unmounted between mount and hydration resolving.
 ---

@@ -89,7 +89,7 @@
         "Verify in browser using dev-browser skill: pan and zoom, navigate away to '/', return to '/map'; camera matches where it was left"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002."
     },
     {
