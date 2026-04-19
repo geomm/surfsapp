@@ -14,9 +14,11 @@ let beachesPlotted = false
 const BEACH_SOURCE_ID = 'beaches'
 const BEACH_CIRCLE_LAYER = 'beach-markers'
 const BEACH_LABEL_LAYER = 'beach-marker-labels'
+const CLUSTER_CIRCLE_LAYER = 'beach-clusters'
+const CLUSTER_COUNT_LAYER = 'beach-cluster-count'
 
 type LabelKey = 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral'
-type ResolvedColors = Record<LabelKey, string>
+type ResolvedColors = Record<LabelKey, string> & { cluster: string }
 
 function resolveLabelColors(): ResolvedColors {
   const styles = getComputedStyle(document.documentElement)
@@ -30,6 +32,7 @@ function resolveLabelColors(): ResolvedColors {
     maybe: read('--color-surf-maybe', '#d4a017'),
     poor: read('--color-surf-poor', '#c0392b'),
     neutral: read('--color-neutral-300', '#dee2e6'),
+    cluster: read('--color-ocean-700', '#1a5a8a'),
   }
 }
 
@@ -59,6 +62,39 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
   mapInstance.addSource(BEACH_SOURCE_ID, {
     type: 'geojson',
     data,
+    cluster: true,
+    clusterMaxZoom: 8,
+    clusterRadius: 50,
+  })
+
+  mapInstance.addLayer({
+    id: CLUSTER_CIRCLE_LAYER,
+    type: 'circle',
+    source: BEACH_SOURCE_ID,
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': colors.cluster,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': 2,
+      'circle-radius': ['step', ['get', 'point_count'], 18, 10, 22, 30, 28],
+    },
+  })
+
+  mapInstance.addLayer({
+    id: CLUSTER_COUNT_LAYER,
+    type: 'symbol',
+    source: BEACH_SOURCE_ID,
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': ['get', 'point_count_abbreviated'],
+      'text-size': 13,
+      'text-font': ['Noto Sans Regular'],
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+    },
+    paint: {
+      'text-color': '#ffffff',
+    },
   })
 
   mapInstance.addLayer({
@@ -102,6 +138,30 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
     paint: {
       'text-color': '#ffffff',
     },
+  })
+
+  mapInstance.on('click', CLUSTER_CIRCLE_LAYER, (e) => {
+    const features = mapInstance.queryRenderedFeatures(e.point, { layers: [CLUSTER_CIRCLE_LAYER] })
+    const feature = features[0]
+    if (!feature) return
+    const clusterId = feature.properties?.cluster_id as number | undefined
+    if (clusterId === undefined) return
+    const source = mapInstance.getSource(BEACH_SOURCE_ID) as maplibregl.GeoJSONSource | undefined
+    if (!source) return
+    source.getClusterExpansionZoom(clusterId).then((zoom) => {
+      if (feature.geometry.type !== 'Point') return
+      mapInstance.easeTo({
+        center: feature.geometry.coordinates as [number, number],
+        zoom,
+      })
+    })
+  })
+
+  mapInstance.on('mouseenter', CLUSTER_CIRCLE_LAYER, () => {
+    mapInstance.getCanvas().style.cursor = 'pointer'
+  })
+  mapInstance.on('mouseleave', CLUSTER_CIRCLE_LAYER, () => {
+    mapInstance.getCanvas().style.cursor = ''
   })
 }
 

@@ -72,7 +72,7 @@
         "Verify in browser using dev-browser skill: zoom out to a country-level view; confirm markers collapse into cluster bubbles with counts; tap a cluster and the map zooms in and the cluster expands"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003."
     },
     {

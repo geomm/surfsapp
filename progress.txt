@@ -10,6 +10,8 @@
 - Beach coords on `Beach` type are `{ lat, lon }`; MapLibre expects `[lon, lat]` order — easy to flip by mistake.
 - MapLibre paint expressions cannot consume CSS custom properties — read them via `getComputedStyle(document.documentElement).getPropertyValue('--color-...')` at map init and pass the resolved hex into a `match` expression on a feature property.
 - Demotiles style glyphs include `Noto Sans Regular` — use it as the `text-font` value for symbol layers there. Other demotiles fonts are not guaranteed.
+- maplibre-gl v5 `GeoJSONSource.getClusterExpansionZoom(clusterId)` returns a Promise<number> (not a callback). Cast `map.getSource(id)` to `maplibregl.GeoJSONSource` to access cluster helpers.
+- Cluster + non-cluster filters: `['has', 'point_count']` for clusters, `['!', ['has', 'point_count']]` for individual features. Add layers in render order — clusters and individual circles are mutually exclusive via the filters, so order matters only for stacking with future overlays.
 
 ## 2026-04-19 - US-001
 - Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
@@ -55,4 +57,20 @@
   - Use a `case` expression instead of `coalesce` for the `text-field` fallback; MapLibre returns an empty string for `null`/missing numbers, so `['to-string', ['get', 'score']]` on its own shows no label when score is null.
   - `match` expression requires pairs of input/output and a single default at the end — passing CSS var() strings directly silently fails; resolve to hex before building the expression.
   - The source + feature properties plumbing is the shared surface for US-004/US-006/US-009; adding the future-use props now (`windSpeed`, `windDirection`, `lastUpdated`) is cheaper than refactoring later.
+---
+
+## 2026-04-19 - US-004
+- Enabled clustering on the `beaches` GeoJSON source (`cluster: true, clusterMaxZoom: 8, clusterRadius: 50`).
+- Added `beach-clusters` circle layer (filter `['has', 'point_count']`): `--color-ocean-700` (resolved to hex), white 2px stroke, step radius `[18, 10→22, 30→28]`.
+- Added `beach-cluster-count` symbol layer with `text-field: ['get', 'point_count_abbreviated']`, white 13px Noto Sans Regular, overlap allowed.
+- Click on `beach-clusters`: queries the rendered feature, awaits `source.getClusterExpansionZoom(clusterId)` (Promise in maplibre-gl v5), then `easeTo({ center, zoom })`.
+- Cursor flips to pointer on cluster hover.
+- Individual marker layers from US-003 untouched (still filter out clusters).
+- Files changed: `ui/src/views/MapView.vue`, `prd.json`, `progress.txt`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): zoom out below z8, confirm clusters with counts appear; tap a cluster, map zooms in and the cluster splits.
+- **Learnings for future iterations:**
+  - `getClusterExpansionZoom` is Promise-based in maplibre-gl v5 — older callback-style examples online are stale.
+  - When extending `ResolvedColors`, prefer adding the new key (e.g. `cluster`) to the same `resolveLabelColors` reader so all paint colours are sourced from one place.
+  - The cluster layers go on the same source — no separate source needed; the source just needs `cluster: true` flipped on at creation time.
 ---
