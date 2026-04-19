@@ -8,6 +8,7 @@ import { formatRelativeTime, isStale } from '../utils/time'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { useInstallPrompt } from '../composables/useInstallPrompt'
 import FilterSheet from '../components/FilterSheet.vue'
+import ViewSwitcherFab from '../components/ViewSwitcherFab.vue'
 
 const beachStore = useBeachStore()
 const router = useRouter()
@@ -247,6 +248,8 @@ function toggleFav(b: Beach) {
     </main>
 
     <FilterSheet :open="filterSheetOpen" @close="filterSheetOpen = false" />
+
+    <ViewSwitcherFab v-if="!beachStore.loading && !beachStore.error" />
   </div>
 </template>
 

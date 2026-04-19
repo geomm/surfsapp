@@ -19,7 +19,7 @@
         "Verify in browser using dev-browser skill: tap FAB on home, map route opens; tap FAB on map, list route returns"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -38,7 +38,7 @@
         "Verify in browser using dev-browser skill: navigate to /map; confirm every beach appears as a marker and the map is zoomed to fit all beaches"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -55,7 +55,7 @@
         "Verify in browser using dev-browser skill: every beach marker is a coloured circle with its score inside; colours match the corresponding beach's badge on HomeView"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002. CSS custom properties cannot be passed directly to MapLibre paint — use getComputedStyle to resolve to hex at map init."
     },
     {
@@ -72,7 +72,7 @@
         "Verify in browser using dev-browser skill: zoom out to a country-level view; confirm markers collapse into cluster bubbles with counts; tap a cluster and the map zooms in and the cluster expands"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003."
     },
     {
@@ -89,7 +89,7 @@
         "Verify in browser using dev-browser skill: pan and zoom, navigate away to '/', return to '/map'; camera matches where it was left"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002."
     },
     {
@@ -108,7 +108,7 @@
         "Verify in browser using dev-browser skill: tap any marker; bottom sheet opens with name/region/score/conditions/View details; tap 'View details' navigates to the beach detail route"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003. Don't duplicate helpers — import or recreate the same computed pattern used in HomeView."
     },
     {
@@ -128,7 +128,7 @@
         "Verify in browser using dev-browser skill: use DevTools → Sensors → override geolocation to a Greek coordinate; tap 'locate me' and confirm the map eases to that location at zoom ≥ 11"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002."
     },
     {
@@ -147,7 +147,7 @@
         "Verify in browser using dev-browser skill: DevTools Network → Offline, navigate to /map; banner appears; tap 'Back to list' returns to '/'"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002. Coexists with the app-level offline banner in App.vue."
     },
     {
@@ -168,7 +168,7 @@
         "Verify in browser using dev-browser skill: toggle on — arrows appear rotated per beach and sized by wind speed; toggle off — arrows disappear; reload the page with toggle on — arrows are visible on mount"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003 (GeoJSON source) and US-007 (locate-me button position — stack under it). Wind-direction convention assumed: degrees = bearing wind is coming FROM; document this next to the icon registration."
     }
   ]
