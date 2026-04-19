@@ -17,13 +17,15 @@ The user should be able to:
 7. Know when data was last refreshed ("Last updated X hours ago")
 
 Do NOT build in MVP:
-- Full interactive map view (all beaches as markers) — add in v2
 - User accounts / auth
 - Push notifications
 - Social features
 - User-submitted conditions
 - Tide modelling (add later)
 - Capacitor native app wrapping (add after PWA is stable)
+
+Shipped beyond original MVP scope:
+- Full interactive map view with clustered markers, locate-me, wind-arrow overlay (Phase 13)
 
 ---
 
@@ -165,11 +167,15 @@ settings        — mapCenter, mapZoom, filters, offlinePreferences
 - Safe area insets
 - Test on real Android + iOS Safari
 
-### Phase 13 — Full Map View (v2)
-- MapLibre GL JS map with all beaches as markers
-- Colour-coded by surfability
-- Cluster markers at low zoom
-- Tap marker → open beach detail
+### Phase 13 — Full Map View (shipped)
+- `/map` route with MapLibre GL JS, symmetric Map ⇄ List FAB
+- All beaches rendered as colour-coded GeoJSON circle markers by surfability score
+- Cluster markers below zoom 8
+- Tap marker → bottom-sheet preview → beach detail
+- Persist map centre + zoom in IndexedDB settings
+- Offline notice when map opens without network
+- Locate-me control (pans map + drops a user-location marker)
+- Toggleable wind-arrow overlay (arrows point where wind is going, not coming from)
 
 ---
 

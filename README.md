@@ -8,8 +8,9 @@ An offline-first PWA that shows surfability scores for Greek beaches. Fetches ma
 - Scores are computed from swell direction, swell period, swell height, and wind — weighted per beach
 - Each beach has a curated profile (ideal swell window, skill level, orientation, etc.)
 - 10-day hourly forecast with a daily best-window summary per beach
+- Full interactive map view with colour-coded markers, clustering, locate-me, and a toggleable wind-arrow overlay
 - Fully usable offline after first load — shows last known scores with a staleness timestamp
-- Installable as a PWA on desktop, Android, and iOS Safari
+- Installable as a PWA on desktop, Android, and iOS Safari (with an in-app "Add to Home Screen" guide)
 
 ## Stack
 
@@ -113,8 +114,9 @@ surfsapp/
 ├── ui/                        # Vue 3 frontend (PWA)
 │   └── src/
 │       ├── components/lit/    # Lit Web Component design system
+│       ├── composables/       # useInstallPrompt, useOnlineStatus, useServiceWorker
 │       ├── styles/            # SCSS design tokens + base styles
-│       └── views/             # Vue page components
+│       └── views/             # Vue page components (Home, BeachDetail, Map)
 └── backend/                   # Node.js API
     └── src/
         ├── data/              # beach_profiles.json (source of truth)
