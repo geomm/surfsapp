@@ -9,26 +9,112 @@ import ViewSwitcherFab from '../components/ViewSwitcherFab.vue'
 const beachStore = useBeachStore()
 const container = ref<HTMLDivElement | null>(null)
 let map: maplibregl.Map | null = null
-let markers: maplibregl.Marker[] = []
 let beachesPlotted = false
 
-function plotBeaches(beaches: Beach[]) {
-  if (!map || beachesPlotted || beaches.length === 0) return
-  const valid = beaches.filter(
-    (b) => Number.isFinite(b.coords?.lat) && Number.isFinite(b.coords?.lon),
-  )
-  if (valid.length === 0) return
+const BEACH_SOURCE_ID = 'beaches'
+const BEACH_CIRCLE_LAYER = 'beach-markers'
+const BEACH_LABEL_LAYER = 'beach-marker-labels'
 
-  for (const beach of valid) {
-    const marker = new maplibregl.Marker()
-      .setLngLat([beach.coords.lon, beach.coords.lat])
-      .addTo(map)
-    markers.push(marker)
+type LabelKey = 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral'
+type ResolvedColors = Record<LabelKey, string>
+
+function resolveLabelColors(): ResolvedColors {
+  const styles = getComputedStyle(document.documentElement)
+  const read = (name: string, fallback: string) => {
+    const v = styles.getPropertyValue(name).trim()
+    return v.length > 0 ? v : fallback
   }
+  return {
+    'very-good': read('--color-surf-very-good', '#2d9e5f'),
+    good: read('--color-surf-good', '#1a72c4'),
+    maybe: read('--color-surf-maybe', '#d4a017'),
+    poor: read('--color-surf-poor', '#c0392b'),
+    neutral: read('--color-neutral-300', '#dee2e6'),
+  }
+}
+
+function toFeatureCollection(beaches: Beach[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  const features: GeoJSON.Feature<GeoJSON.Point>[] = beaches
+    .filter((b) => Number.isFinite(b.coords?.lat) && Number.isFinite(b.coords?.lon))
+    .map((b) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [b.coords.lon, b.coords.lat] },
+      properties: {
+        id: b.id,
+        name: b.name,
+        region: b.region,
+        label: b.currentLabel ?? 'neutral',
+        score: b.currentScore,
+        windSpeed: b.windSpeed ?? null,
+        windDirection: b.windDirection ?? null,
+        lastUpdated: b.lastUpdated,
+      },
+    }))
+  return { type: 'FeatureCollection', features }
+}
+
+function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollection<GeoJSON.Point>) {
+  const colors = resolveLabelColors()
+
+  mapInstance.addSource(BEACH_SOURCE_ID, {
+    type: 'geojson',
+    data,
+  })
+
+  mapInstance.addLayer({
+    id: BEACH_CIRCLE_LAYER,
+    type: 'circle',
+    source: BEACH_SOURCE_ID,
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+      'circle-radius': 18,
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff',
+      'circle-color': [
+        'match',
+        ['get', 'label'],
+        'very-good', colors['very-good'],
+        'good', colors.good,
+        'maybe', colors.maybe,
+        'poor', colors.poor,
+        colors.neutral,
+      ],
+    },
+  })
+
+  mapInstance.addLayer({
+    id: BEACH_LABEL_LAYER,
+    type: 'symbol',
+    source: BEACH_SOURCE_ID,
+    filter: ['!', ['has', 'point_count']],
+    layout: {
+      'text-field': [
+        'case',
+        ['!=', ['get', 'score'], null],
+        ['to-string', ['get', 'score']],
+        '—',
+      ],
+      'text-size': 13,
+      'text-font': ['Noto Sans Regular'],
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+    },
+    paint: {
+      'text-color': '#ffffff',
+    },
+  })
+}
+
+function plotBeaches(beaches: Beach[]) {
+  if (!map || beachesPlotted) return
+  const data = toFeatureCollection(beaches)
+  if (data.features.length === 0) return
+
+  addBeachLayers(map, data)
 
   const bounds = new maplibregl.LngLatBounds()
-  for (const beach of valid) {
-    bounds.extend([beach.coords.lon, beach.coords.lat])
+  for (const feature of data.features) {
+    bounds.extend(feature.geometry.coordinates as [number, number])
   }
   map.fitBounds(bounds, { padding: 48, animate: false })
   beachesPlotted = true
@@ -64,12 +150,11 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  for (const m of markers) m.remove()
-  markers = []
   if (map) {
     map.remove()
     map = null
   }
+  beachesPlotted = false
 })
 </script>
 

@@ -8,6 +8,8 @@
 - FAB / overlay pattern: position fixed, use env(safe-area-inset-*) on offsets, `--color-ocean-800` is the brand accent.
 - MapLibre: import `'maplibre-gl/dist/maplibre-gl.css'` in any view that mounts a map (BeachMap.vue does NOT — it relies on the importer to provide CSS). Without it controls/markers render unstyled.
 - Beach coords on `Beach` type are `{ lat, lon }`; MapLibre expects `[lon, lat]` order — easy to flip by mistake.
+- MapLibre paint expressions cannot consume CSS custom properties — read them via `getComputedStyle(document.documentElement).getPropertyValue('--color-...')` at map init and pass the resolved hex into a `match` expression on a feature property.
+- Demotiles style glyphs include `Noto Sans Regular` — use it as the `text-font` value for symbol layers there. Other demotiles fonts are not guaranteed.
 
 ## 2026-04-19 - US-001
 - Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
@@ -37,4 +39,20 @@
   - The `Beach.coords` shape is `{ lat, lon }` and MapLibre wants `[lon, lat]`; reusing the same `[lon, lat]` projection for both marker placement and `bounds.extend()` keeps the call sites symmetric.
   - Because beach data may load before OR after the map, both paths (`map.on('load', ...)` for first plot, plus a `watch` on `beachStore.beaches`) are needed; gate plotting with a flag so we don't re-fit/re-mark when the store array reference changes during refresh.
   - US-003 will swap these per-beach Markers for a GeoJSON source + circle/symbol layers, so do not over-invest in marker styling here.
+---
+
+## 2026-04-19 - US-003
+- Replaced per-beach `maplibregl.Marker` rendering in MapView.vue with a GeoJSON source `beaches` + two layers filtered to non-cluster features:
+  - `beach-markers` (circle): radius 18, 2px white stroke, fill driven by a `match` on feature `label` ('very-good'/'good'/'maybe'/'poor' → corresponding `--color-surf-*` hex; fallback `--color-neutral-300`).
+  - `beach-marker-labels` (symbol): `text-field` uses a `case` expression that falls back to `—` when `score` is null; `text-font: ['Noto Sans Regular']`, 13px, white, `text-allow-overlap`/`text-ignore-placement` both true.
+- CSS custom properties are resolved to hex once at plot time via `getComputedStyle(document.documentElement).getPropertyValue(...)` — demotiles paint expressions can't consume `var()` tokens.
+- Each feature carries `id`/`name`/`region`/`label`/`score`/`windSpeed`/`windDirection`/`lastUpdated` in `properties` so future stories (US-006 bottom sheet, US-009 wind arrows) can read them without extra source plumbing.
+- Both layers filter `['!', ['has', 'point_count']]` in preparation for US-004 clustering.
+- Files changed: `ui/src/views/MapView.vue`.
+- Quality: `yarn typecheck` passes.
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): confirm every marker is a coloured circle with its score inside and colours match HomeView badges.
+- **Learnings for future iterations:**
+  - Use a `case` expression instead of `coalesce` for the `text-field` fallback; MapLibre returns an empty string for `null`/missing numbers, so `['to-string', ['get', 'score']]` on its own shows no label when score is null.
+  - `match` expression requires pairs of input/output and a single default at the end — passing CSS var() strings directly silently fails; resolve to hex before building the expression.
+  - The source + feature properties plumbing is the shared surface for US-004/US-006/US-009; adding the future-use props now (`windSpeed`, `windDirection`, `lastUpdated`) is cheaper than refactoring later.
 ---

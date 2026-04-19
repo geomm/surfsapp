@@ -55,7 +55,7 @@
         "Verify in browser using dev-browser skill: every beach marker is a coloured circle with its score inside; colours match the corresponding beach's badge on HomeView"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002. CSS custom properties cannot be passed directly to MapLibre paint — use getComputedStyle to resolve to hex at map init."
     },
     {
