@@ -1,0 +1,121 @@
+{
+  "project": "surfsapp",
+  "branchName": "ralph/phase-12-mobile-polish",
+  "description": "Phase 12 — Mobile Polish. Safe-area insets, tap/scroll feel, standalone-mode CSS, skeleton loading states, polished error states, and a landscape audit. iOS Safari priority; no haptics; portrait lock stays.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Safe-area + global tap/scroll foundation",
+      "description": "As a developer, I need a baseline set of mobile-friendly CSS rules and a viewport config that enables safe-area insets, so every subsequent view can rely on them.",
+      "acceptanceCriteria": [
+        "ui/index.html viewport meta tag updated to <meta name='viewport' content='width=device-width, initial-scale=1.0, viewport-fit=cover' /> — without viewport-fit=cover, env(safe-area-inset-*) always resolves to 0 on iOS",
+        "ui/src/styles/base/_base.scss body selector gains: -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior-y: none;",
+        "_base.scss gains a button reset adding -webkit-tap-highlight-color: transparent; and touch-action: manipulation; (eliminates 300ms double-tap delay and grey tap flash)",
+        "Existing body rules (font-family, font-size, background-color, color) preserved",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: open the app, tap a beach card rapidly — no grey flash, no zoom; inspect <meta name='viewport'> and confirm viewport-fit=cover is present"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "touch-action: manipulation is the right default on buttons (allows pan/zoom at page level but kills double-tap zoom on the element itself). Do NOT apply touch-action: none globally — that would break the custom pull-to-refresh gesture."
+    },
+    {
+      "id": "US-002",
+      "title": "Apply safe-area insets to HomeView and BeachDetailView",
+      "description": "As a user on iPhone with a notch, I want the app header and bottom content not to sit under the Dynamic Island/notch or home indicator.",
+      "acceptanceCriteria": [
+        "HomeView.vue .header padding-top adjusted to: padding-top: calc(var(--space-4) + env(safe-area-inset-top));",
+        "HomeView.vue .header padding-left and padding-right adjusted to: padding-left: calc(var(--space-4) + env(safe-area-inset-left)); padding-right: calc(var(--space-4) + env(safe-area-inset-right));",
+        "HomeView.vue .content padding-bottom adjusted to: padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));",
+        "Same three adjustments applied to BeachDetailView.vue .header and .content",
+        "Existing max-width/margin/layout rules preserved — only padding values change",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: open Chrome DevTools device mode, emulate iPhone 14 Pro; confirm the header and content stay clear of the status bar area and the bottom of the viewport"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Depends on US-001 (viewport-fit=cover must be in place for env() to return non-zero values). Use calc() so existing spacing tokens continue to apply."
+    },
+    {
+      "id": "US-003",
+      "title": "Safe-area for bottom sheets and FilterSheet footer",
+      "description": "As a user, I want bottom sheets not to bury their footer buttons under the iOS home indicator.",
+      "acceptanceCriteria": [
+        "ui/src/components/lit/surf-bottom-sheet.ts .sheet padding updated: keep padding: var(--space-4); then add padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));",
+        "ui/src/components/FilterSheet.vue — verify its Done/Clear-all footer is not obscured; if the sheet itself pads correctly, no further change required. If the footer is absolutely positioned, it must also honour env(safe-area-inset-bottom)",
+        "Backdrop full-screen styling unchanged",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: emulate iPhone 14 Pro, open the filter sheet; the Done/Clear all buttons sit above the simulated home indicator area, not under it"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Depends on US-001. The existing bottom sheet already uses transform/transition from translateY(100%) → translateY(0); adjusting only the padding keeps those animations intact."
+    },
+    {
+      "id": "US-004",
+      "title": "Standalone-mode CSS for iOS status bar clearance",
+      "description": "As a user who installed surfsapp on iOS, I want the header to clear the iOS status bar cleanly instead of sitting under it when launching the installed app.",
+      "acceptanceCriteria": [
+        "_base.scss (or a new partial imported from main.scss) adds an @media all and (display-mode: standalone) block",
+        "Inside the block, the shared header selector (.header — present in both HomeView and BeachDetailView, and scoped per component — so the rule must target the class or be added in each view's <style scoped> block) gains an additional var(--space-2) top padding on top of the US-002 env(safe-area-inset-top) padding. Implement either by: (a) updating both HomeView.vue and BeachDetailView.vue scoped <style> blocks with their own @media (display-mode: standalone) rule, OR (b) making the rule global in _base.scss targeting .header (confirm no other .header collisions exist)",
+        "In regular browser (not standalone), the extra padding does NOT apply",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: open DevTools → Rendering → 'Emulate CSS media feature display-mode' → set to 'standalone'; confirm the extra header padding applies. Toggle back to 'browser'; confirm it does NOT apply"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Depends on US-002 (safe-area baseline). iOS Safari doesn't preview standalone mode inside the browser, but Chromium's media emulator works for verification. Prefer option (a) — per-view scoped rules — since .header is a scoped class and a global rule won't reach it without :deep() or :global()."
+    },
+    {
+      "id": "US-005",
+      "title": "Skeleton loading states for HomeView and BeachDetailView",
+      "description": "As a user waiting for data, I want a skeleton that mirrors the final layout so the screen feels responsive and intentional, not blank.",
+      "acceptanceCriteria": [
+        "HomeView.vue loading state (currently <div v-if='beachStore.loading' class='state'>Loading…</div>) replaced with a list of 4 skeleton cards, each approximating the real beach-card layout: a title-width bar (~60% of card), a region-width bar (~40%), a badge-sized bar (top-right), and a conditions-line bar (~80%)",
+        "BeachDetailView.vue loading state replaced with a hero skeleton: a name-width bar, a region-width bar, a score-width bar, and 2-3 lines approximating the reasons disclosure",
+        "Skeleton bars animate with a subtle pulse or shimmer via CSS @keyframes (roughly 1.5s loop) using existing neutral tokens (check ui/src/styles/tokens/_colors.scss for --color-neutral-* values; use the lightest available as base and one step darker for the shimmer)",
+        "Skeleton container has aria-busy='true' aria-live='polite'; individual bars have aria-hidden='true'",
+        "Animation respects prefers-reduced-motion: a @media (prefers-reduced-motion: reduce) block inside the skeleton styles disables the keyframe animation",
+        "No new Lit component — skeletons are inline Vue markup with scoped styles",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: throttle the network to Slow 3G in DevTools, reload the home page; the skeleton cards appear until data arrives, then are replaced by real cards. Repeat for a beach detail page"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Keep animation subtle — a gentle opacity or background-position shimmer is enough. Heavy animation is distracting on mobile. No new component needed — both views can own their own skeleton markup."
+    },
+    {
+      "id": "US-006",
+      "title": "Polished error states for HomeView and BeachDetailView",
+      "description": "As a user who hits a network or data error, I want a clear visual and a one-tap retry rather than a raw error string.",
+      "acceptanceCriteria": [
+        "HomeView.vue error state (the <div v-else-if='beachStore.error' class='state'> block) restructured to mirror the existing .empty-state pattern: a centred <surf-icon name='cloud-off' size='48'> icon, an <h2> 'Can't load beaches', a <p> containing a friendly, shortened version of beachStore.error, and the existing Retry <surf-button>",
+        "BeachDetailView.vue error state (<div v-else-if='beachStore.detailError'>) restructured with the same pattern: cloud-off icon, 'Can't load this beach' heading, friendly error line, Retry button",
+        "The cloud-off icon is registered in ui/src/components/lit/surf-icon.ts (import from lucide if missing)",
+        "Raw error string remains visible but de-emphasised (smaller font, --color-text-secondary), not styled as --color-surf-poor 'Error:' prefix",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: in DevTools throttling set to Offline, reload the home page; confirm the new error state appears with icon + message + Retry button. Switch back to Online, tap Retry; list loads. Repeat for a beach detail page"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "The lucide icon is named `cloud-off` (package export: CloudOff). If missing from the surf-icon registry, add it following the existing pattern used for heart, download, sliders-horizontal, etc."
+    },
+    {
+      "id": "US-007",
+      "title": "Landscape audit and fixes at iPhone X and iPhone 14 Pro Max landscape viewports",
+      "description": "As a user who rotates their phone before installing, I want the app not to break obviously in landscape.",
+      "acceptanceCriteria": [
+        "Using Chrome DevTools device mode, audit HomeView at 812x375 (iPhone X landscape) and 926x428 (iPhone 14 Pro Max landscape): header stays on one row, cards flow correctly, scroll works, filter sheet opens without clipping",
+        "Audit BeachDetailView at the same viewports: hero layout doesn't clip, reasons disclosure expands correctly, map renders at a sensible height (if the map explodes to full viewport height in landscape, add max-height: 40vh on .beach-map-wrap — only if observed as broken), ForecastStrip remains horizontally scrollable",
+        "Audit FilterSheet at the same viewports: the existing max-height: 85vh on surf-bottom-sheet holds; if checkbox rows look cramped, add a max-width: 480px; margin: 0 auto; on the inner sheet content container",
+        "Every observed breakage is fixed with the minimum CSS required; the commit message documents each fix in one line",
+        "If no breakage is observed, the commit message says exactly 'Phase 12 landscape audit — no changes required'",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: toggle DevTools device mode to landscape for both iPhone X and iPhone 14 Pro Max; visually confirm all three surfaces (home, detail, filter sheet) render sensibly"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Manifest stays orientation: 'portrait' — landscape is a soft-support scenario for pre-install users only. Don't over-invest. Only fix what's visibly broken."
+    }
+  ]
+}

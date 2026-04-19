@@ -1,121 +1,175 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-12-mobile-polish",
-  "description": "Phase 12 — Mobile Polish. Safe-area insets, tap/scroll feel, standalone-mode CSS, skeleton loading states, polished error states, and a landscape audit. iOS Safari priority; no haptics; portrait lock stays.",
+  "branchName": "ralph/phase-13-full-map-view",
+  "description": "Phase 13 — Full Map View. Dedicated /map route with MapLibre plotting every beach as a colour-coded, score-labelled marker. Clustering at low zoom, bottom-sheet previews on tap, persistent camera state, locate-me control, offline banner, and a toggleable wind-arrow overlay. Symmetric Map ⇄ List FAB. No filter integration, no heatmap, no tide overlay, no tile precaching.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Safe-area + global tap/scroll foundation",
-      "description": "As a developer, I need a baseline set of mobile-friendly CSS rules and a viewport config that enables safe-area insets, so every subsequent view can rely on them.",
+      "title": "Add /map route and symmetric Map ⇄ List FAB",
+      "description": "As a user, I want a single FAB that toggles between list and map so switching views feels like one obvious gesture in both directions.",
       "acceptanceCriteria": [
-        "ui/index.html viewport meta tag updated to <meta name='viewport' content='width=device-width, initial-scale=1.0, viewport-fit=cover' /> — without viewport-fit=cover, env(safe-area-inset-*) always resolves to 0 on iOS",
-        "ui/src/styles/base/_base.scss body selector gains: -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior-y: none;",
-        "_base.scss gains a button reset adding -webkit-tap-highlight-color: transparent; and touch-action: manipulation; (eliminates 300ms double-tap delay and grey tap flash)",
-        "Existing body rules (font-family, font-size, background-color, color) preserved",
+        "Add route to ui/src/router.ts: { path: '/map', name: 'beach-map', component: () => import('./views/MapView.vue') }",
+        "Create ui/src/views/MapView.vue with a placeholder <main><h1>Map</h1></main> (real map comes in US-002)",
+        "Create ui/src/components/ViewSwitcherFab.vue: fixed bottom-right, 56px circle, background var(--color-ocean-800), white icon, honours env(safe-area-inset-bottom) in bottom offset",
+        "FAB reads the current route; on '/' shows lucide 'map' icon with aria-label 'Open map view' and navigates to { name: 'beach-map' }; on '/map' shows lucide 'list' icon with aria-label 'Open list view' and navigates to '/'",
+        "Register 'map' and 'list' lucide icons in ui/src/components/lit/surf-icon.ts if missing, following the existing heart/download/sliders-horizontal/cloud-off pattern",
+        "Mount ViewSwitcherFab in both HomeView.vue and MapView.vue (or once at app-shell level — whichever is simpler; must render on both routes)",
+        "On HomeView, hide the FAB while beachStore.loading is true OR beachStore.error is set; on MapView the FAB is always shown",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: open the app, tap a beach card rapidly — no grey flash, no zoom; inspect <meta name='viewport'> and confirm viewport-fit=cover is present"
+        "Verify in browser using dev-browser skill: tap FAB on home, map route opens; tap FAB on map, list route returns"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "touch-action: manipulation is the right default on buttons (allows pan/zoom at page level but kills double-tap zoom on the element itself). Do NOT apply touch-action: none globally — that would break the custom pull-to-refresh gesture."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Apply safe-area insets to HomeView and BeachDetailView",
-      "description": "As a user on iPhone with a notch, I want the app header and bottom content not to sit under the Dynamic Island/notch or home indicator.",
+      "title": "Render MapLibre map with all beaches and fit-to-bounds on first visit",
+      "description": "As a user opening the map for the first time, I want to see every beach on a map zoomed to fit them all so I get an overview without panning.",
       "acceptanceCriteria": [
-        "HomeView.vue .header padding-top adjusted to: padding-top: calc(var(--space-4) + env(safe-area-inset-top));",
-        "HomeView.vue .header padding-left and padding-right adjusted to: padding-left: calc(var(--space-4) + env(safe-area-inset-left)); padding-right: calc(var(--space-4) + env(safe-area-inset-right));",
-        "HomeView.vue .content padding-bottom adjusted to: padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));",
-        "Same three adjustments applied to BeachDetailView.vue .header and .content",
-        "Existing max-width/margin/layout rules preserved — only padding values change",
+        "MapView.vue calls beachStore.fetchBeaches() on mount if beachStore.beaches.length === 0",
+        "Initialise a MapLibre map filling the viewport (container has height: 100vh, no persistent top header — the FAB from US-001 is the only nav affordance)",
+        "Use the same style URL as ui/src/components/BeachMap.vue: 'https://demotiles.maplibre.org/style.json'",
+        "On first visit (no persisted camera from US-005 yet), call map.fitBounds(bounds, { padding: 48 }) over every beach's [lon, lat]",
+        "Add a default MapLibre Marker for each beach (styling upgrade comes in US-003)",
+        "Clean up the map instance in onBeforeUnmount via map.remove()",
+        "Depends on US-001 (route must exist)",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: open Chrome DevTools device mode, emulate iPhone 14 Pro; confirm the header and content stay clear of the status bar area and the bottom of the viewport"
+        "Verify in browser using dev-browser skill: navigate to /map; confirm every beach appears as a marker and the map is zoomed to fit all beaches"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Depends on US-001 (viewport-fit=cover must be in place for env() to return non-zero values). Use calc() so existing spacing tokens continue to apply."
+      "passes": false,
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Safe-area for bottom sheets and FilterSheet footer",
-      "description": "As a user, I want bottom sheets not to bury their footer buttons under the iOS home indicator.",
+      "title": "Colour-coded circle markers with score number via GeoJSON source + circle/symbol layers",
+      "description": "As a user scanning the map, I want each marker to show the beach's score inside a coloured circle so I can compare surfability visually without tapping.",
       "acceptanceCriteria": [
-        "ui/src/components/lit/surf-bottom-sheet.ts .sheet padding updated: keep padding: var(--space-4); then add padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));",
-        "ui/src/components/FilterSheet.vue — verify its Done/Clear-all footer is not obscured; if the sheet itself pads correctly, no further change required. If the footer is absolutely positioned, it must also honour env(safe-area-inset-bottom)",
-        "Backdrop full-screen styling unchanged",
+        "Replace the per-beach MapLibre Markers from US-002 with a GeoJSON source 'beaches' whose features carry properties: id (beach id), name, region, label (currentLabel or 'neutral'), score (currentScore or null), windSpeed, windDirection, lastUpdated",
+        "Add a circle layer 'beach-markers' with circle-radius 18, circle-stroke-width 2, circle-stroke-color '#ffffff', and circle-color driven by label via a match expression: 'very-good' → var(--color-surf-very-good), 'good' → var(--color-surf-good), 'maybe' → var(--color-surf-maybe), 'poor' → var(--color-surf-poor), default → var(--color-neutral-300). Resolve the CSS custom properties to hex in JS (read getComputedStyle on :root) and pass hex to paint",
+        "Add a symbol layer 'beach-marker-labels' on the same source: text-field is the score when score != null else '—'; text-size 13; text-color '#ffffff'; text-font set to a font listed in the demotiles style's glyphs (e.g. ['Noto Sans Regular']); text-allow-overlap true; text-ignore-placement true",
+        "Both layers filter OUT clusters (filter: ['!', ['has', 'point_count']]) — prep for clustering in US-004",
+        "A subtle drop shadow on the circle is acceptable via an additional circle layer beneath with larger radius and low opacity; not required",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: emulate iPhone 14 Pro, open the filter sheet; the Done/Clear all buttons sit above the simulated home indicator area, not under it"
+        "Verify in browser using dev-browser skill: every beach marker is a coloured circle with its score inside; colours match the corresponding beach's badge on HomeView"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Depends on US-001. The existing bottom sheet already uses transform/transition from translateY(100%) → translateY(0); adjusting only the padding keeps those animations intact."
+      "passes": false,
+      "notes": "Depends on US-002. CSS custom properties cannot be passed directly to MapLibre paint — use getComputedStyle to resolve to hex at map init."
     },
     {
       "id": "US-004",
-      "title": "Standalone-mode CSS for iOS status bar clearance",
-      "description": "As a user who installed surfsapp on iOS, I want the header to clear the iOS status bar cleanly instead of sitting under it when launching the installed app.",
+      "title": "Cluster markers below zoom 8",
+      "description": "As a user at country-level zoom, I want clustered markers so the map isn't overwhelmed with overlapping pins.",
       "acceptanceCriteria": [
-        "_base.scss (or a new partial imported from main.scss) adds an @media all and (display-mode: standalone) block",
-        "Inside the block, the shared header selector (.header — present in both HomeView and BeachDetailView, and scoped per component — so the rule must target the class or be added in each view's <style scoped> block) gains an additional var(--space-2) top padding on top of the US-002 env(safe-area-inset-top) padding. Implement either by: (a) updating both HomeView.vue and BeachDetailView.vue scoped <style> blocks with their own @media (display-mode: standalone) rule, OR (b) making the rule global in _base.scss targeting .header (confirm no other .header collisions exist)",
-        "In regular browser (not standalone), the extra padding does NOT apply",
+        "Update the 'beaches' GeoJSON source from US-003 with cluster: true, clusterMaxZoom: 8, clusterRadius: 50",
+        "Add a cluster-circle layer 'beach-clusters' filter ['has', 'point_count']: circle-color var(--color-ocean-700) resolved to hex; circle-stroke-color '#ffffff'; circle-stroke-width 2; circle-radius via step expression: ['step', ['get', 'point_count'], 18, 10, 22, 30, 28]",
+        "Add a cluster-count symbol layer 'beach-cluster-count' with filter ['has', 'point_count']: text-field ['get', 'point_count_abbreviated']; text-size 13; text-color '#ffffff'; text-font as in US-003",
+        "On click of 'beach-clusters' layer, call source.getClusterExpansionZoom(clusterId) and then map.easeTo({ center: clusterCenter, zoom: expansionZoom })",
+        "Individual marker layer (from US-003) continues to filter out clusters so no overlap",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: open DevTools → Rendering → 'Emulate CSS media feature display-mode' → set to 'standalone'; confirm the extra header padding applies. Toggle back to 'browser'; confirm it does NOT apply"
+        "Verify in browser using dev-browser skill: zoom out to a country-level view; confirm markers collapse into cluster bubbles with counts; tap a cluster and the map zooms in and the cluster expands"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Depends on US-002 (safe-area baseline). iOS Safari doesn't preview standalone mode inside the browser, but Chromium's media emulator works for verification. Prefer option (a) — per-view scoped rules — since .header is a scoped class and a global rule won't reach it without :deep() or :global()."
+      "passes": false,
+      "notes": "Depends on US-003."
     },
     {
       "id": "US-005",
-      "title": "Skeleton loading states for HomeView and BeachDetailView",
-      "description": "As a user waiting for data, I want a skeleton that mirrors the final layout so the screen feels responsive and intentional, not blank.",
+      "title": "Persist map centre and zoom in IndexedDB settings",
+      "description": "As a returning user, I want the map to open where I left it so I don't have to re-navigate to my area every time.",
       "acceptanceCriteria": [
-        "HomeView.vue loading state (currently <div v-if='beachStore.loading' class='state'>Loading…</div>) replaced with a list of 4 skeleton cards, each approximating the real beach-card layout: a title-width bar (~60% of card), a region-width bar (~40%), a badge-sized bar (top-right), and a conditions-line bar (~80%)",
-        "BeachDetailView.vue loading state replaced with a hero skeleton: a name-width bar, a region-width bar, a score-width bar, and 2-3 lines approximating the reasons disclosure",
-        "Skeleton bars animate with a subtle pulse or shimmer via CSS @keyframes (roughly 1.5s loop) using existing neutral tokens (check ui/src/styles/tokens/_colors.scss for --color-neutral-* values; use the lightest available as base and one step darker for the shimmer)",
-        "Skeleton container has aria-busy='true' aria-live='polite'; individual bars have aria-hidden='true'",
-        "Animation respects prefers-reduced-motion: a @media (prefers-reduced-motion: reduce) block inside the skeleton styles disables the keyframe animation",
-        "No new Lit component — skeletons are inline Vue markup with scoped styles",
+        "On MapView mount, read db.settings.get('mapCenter') and db.settings.get('mapZoom') before initialising the map",
+        "If both values exist and are valid, pass them as center and zoom in new maplibregl.Map({ ... }) and SKIP the fitBounds from US-002",
+        "If either is missing or invalid, fall back to the US-002 fit-to-bounds behaviour",
+        "On map 'moveend', write { key: 'mapCenter', value: [lng, lat] } and { key: 'mapZoom', value: zoom } to db.settings with a ~400ms debounce so rapid panning doesn't spam IndexedDB",
+        "No TypeScript 'any' — follow the existing typed read/write pattern used by filter persistence in ui/src/stores/beachStore.ts",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: throttle the network to Slow 3G in DevTools, reload the home page; the skeleton cards appear until data arrives, then are replaced by real cards. Repeat for a beach detail page"
+        "Verify in browser using dev-browser skill: pan and zoom, navigate away to '/', return to '/map'; camera matches where it was left"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Keep animation subtle — a gentle opacity or background-position shimmer is enough. Heavy animation is distracting on mobile. No new component needed — both views can own their own skeleton markup."
+      "passes": false,
+      "notes": "Depends on US-002."
     },
     {
       "id": "US-006",
-      "title": "Polished error states for HomeView and BeachDetailView",
-      "description": "As a user who hits a network or data error, I want a clear visual and a one-tap retry rather than a raw error string.",
+      "title": "Bottom-sheet preview on marker tap",
+      "description": "As a user tapping a marker, I want a quick preview card with the beach's key info and a button to open full details, without losing my place on the map.",
       "acceptanceCriteria": [
-        "HomeView.vue error state (the <div v-else-if='beachStore.error' class='state'> block) restructured to mirror the existing .empty-state pattern: a centred <surf-icon name='cloud-off' size='48'> icon, an <h2> 'Can't load beaches', a <p> containing a friendly, shortened version of beachStore.error, and the existing Retry <surf-button>",
-        "BeachDetailView.vue error state (<div v-else-if='beachStore.detailError'>) restructured with the same pattern: cloud-off icon, 'Can't load this beach' heading, friendly error line, Retry button",
-        "The cloud-off icon is registered in ui/src/components/lit/surf-icon.ts (import from lucide if missing)",
-        "Raw error string remains visible but de-emphasised (smaller font, --color-text-secondary), not styled as --color-surf-poor 'Error:' prefix",
+        "Register a click handler on the 'beach-markers' (individual) layer from US-003 — clicks on clusters are handled separately in US-004",
+        "On click, look up the beach from beachStore.beaches by the feature's 'id' property",
+        "Open surf-bottom-sheet (import the existing ui/src/components/lit/surf-bottom-sheet.ts) with :open='true'",
+        "Sheet content shows: beach name (h2), region (subtitle), surf-badge with label and score (e.g. '72%'), swell/wind summary lines when the beach has swellHeight/swellPeriod/swellDirection/windSpeed/windDirection (reuse the degreesToCompass helper and hhmm helper patterns from HomeView), a staleness line built from lastUpdated via formatRelativeTime",
+        "Sheet footer contains a full-width surf-button variant='primary' labelled 'View details' that calls router.push({ name: 'beach-detail', params: { id: beach.id } })",
+        "Closing the sheet (backdrop tap / close gesture) returns focus to the map without navigation — use the sheet's existing close event",
+        "The bottom sheet already honours env(safe-area-inset-bottom) from Phase 12, so no change there",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: in DevTools throttling set to Offline, reload the home page; confirm the new error state appears with icon + message + Retry button. Switch back to Online, tap Retry; list loads. Repeat for a beach detail page"
+        "Verify in browser using dev-browser skill: tap any marker; bottom sheet opens with name/region/score/conditions/View details; tap 'View details' navigates to the beach detail route"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "The lucide icon is named `cloud-off` (package export: CloudOff). If missing from the surf-icon registry, add it following the existing pattern used for heart, download, sliders-horizontal, etc."
+      "passes": false,
+      "notes": "Depends on US-003. Don't duplicate helpers — import or recreate the same computed pattern used in HomeView."
     },
     {
       "id": "US-007",
-      "title": "Landscape audit and fixes at iPhone X and iPhone 14 Pro Max landscape viewports",
-      "description": "As a user who rotates their phone before installing, I want the app not to break obviously in landscape.",
+      "title": "Locate-me control that pans to user geolocation",
+      "description": "As a user, I want to quickly centre the map on my current location to see beaches near me.",
       "acceptanceCriteria": [
-        "Using Chrome DevTools device mode, audit HomeView at 812x375 (iPhone X landscape) and 926x428 (iPhone 14 Pro Max landscape): header stays on one row, cards flow correctly, scroll works, filter sheet opens without clipping",
-        "Audit BeachDetailView at the same viewports: hero layout doesn't clip, reasons disclosure expands correctly, map renders at a sensible height (if the map explodes to full viewport height in landscape, add max-height: 40vh on .beach-map-wrap — only if observed as broken), ForecastStrip remains horizontally scrollable",
-        "Audit FilterSheet at the same viewports: the existing max-height: 85vh on surf-bottom-sheet holds; if checkbox rows look cramped, add a max-width: 480px; margin: 0 auto; on the inner sheet content container",
-        "Every observed breakage is fixed with the minimum CSS required; the commit message documents each fix in one line",
-        "If no breakage is observed, the commit message says exactly 'Phase 12 landscape audit — no changes required'",
+        "Overlay a circular 'locate me' button at the top-right of the map, 44×44 px, background '#ffffff', border 1px solid var(--color-ocean-800), lucide 'locate-fixed' icon coloured var(--color-ocean-800)",
+        "Register 'locate-fixed' lucide icon in surf-icon.ts if missing",
+        "Button honours env(safe-area-inset-top) on its top offset and env(safe-area-inset-right) on its right offset",
+        "On click, call navigator.geolocation.getCurrentPosition with a 10s timeout",
+        "While awaiting a fix, set a local 'locating' reactive flag: button disabled via pointer-events: none and icon at opacity 0.5",
+        "On success, map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 11) })",
+        "On error or permission denial, render a small aria-live='polite' inline notice near the button (or reuse the offline-banner styling) with text 'Can't access your location' that auto-dismisses after 4s",
+        "Clear the 'locating' flag in both success and error paths",
         "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: toggle DevTools device mode to landscape for both iPhone X and iPhone 14 Pro Max; visually confirm all three surfaces (home, detail, filter sheet) render sensibly"
+        "Verify in browser using dev-browser skill: use DevTools → Sensors → override geolocation to a Greek coordinate; tap 'locate me' and confirm the map eases to that location at zoom ≥ 11"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "Manifest stays orientation: 'portrait' — landscape is a soft-support scenario for pre-install users only. Don't over-invest. Only fix what's visibly broken."
+      "passes": false,
+      "notes": "Depends on US-002."
+    },
+    {
+      "id": "US-008",
+      "title": "Offline notice when map opened without network",
+      "description": "As a user opening the map offline, I want to be told the tiles won't load so I'm not left staring at a blank grid.",
+      "acceptanceCriteria": [
+        "MapView.vue imports the existing ui/src/composables/useOnlineStatus.ts composable",
+        "When !isOnline on mount OR it flips false while viewing the map, render a full-width banner at the top of the map: 'Map needs internet — tiles won't load. Your cached beach data is still available on the list view.'",
+        "Banner uses background var(--color-surf-maybe) and white text, mirroring the existing offline-banner pattern in App.vue (do NOT duplicate App.vue's banner — the app-level banner still shows; this banner is the map-specific explanation with a CTA)",
+        "Banner includes a surf-button variant='secondary' labelled 'Back to list' that calls router.push('/')",
+        "Banner sits above the map and does NOT block interaction with the map itself — the map is still mounted underneath",
+        "Banner disappears automatically when isOnline becomes true",
+        "Banner honours env(safe-area-inset-top) in its top offset",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: DevTools Network → Offline, navigate to /map; banner appears; tap 'Back to list' returns to '/'"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Depends on US-002. Coexists with the app-level offline banner in App.vue."
+    },
+    {
+      "id": "US-009",
+      "title": "Toggleable wind-arrow overlay",
+      "description": "As a user comparing beaches on the map, I want to see wind direction and relative strength at each beach so I can spot offshore-wind spots without opening each detail page.",
+      "acceptanceCriteria": [
+        "On map 'load', load a small arrow SVG (either bundled via Vite ESM import + URL.createObjectURL or inline data URL) and register it with map.addImage('arrow', image) — the arrow points up by default so icon-rotate rotates around the marker centre",
+        "Add a symbol layer 'beach-wind-arrows' on the existing 'beaches' GeoJSON source with filter ['!', ['has', 'point_count']] (never render arrows on clusters)",
+        "Layer paint/layout: icon-image 'arrow'; icon-rotate ['get', 'windDirection']; icon-size ['interpolate', ['linear'], ['get', 'windSpeed'], 0, 0.5, 30, 1.0]; icon-opacity 0.85; icon-allow-overlap true; icon-ignore-placement true; icon-offset [0, -28] so arrows sit above the score circle",
+        "Features missing windSpeed or windDirection produce null icon-rotate/icon-size; use a second filter that requires both: ['all', ['!', ['has', 'point_count']], ['has', 'windSpeed'], ['has', 'windDirection']]",
+        "Overlay a circular toggle button at the top-right of the map, 44×44 px, positioned BELOW the locate-me button (stacked with ~8px gap), using lucide 'wind' icon — register the icon in surf-icon.ts if missing",
+        "Active state: background var(--color-ocean-800), icon white; inactive state: background '#ffffff', border 1px solid var(--color-ocean-800), icon var(--color-ocean-800)",
+        "Toggling flips map.setLayoutProperty('beach-wind-arrows', 'visibility', 'visible' | 'none') — no re-render",
+        "Persist the toggle state in db.settings under key 'mapWindOverlay' (boolean); read it on map mount to restore the initial visibility (default false on first visit)",
+        "Safe-area insets honoured on the button's top-right offsets",
+        "Typecheck passes (cd ui && yarn typecheck)",
+        "Verify in browser using dev-browser skill: toggle on — arrows appear rotated per beach and sized by wind speed; toggle off — arrows disappear; reload the page with toggle on — arrows are visible on mount"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Depends on US-003 (GeoJSON source) and US-007 (locate-me button position — stack under it). Wind-direction convention assumed: degrees = bearing wind is coming FROM; document this next to the icon registration."
     }
   ]
 }
