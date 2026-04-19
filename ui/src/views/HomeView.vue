@@ -254,7 +254,6 @@ function toggleFav(b: Beach) {
 .home {
   font-family: var(--font-family-base);
   min-height: 100vh;
-  background: var(--color-background);
 }
 
 .header {
@@ -278,7 +277,7 @@ function toggleFav(b: Beach) {
 .title {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--color-ocean-800);
   margin: 0;
 }
 
@@ -287,7 +286,7 @@ function toggleFav(b: Beach) {
   border: none;
   padding: var(--space-2);
   cursor: pointer;
-  color: var(--color-text-primary);
+  color: var(--color-ocean-800);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -300,7 +299,7 @@ function toggleFav(b: Beach) {
   min-width: 44px;
   min-height: 44px;
   cursor: pointer;
-  color: var(--color-text-primary);
+  color: var(--color-ocean-800);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -314,7 +313,7 @@ function toggleFav(b: Beach) {
   min-height: 44px;
   margin-left: auto;
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--color-ocean-800);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -332,7 +331,7 @@ function toggleFav(b: Beach) {
   min-width: 44px;
   min-height: 44px;
   cursor: pointer;
-  color: var(--color-text-primary);
+  color: var(--color-ocean-800);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -374,6 +373,13 @@ function toggleFav(b: Beach) {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  position: relative;
+}
+
+.card-body .fav-btn {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
 }
 
 .card-head {
@@ -446,7 +452,7 @@ function toggleFav(b: Beach) {
 }
 
 .empty-state surf-icon {
-  color: var(--color-text-secondary);
+  color: var(--color-ocean-800);
 }
 
 .empty-title {
@@ -458,7 +464,7 @@ function toggleFav(b: Beach) {
 
 .empty-subtext {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-ocean-800);
   margin: 0;
 }
 

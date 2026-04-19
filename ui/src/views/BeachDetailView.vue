@@ -246,7 +246,6 @@ onBeforeUnmount(() => {
 .detail {
   font-family: var(--font-family-base);
   min-height: 100vh;
-  background: var(--color-background);
 }
 
 .header {
@@ -277,13 +276,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--color-text-primary);
+  color: var(--color-ocean-800);
 }
 
 .title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--color-ocean-800);
   margin: 0;
 }
 
@@ -307,7 +306,7 @@ onBeforeUnmount(() => {
 }
 
 .empty-state surf-icon {
-  color: var(--color-text-secondary);
+  color: var(--color-ocean-800);
 }
 
 .empty-title {
@@ -345,7 +344,7 @@ onBeforeUnmount(() => {
 
 .hero-region {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .score-row {
@@ -385,7 +384,7 @@ onBeforeUnmount(() => {
 
 .best-window {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .fav-btn {
@@ -404,13 +403,17 @@ onBeforeUnmount(() => {
   color: var(--color-text-secondary);
 }
 
-.fav-btn-on {
+.hero .fav-btn {
+  color: var(--color-ocean-800);
+}
+
+.fav-btn-on, .hero .fav-btn-on {
   color: var(--color-surf-poor);
 }
 
 .staleness {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .staleness-warn {

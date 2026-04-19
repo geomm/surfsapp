@@ -33,7 +33,7 @@ class SurfBadge extends LitElement {
     }
     .badge.size-md {
       font-size: var(--font-size-sm);
-      padding: var(--space-1) var(--space-3);
+      padding: var(--space-2) var(--space-3);
       border-radius: 6px;
     }
     .badge.variant-very-good {

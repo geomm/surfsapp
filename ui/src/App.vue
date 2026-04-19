@@ -34,6 +34,16 @@ function handleRefresh() {
   </div>
 </template>
 
+<style>
+html {
+  background-image: url('./assets/background-waves.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+</style>
+
 <style scoped>
 .offline-banner {
   position: fixed;
