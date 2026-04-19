@@ -19,20 +19,43 @@ const selectedBeach = ref<Beach | null>(null)
 const sheetOpen = ref(false)
 const locating = ref(false)
 const locateError = ref(false)
+const windOverlayOn = ref(false)
 let map: maplibregl.Map | null = null
 let beachesPlotted = false
 let hasPersistedCamera = false
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let locateErrorTimer: ReturnType<typeof setTimeout> | null = null
+let arrowImage: HTMLImageElement | null = null
 
 const BEACH_SOURCE_ID = 'beaches'
 const BEACH_CIRCLE_LAYER = 'beach-markers'
 const BEACH_LABEL_LAYER = 'beach-marker-labels'
 const CLUSTER_CIRCLE_LAYER = 'beach-clusters'
 const CLUSTER_COUNT_LAYER = 'beach-cluster-count'
+const WIND_ARROW_LAYER = 'beach-wind-arrows'
+const ARROW_IMAGE_ID = 'arrow'
 const MAP_CENTER_KEY = 'mapCenter'
 const MAP_ZOOM_KEY = 'mapZoom'
+const WIND_OVERLAY_KEY = 'mapWindOverlay'
 const PERSIST_DEBOUNCE_MS = 400
+
+// Upward-pointing arrow (north). icon-rotate is applied clockwise from this baseline,
+// so a windDirection of 90° rotates the arrow to point east. windDirection here is the
+// meteorological convention: bearing the wind is coming FROM (e.g. 270° = westerly wind).
+const ARROW_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
+  '<path d="M20 4 L32 30 L20 24 L8 30 Z" fill="#1a5a8a" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>' +
+  '</svg>'
+const ARROW_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(ARROW_SVG)}`
+
+function loadArrowImage(): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image(40, 40)
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Failed to load wind arrow image'))
+    img.src = ARROW_DATA_URL
+  })
+}
 
 function isValidCenter(v: unknown): v is [number, number] {
   return (
@@ -73,20 +96,25 @@ function resolveLabelColors(): ResolvedColors {
 function toFeatureCollection(beaches: Beach[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
   const features: GeoJSON.Feature<GeoJSON.Point>[] = beaches
     .filter((b) => Number.isFinite(b.coords?.lat) && Number.isFinite(b.coords?.lon))
-    .map((b) => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [b.coords.lon, b.coords.lat] },
-      properties: {
+    .map((b) => {
+      const properties: Record<string, unknown> = {
         id: b.id,
         name: b.name,
         region: b.region,
         label: b.currentLabel ?? 'neutral',
         score: b.currentScore,
-        windSpeed: b.windSpeed ?? null,
-        windDirection: b.windDirection ?? null,
         lastUpdated: b.lastUpdated,
-      },
-    }))
+      }
+      // Omit wind props when null so ['has', 'windSpeed'/'windDirection'] filter
+      // correctly excludes features without forecast data from the wind-arrow layer.
+      if (b.windSpeed != null) properties.windSpeed = b.windSpeed
+      if (b.windDirection != null) properties.windDirection = b.windDirection
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [b.coords.lon, b.coords.lat] },
+        properties,
+      }
+    })
   return { type: 'FeatureCollection', features }
 }
 
@@ -215,6 +243,30 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
   mapInstance.on('mouseleave', BEACH_CIRCLE_LAYER, () => {
     mapInstance.getCanvas().style.cursor = ''
   })
+
+  if (arrowImage && !mapInstance.hasImage(ARROW_IMAGE_ID)) {
+    mapInstance.addImage(ARROW_IMAGE_ID, arrowImage)
+  }
+  if (mapInstance.hasImage(ARROW_IMAGE_ID)) {
+    mapInstance.addLayer({
+      id: WIND_ARROW_LAYER,
+      type: 'symbol',
+      source: BEACH_SOURCE_ID,
+      filter: ['all', ['!', ['has', 'point_count']], ['has', 'windSpeed'], ['has', 'windDirection']],
+      layout: {
+        'icon-image': ARROW_IMAGE_ID,
+        'icon-rotate': ['get', 'windDirection'],
+        'icon-size': ['interpolate', ['linear'], ['get', 'windSpeed'], 0, 0.5, 30, 1.0],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-offset': [0, -28],
+        visibility: windOverlayOn.value ? 'visible' : 'none',
+      },
+      paint: {
+        'icon-opacity': 0.85,
+      },
+    })
+  }
 }
 
 function hasForecast(b: Beach): boolean {
@@ -265,6 +317,16 @@ function showLocateError() {
     locateError.value = false
     locateErrorTimer = null
   }, 4000)
+}
+
+function toggleWindOverlay() {
+  windOverlayOn.value = !windOverlayOn.value
+  if (map && map.getLayer(WIND_ARROW_LAYER)) {
+    map.setLayoutProperty(WIND_ARROW_LAYER, 'visibility', windOverlayOn.value ? 'visible' : 'none')
+  }
+  db.settings.put({ key: WIND_OVERLAY_KEY, value: windOverlayOn.value }).catch((err) => {
+    console.error('Failed to persist wind overlay state', err)
+  })
 }
 
 function handleLocateMe() {
@@ -335,15 +397,19 @@ onMounted(async () => {
 
   if (!container.value) return
 
-  const [centerRec, zoomRec] = await Promise.all([
+  const [centerRec, zoomRec, windRec, loadedArrow] = await Promise.all([
     db.settings.get(MAP_CENTER_KEY).catch(() => undefined),
     db.settings.get(MAP_ZOOM_KEY).catch(() => undefined),
+    db.settings.get(WIND_OVERLAY_KEY).catch(() => undefined),
+    loadArrowImage().catch(() => null),
   ])
   const centerVal = centerRec?.value
   const zoomVal = zoomRec?.value
   const persistedCenter = isValidCenter(centerVal) ? centerVal : null
   const persistedZoom = isValidZoom(zoomVal) ? zoomVal : null
   hasPersistedCamera = persistedCenter !== null && persistedZoom !== null
+  windOverlayOn.value = typeof windRec?.value === 'boolean' ? windRec.value : false
+  arrowImage = loadedArrow
 
   if (!container.value) return
   map = new maplibregl.Map({
@@ -386,6 +452,7 @@ onBeforeUnmount(() => {
   }
   beachesPlotted = false
   hasPersistedCamera = false
+  arrowImage = null
   locating.value = false
   locateError.value = false
 })
@@ -411,6 +478,16 @@ onBeforeUnmount(() => {
       @click="handleLocateMe"
     >
       <surf-icon name="locate-fixed" :size="20"></surf-icon>
+    </button>
+    <button
+      type="button"
+      class="wind-btn"
+      :class="{ 'wind-btn--active': windOverlayOn }"
+      :aria-pressed="windOverlayOn"
+      aria-label="Toggle wind direction overlay"
+      @click="toggleWindOverlay"
+    >
+      <surf-icon name="wind" :size="20"></surf-icon>
     </button>
     <div v-if="locateError" class="locate-error" role="status" aria-live="polite">
       Can't access your location
@@ -523,9 +600,37 @@ onBeforeUnmount(() => {
   opacity: 0.5;
 }
 
-.locate-error {
+.wind-btn {
   position: absolute;
   top: calc(var(--space-3) + env(safe-area-inset-top) + 52px);
+  right: var(--space-3);
+  right: calc(var(--space-3) + env(safe-area-inset-right));
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid var(--color-ocean-800);
+  color: var(--color-ocean-800);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 800;
+}
+
+.wind-btn:active {
+  transform: scale(0.96);
+}
+
+.wind-btn--active {
+  background: var(--color-ocean-800);
+  color: #ffffff;
+}
+
+.locate-error {
+  position: absolute;
+  top: calc(var(--space-3) + env(safe-area-inset-top) + 104px);
   right: calc(var(--space-3) + env(safe-area-inset-right));
   background: var(--color-surf-maybe);
   color: #ffffff;

@@ -18,6 +18,8 @@
 - `surf-button` exposes its inner button element as `part="button"` — target it from outside with `surf-button::part(button) { ... }` to override width/size. Host is `display: inline-flex` by default; for full-width usage also set host `display: block; width: 100%`.
 - MapLibre layer click handlers receive features in `e.features` (typed as `MapGeoJSONFeature[] | undefined`); `properties` is `Record<string, any>` so narrow with `typeof`.
 - Online/offline state: use `useOnlineStatus()` from `ui/src/composables/useOnlineStatus.ts` — it returns a reactive `isOnline` ref and self-cleans via `onScopeDispose`. Don't poll `navigator.onLine`.
+- MapLibre `addImage` requires the image be loaded. For inline SVG icons, build a `data:image/svg+xml` URL and load via `new Image()` + `onload` Promise BEFORE calling `addImage`. Load it in parallel with other async setup (`Promise.all` alongside `db.settings.get(...)`), then register inside the `map.on('load', ...)` callback.
+- For source feature properties consumed by symbol-layer expressions like `['get', 'windDirection']`: OMIT the property entirely when null (don't set `key: null`). MapLibre's `['has', key]` filter returns true for null values, so keeping `key: null` won't exclude features. Build the properties object conditionally.
 
 ## 2026-04-19 - US-001
 - Added `/map` route with name `beach-map` pointing to lazy-loaded MapView.vue.
@@ -145,4 +147,23 @@
   - `useOnlineStatus` is the canonical online/offline composable — don't poll `navigator.onLine`; subscribe via the composable so the `online`/`offline` events drive a Vue ref and `onScopeDispose` handles cleanup automatically.
   - Map-overlay z-index stack so far: locate-btn 800, offline-map-banner 850, ViewSwitcherFab 900, App.vue banners 1000. Future overlays should slot between these without resorting to higher numbers.
   - Inline `top: 0; top: env(safe-area-inset-top);` is the existing safe-area progressive-enhancement pattern in this view — browsers without env() pick up the first value, modern ones pick up the second.
+---
+
+## 2026-04-19 - US-009
+- Added a toggleable wind-arrow overlay on the map.
+- Arrow image: built from an inline SVG (upward-pointing triangle, ocean-700 fill with white outline, 40×40), encoded as a `data:image/svg+xml` URL and loaded via `new Image()` + `onload` Promise. Loaded in parallel with other settings reads in `Promise.all` during `onMounted`. Registered with `map.addImage('arrow', ...)` inside `addBeachLayers`.
+- Layer `beach-wind-arrows` (symbol) on the existing `beaches` source, filter `['all', ['!', ['has', 'point_count']], ['has', 'windSpeed'], ['has', 'windDirection']]`. Layout: `icon-image: 'arrow'`, `icon-rotate: ['get', 'windDirection']`, `icon-size: ['interpolate', ['linear'], ['get', 'windSpeed'], 0, 0.5, 30, 1.0]`, `icon-offset: [0, -28]` so arrows sit above the score circle, overlap+ignore-placement allow. Paint: `icon-opacity: 0.85`. Initial `visibility` set from persisted toggle.
+- Updated `toFeatureCollection` to OMIT `windSpeed`/`windDirection` from feature properties when null (instead of setting them to `null`), so the `['has', ...]` filter correctly excludes features without forecast data.
+- Toggle button: 44×44 circular `wind-btn` positioned absolute top-right, stacked 8px below the locate-btn (`top: calc(... + 52px)`), z-index 800. Inactive: white background, ocean-800 border + icon. Active (`.wind-btn--active`): ocean-800 background, white icon. Uses lucide `wind` icon (already registered). Click flips `windOverlayOn` ref + calls `map.setLayoutProperty(WIND_ARROW_LAYER, 'visibility', ...)` (guarded by `getLayer` so toggling before beaches load is a no-op on the layer) + persists boolean to `db.settings` under key `mapWindOverlay`.
+- Persistence: read `mapWindOverlay` in `onMounted` `Promise.all` alongside center/zoom; default false on first visit.
+- Moved the locate-error inline notice from `top: +52px` to `top: +104px` so it now sits below the wind toggle button instead of conflicting with it.
+- Added a comment next to the arrow registration documenting the wind-direction convention: `windDirection` is the bearing the wind is coming FROM (meteorological convention).
+- Files changed: `ui/src/views/MapView.vue`, `prd.json`, `progress.txt`.
+- Quality: `yarn typecheck` passes. (No lint or test scripts exist in `ui/package.json`.)
+- Manual browser verification needed (no dev-browser MCP skill available in this iteration): toggle on — arrows appear rotated per beach and sized by wind speed; toggle off — arrows disappear; reload with toggle on — arrows visible on mount.
+- **Learnings for future iterations:**
+  - MapLibre `addImage` is synchronous but the `HTMLImageElement` itself must already be loaded — wrap `new Image()` in a Promise that resolves on `onload`. Doing this in parallel with the existing settings reads (`Promise.all`) keeps mount cheap.
+  - `['has', key]` in a filter expression returns true for `key: null` — to exclude features lacking a value, omit the property entirely from `feature.properties` rather than setting it to null.
+  - When toggling layout properties on a layer that may not exist yet (because the source/layers are added after async beach data loads), guard with `map.getLayer(id)`. The visibility ref is the source of truth; the next `addBeachLayers` call honours it via the initial `visibility` layout value.
+  - Map control stack from US-007 onwards: locate-btn at `+0`, wind-btn at `+52px`, locate-error at `+104px`. If a third control needs to slot below, continue the 52px stride.
 ---

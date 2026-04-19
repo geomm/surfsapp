@@ -168,7 +168,7 @@
         "Verify in browser using dev-browser skill: toggle on — arrows appear rotated per beach and sized by wind speed; toggle off — arrows disappear; reload the page with toggle on — arrows are visible on mount"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003 (GeoJSON source) and US-007 (locate-me button position — stack under it). Wind-direction convention assumed: degrees = bearing wind is coming FROM; document this next to the icon registration."
     }
   ]
