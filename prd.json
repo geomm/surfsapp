@@ -1,175 +1,158 @@
 {
   "project": "surfsapp",
-  "branchName": "ralph/phase-13-full-map-view",
-  "description": "Phase 13 — Full Map View. Dedicated /map route with MapLibre plotting every beach as a colour-coded, score-labelled marker. Clustering at low zoom, bottom-sheet previews on tap, persistent camera state, locate-me control, offline banner, and a toggleable wind-arrow overlay. Symmetric Map ⇄ List FAB. No filter integration, no heatmap, no tide overlay, no tile precaching.",
+  "branchName": "ralph/v02-phase-foundation",
+  "description": "v0.2 Phase 1 — Foundation. Lock dev tooling, capture frontend perf baseline, and keep the backend responsive while the cron forecast fetcher runs. Covers brief stories US-001 (Dev experience baseline), US-002 (Frontend performance pass), US-003 (Backend performance & resilience). Adds ESLint + Prettier across both packages, tightens TypeScript strictness, husky + lint-staged pre-commit, Lighthouse mobile ≥ 90 baseline, vite chunk-size warning budget, worker_threads offload of the forecast fetcher, morgan request logging with requestId propagation, and verifies MongoDB indexes. Source: tasks/prd-v02-phase-foundation.md.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Add /map route and symmetric Map ⇄ List FAB",
-      "description": "As a user, I want a single FAB that toggles between list and map so switching views feels like one obvious gesture in both directions.",
+      "title": "ESLint + Prettier across ui/ and backend/",
+      "description": "As a contributor, I want a single lint + format setup across both packages so I get consistent feedback and the same rules apply everywhere.",
       "acceptanceCriteria": [
-        "Add route to ui/src/router.ts: { path: '/map', name: 'beach-map', component: () => import('./views/MapView.vue') }",
-        "Create ui/src/views/MapView.vue with a placeholder <main><h1>Map</h1></main> (real map comes in US-002)",
-        "Create ui/src/components/ViewSwitcherFab.vue: fixed bottom-right, 56px circle, background var(--color-ocean-800), white icon, honours env(safe-area-inset-bottom) in bottom offset",
-        "FAB reads the current route; on '/' shows lucide 'map' icon with aria-label 'Open map view' and navigates to { name: 'beach-map' }; on '/map' shows lucide 'list' icon with aria-label 'Open list view' and navigates to '/'",
-        "Register 'map' and 'list' lucide icons in ui/src/components/lit/surf-icon.ts if missing, following the existing heart/download/sliders-horizontal/cloud-off pattern",
-        "Mount ViewSwitcherFab in both HomeView.vue and MapView.vue (or once at app-shell level — whichever is simpler; must render on both routes)",
-        "On HomeView, hide the FAB while beachStore.loading is true OR beachStore.error is set; on MapView the FAB is always shown",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: tap FAB on home, map route opens; tap FAB on map, list route returns"
+        "Add ui/eslint.config.js (ESLint flat config) using eslint-plugin-vue + @typescript-eslint + @vue/eslint-config-typescript, with eslint-config-prettier last in the config chain to disable conflicting style rules",
+        "Add backend/eslint.config.js (ESLint flat config) using @typescript-eslint, with eslint-config-prettier last",
+        "Add a single root .prettierrc that both packages defer to (no per-package Prettier config that overrides it)",
+        "ui/package.json adds scripts: 'lint': 'eslint . --max-warnings 0' and 'format': 'prettier --write .'",
+        "backend/package.json adds scripts: 'lint': 'eslint . --max-warnings 0' and 'format': 'prettier --write .'",
+        "After at most one autofix pass (eslint --fix && prettier --write), `cd ui && yarn lint` exits 0",
+        "After at most one autofix pass, `cd backend && npm run lint` exits 0",
+        "`cd ui && yarn typecheck` still passes",
+        "`cd backend && npm run typecheck` still passes",
+        "Typecheck passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Source: brief US-001 (Dev experience baseline). PRD US-001."
     },
     {
       "id": "US-002",
-      "title": "Render MapLibre map with all beaches and fit-to-bounds on first visit",
-      "description": "As a user opening the map for the first time, I want to see every beach on a map zoomed to fit them all so I get an overview without panning.",
+      "title": "Tighten TypeScript strictness in both packages",
+      "description": "As a contributor, I want strict TypeScript so type errors surface at edit time, not in production.",
       "acceptanceCriteria": [
-        "MapView.vue calls beachStore.fetchBeaches() on mount if beachStore.beaches.length === 0",
-        "Initialise a MapLibre map filling the viewport (container has height: 100vh, no persistent top header — the FAB from US-001 is the only nav affordance)",
-        "Use the same style URL as ui/src/components/BeachMap.vue: 'https://demotiles.maplibre.org/style.json'",
-        "On first visit (no persisted camera from US-005 yet), call map.fitBounds(bounds, { padding: 48 }) over every beach's [lon, lat]",
-        "Add a default MapLibre Marker for each beach (styling upgrade comes in US-003)",
-        "Clean up the map instance in onBeforeUnmount via map.remove()",
-        "Depends on US-001 (route must exist)",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: navigate to /map; confirm every beach appears as a marker and the map is zoomed to fit all beaches"
+        "ui/tsconfig.json (or the referenced tsconfig.app.json) has 'strict': true, 'noUncheckedIndexedAccess': true, 'noFallthroughCasesInSwitch': true",
+        "backend/tsconfig.json has the same three flags enabled",
+        "`cd ui && yarn typecheck` passes",
+        "`cd backend && npm run typecheck` passes",
+        "Any new // @ts-expect-error or `as any` cast added solely to make the build pass has a one-line comment explaining why; no silent suppressions",
+        "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "notes": "Source: brief US-001 (Dev experience baseline). PRD US-002. Depends on US-001 only insofar as both should land before US-003's pre-commit hook is added."
     },
     {
       "id": "US-003",
-      "title": "Colour-coded circle markers with score number via GeoJSON source + circle/symbol layers",
-      "description": "As a user scanning the map, I want each marker to show the beach's score inside a coloured circle so I can compare surfability visually without tapping.",
+      "title": "Pre-commit hook running typecheck on staged files",
+      "description": "As a contributor, I want broken types caught before commit so they never reach review.",
       "acceptanceCriteria": [
-        "Replace the per-beach MapLibre Markers from US-002 with a GeoJSON source 'beaches' whose features carry properties: id (beach id), name, region, label (currentLabel or 'neutral'), score (currentScore or null), windSpeed, windDirection, lastUpdated",
-        "Add a circle layer 'beach-markers' with circle-radius 18, circle-stroke-width 2, circle-stroke-color '#ffffff', and circle-color driven by label via a match expression: 'very-good' → var(--color-surf-very-good), 'good' → var(--color-surf-good), 'maybe' → var(--color-surf-maybe), 'poor' → var(--color-surf-poor), default → var(--color-neutral-300). Resolve the CSS custom properties to hex in JS (read getComputedStyle on :root) and pass hex to paint",
-        "Add a symbol layer 'beach-marker-labels' on the same source: text-field is the score when score != null else '—'; text-size 13; text-color '#ffffff'; text-font set to a font listed in the demotiles style's glyphs (e.g. ['Noto Sans Regular']); text-allow-overlap true; text-ignore-placement true",
-        "Both layers filter OUT clusters (filter: ['!', ['has', 'point_count']]) — prep for clustering in US-004",
-        "A subtle drop shadow on the circle is acceptable via an additional circle layer beneath with larger radius and low opacity; not required",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: every beach marker is a coloured circle with its score inside; colours match the corresponding beach's badge on HomeView"
+        "Introduce a minimal root package.json (private, no app code) solely to host devDependencies husky and lint-staged",
+        "`npx husky init` (or equivalent manual setup) generates .husky/pre-commit; the hook body runs `npx lint-staged`",
+        "Root package.json `lint-staged` config: for staged *.ts/*.tsx run `eslint --fix` + `prettier --write` + `tsc --noEmit` scoped to the staged files; for staged *.vue run `eslint --fix` + `prettier --write` + `vue-tsc --noEmit` scoped to the staged files; for staged *.js/*.json/*.md run `prettier --write`",
+        "A representative typo (e.g. `const x: number = 'foo'`) in a single staged file causes the pre-commit hook to fail before the commit is created",
+        "`git commit --no-verify` continues to bypass the hook (default husky behaviour preserved)",
+        "Pre-commit completes in ≤ ~5s wall-clock for a typical 1–3 file change on a warm cache",
+        "README.md adds a short 'Pre-commit hooks' section explaining what runs and how to skip in emergencies",
+        "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Depends on US-002. CSS custom properties cannot be passed directly to MapLibre paint — use getComputedStyle to resolve to hex at map init."
+      "passes": false,
+      "notes": "Source: brief US-001 (Dev experience baseline). PRD US-003. Depends on US-001 (lint config) and US-002 (strict tsconfig) so the staged-file checks have something real to run."
     },
     {
       "id": "US-004",
-      "title": "Cluster markers below zoom 8",
-      "description": "As a user at country-level zoom, I want clustered markers so the map isn't overwhelmed with overlapping pins.",
+      "title": "Structured request logging + MongoDB index verification",
+      "description": "As a maintainer, I want structured request logs and confirmed indexes so I can diagnose latency issues with real data.",
       "acceptanceCriteria": [
-        "Update the 'beaches' GeoJSON source from US-003 with cluster: true, clusterMaxZoom: 8, clusterRadius: 50",
-        "Add a cluster-circle layer 'beach-clusters' filter ['has', 'point_count']: circle-color var(--color-ocean-700) resolved to hex; circle-stroke-color '#ffffff'; circle-stroke-width 2; circle-radius via step expression: ['step', ['get', 'point_count'], 18, 10, 22, 30, 28]",
-        "Add a cluster-count symbol layer 'beach-cluster-count' with filter ['has', 'point_count']: text-field ['get', 'point_count_abbreviated']; text-size 13; text-color '#ffffff'; text-font as in US-003",
-        "On click of 'beach-clusters' layer, call source.getClusterExpansionZoom(clusterId) and then map.easeTo({ center: clusterCenter, zoom: expansionZoom })",
-        "Individual marker layer (from US-003) continues to filter out clusters so no overlap",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: zoom out to a country-level view; confirm markers collapse into cluster bubbles with counts; tap a cluster and the map zooms in and the cluster expands"
+        "Add `morgan` to backend deps; configure with a custom JSON-shaped format string emitting at minimum: requestId, method, path, status, durationMs, timestamp",
+        "Add a request-id middleware (mounted before morgan) that generates `req.requestId = crypto.randomUUID()` and exposes it on res header `x-request-id`",
+        "Create backend/src/lib/log.ts exposing `log.info`, `log.warn`, `log.error` that emit single-line JSON to stdout including `requestId` when called from request scope (use AsyncLocalStorage to carry the id) and omit it when called from non-request scope (e.g. cron/worker)",
+        "Migrate the forecast fetcher's start/finish app log calls to use the new wrapper to prove integration",
+        "Add Mongoose schema indexes in code: `forecastSnapshotSchema.index({ beachId: 1 })` and `forecastSnapshotSchema.index({ fetchedAt: -1 })`",
+        "Boot the backend, hit `db.forecastSnapshots.getIndexes()` via mongo shell (or the existing connection), confirm both indexes are present, and capture the output in docs/perf-baseline.md under a 'Backend baseline > Indexes' subsection",
+        "`cd backend && npm run typecheck` passes",
+        "`cd backend && npm run lint` passes",
+        "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Depends on US-003."
+      "passes": false,
+      "notes": "Source: brief US-003 (Backend performance & resilience). PRD US-008. Sequenced before the worker offload so the worker code can use the new log wrapper from day one."
     },
     {
       "id": "US-005",
-      "title": "Persist map centre and zoom in IndexedDB settings",
-      "description": "As a returning user, I want the map to open where I left it so I don't have to re-navigate to my area every time.",
+      "title": "Backend latency baseline + offload forecast fetcher to a worker",
+      "description": "As a user, I want the API to stay responsive even while the forecast fetcher runs, so list and detail views never stall during a cron cycle.",
       "acceptanceCriteria": [
-        "On MapView mount, read db.settings.get('mapCenter') and db.settings.get('mapZoom') before initialising the map",
-        "If both values exist and are valid, pass them as center and zoom in new maplibregl.Map({ ... }) and SKIP the fitBounds from US-002",
-        "If either is missing or invalid, fall back to the US-002 fit-to-bounds behaviour",
-        "On map 'moveend', write { key: 'mapCenter', value: [lng, lat] } and { key: 'mapZoom', value: zoom } to db.settings with a ~400ms debounce so rapid panning doesn't spam IndexedDB",
-        "No TypeScript 'any' — follow the existing typed read/write pattern used by filter persistence in ui/src/stores/beachStore.ts",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: pan and zoom, navigate away to '/', return to '/map'; camera matches where it was left"
+        "Measure baseline p50/p95 response times for `GET /beaches` and `GET /beaches/:id/forecast` with the cron fetcher idle (≥ 50 sequential requests, document the tool used — autocannon, hey, or a small node script — in docs/perf-baseline.md)",
+        "Record idle p50/p95 for both endpoints in docs/perf-baseline.md under 'Backend baseline > Latency (idle)'",
+        "Measure the same p50/p95 during an active forecast fetch cycle (trigger via `POST /admin/fetch-forecasts` or by tightening the cron interval); record under 'Latency (during fetch, before offload)'",
+        "Implement worker_threads offload of the forecast fetcher: a single entry point `backend/src/workers/forecastFetcher.worker.ts` that owns the Mongoose connection, runs the existing fetch + score + persist pipeline, and accepts a one-shot trigger message",
+        "Both the existing cron entry point and the existing `POST /admin/fetch-forecasts` endpoint enqueue work to the worker (single code path); neither runs the fetcher inline on the HTTP main thread",
+        "If a separate child process is chosen instead of worker_threads (e.g. due to Mongoose lifecycle issues), document the trade-off in the PR description",
+        "Re-measure p50/p95 during an active fetch after the offload; record under 'Latency (during fetch, after offload)'",
+        "After-offload during-fetch p95 ≤ idle p95 × 1.10 (≤ 10% regression) for both endpoints",
+        "Manual smoke check: trigger `POST /admin/fetch-forecasts` and concurrently hit `GET /beaches` in a separate terminal — list endpoint stays responsive (sub-second responses)",
+        "Use the log wrapper from US-004 (`log.info`) inside the worker for fetch start/finish",
+        "`cd backend && npm run typecheck` passes",
+        "`cd backend && npm run lint` passes",
+        "Typecheck passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Depends on US-002."
+      "passes": false,
+      "notes": "Source: brief US-003 (Backend performance & resilience). PRD US-007. Depends on US-004 for the structured log wrapper used inside the worker."
     },
     {
       "id": "US-006",
-      "title": "Bottom-sheet preview on marker tap",
-      "description": "As a user tapping a marker, I want a quick preview card with the beach's key info and a button to open full details, without losing my place on the map.",
+      "title": "Capture Lighthouse mobile baseline and lift score to ≥ 90",
+      "description": "As a maintainer, I want a committed Lighthouse baseline and a mobile performance score of at least 90 so we have a concrete gate for v0.2.",
       "acceptanceCriteria": [
-        "Register a click handler on the 'beach-markers' (individual) layer from US-003 — clicks on clusters are handled separately in US-004",
-        "On click, look up the beach from beachStore.beaches by the feature's 'id' property",
-        "Open surf-bottom-sheet (import the existing ui/src/components/lit/surf-bottom-sheet.ts) with :open='true'",
-        "Sheet content shows: beach name (h2), region (subtitle), surf-badge with label and score (e.g. '72%'), swell/wind summary lines when the beach has swellHeight/swellPeriod/swellDirection/windSpeed/windDirection (reuse the degreesToCompass helper and hhmm helper patterns from HomeView), a staleness line built from lastUpdated via formatRelativeTime",
-        "Sheet footer contains a full-width surf-button variant='primary' labelled 'View details' that calls router.push({ name: 'beach-detail', params: { id: beach.id } })",
-        "Closing the sheet (backdrop tap / close gesture) returns focus to the map without navigation — use the sheet's existing close event",
-        "The bottom sheet already honours env(safe-area-inset-bottom) from Phase 12, so no change there",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: tap any marker; bottom sheet opens with name/region/score/conditions/View details; tap 'View details' navigates to the beach detail route"
+        "Create docs/perf-baseline.md (or extend the existing file from US-004) with a 'Frontend baseline' section",
+        "Run Lighthouse mobile (default mobile preset) against `yarn build && yarn preview` three times; record the median Performance, Accessibility, Best Practices, and SEO scores",
+        "Record date and commit SHA of the run, plus the device/throttling profile (e.g. 'Lighthouse default mobile preset — Moto G4 / Slow 4G')",
+        "If the initial median Performance < 90, apply the wins from docs/v0.2-design-brief.md US-002: route-level code-splitting via dynamic `import()`, lazy-load MapLibre on `/map` only (`import('maplibre-gl')` inside the route), `loading=\"lazy\"` on beach photo `<img>` (or equivalent on the existing image component), and font subsetting if any custom font is used",
+        "Final recorded median Lighthouse mobile Performance ≥ 90 (hard gate — phase cannot exit otherwise)",
+        "Build chunk graph (yarn build output or vite-bundle-visualizer) confirms `maplibre-gl` is in a route-specific chunk, NOT in the main entry chunk; record the route chunk name in docs/perf-baseline.md",
+        "`cd ui && yarn typecheck` passes",
+        "`cd ui && yarn lint` passes",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill: home loads, list scrolls smoothly, navigating to /map still mounts the map after the lazy chunk loads"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Depends on US-003. Don't duplicate helpers — import or recreate the same computed pattern used in HomeView."
+      "passes": false,
+      "notes": "Source: brief US-002 (Frontend performance pass). PRD US-005. Depends on US-001/US-002 (lint + tsconfig) and US-003 (pre-commit) only insofar as those gates must already pass on main when this story lands."
     },
     {
       "id": "US-007",
-      "title": "Locate-me control that pans to user geolocation",
-      "description": "As a user, I want to quickly centre the map on my current location to see beaches near me.",
+      "title": "Bundle-size baseline and perf budget in vite.config.ts",
+      "description": "As a maintainer, I want bundle growth to surface as a build warning so charts and other v0.2 additions don't silently bloat the app.",
       "acceptanceCriteria": [
-        "Overlay a circular 'locate me' button at the top-right of the map, 44×44 px, background '#ffffff', border 1px solid var(--color-ocean-800), lucide 'locate-fixed' icon coloured var(--color-ocean-800)",
-        "Register 'locate-fixed' lucide icon in surf-icon.ts if missing",
-        "Button honours env(safe-area-inset-top) on its top offset and env(safe-area-inset-right) on its right offset",
-        "On click, call navigator.geolocation.getCurrentPosition with a 10s timeout",
-        "While awaiting a fix, set a local 'locating' reactive flag: button disabled via pointer-events: none and icon at opacity 0.5",
-        "On success, map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 11) })",
-        "On error or permission denial, render a small aria-live='polite' inline notice near the button (or reuse the offline-banner styling) with text 'Can't access your location' that auto-dismisses after 4s",
-        "Clear the 'locating' flag in both success and error paths",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: use DevTools → Sensors → override geolocation to a Greek coordinate; tap 'locate me' and confirm the map eases to that location at zoom ≥ 11"
+        "Run `yarn build` and record per-chunk gzipped sizes in docs/perf-baseline.md alongside the Lighthouse numbers from US-006 (a small markdown table: chunk name | raw size | gzip size)",
+        "Identify the largest chunk's gzipped size and round up to the nearest 10 KB; multiply by 1.10 (10% headroom)",
+        "Set `build.chunkSizeWarningLimit` in ui/vite.config.ts to that value (in KB, since vite expects KB)",
+        "Add a one-line comment next to the value in vite.config.ts: '// v0.2 baseline largest chunk + 10% headroom — see docs/perf-baseline.md'",
+        "`yarn build` completes without any chunk-size warnings on the current main",
+        "`cd ui && yarn typecheck` passes",
+        "`cd ui && yarn lint` passes",
+        "Typecheck passes"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "Depends on US-002."
+      "passes": false,
+      "notes": "Source: brief US-002 (Frontend performance pass). PRD US-006. Depends on US-006 because the budget value is the largest chunk size measured at that point."
     },
     {
       "id": "US-008",
-      "title": "Offline notice when map opened without network",
-      "description": "As a user opening the map offline, I want to be told the tiles won't load so I'm not left staring at a blank grid.",
+      "title": "Document Docker + HMR developer workflow in README.md",
+      "description": "As a new contributor, I want the dev workflow documented so I can boot the stack without trial and error.",
       "acceptanceCriteria": [
-        "MapView.vue imports the existing ui/src/composables/useOnlineStatus.ts composable",
-        "When !isOnline on mount OR it flips false while viewing the map, render a full-width banner at the top of the map: 'Map needs internet — tiles won't load. Your cached beach data is still available on the list view.'",
-        "Banner uses background var(--color-surf-maybe) and white text, mirroring the existing offline-banner pattern in App.vue (do NOT duplicate App.vue's banner — the app-level banner still shows; this banner is the map-specific explanation with a CTA)",
-        "Banner includes a surf-button variant='secondary' labelled 'Back to list' that calls router.push('/')",
-        "Banner sits above the map and does NOT block interaction with the map itself — the map is still mounted underneath",
-        "Banner disappears automatically when isOnline becomes true",
-        "Banner honours env(safe-area-inset-top) in its top offset",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: DevTools Network → Offline, navigate to /map; banner appears; tap 'Back to list' returns to '/'"
+        "README.md has a 'Local development' section covering: clone → `docker compose up` (or the equivalent the repo actually uses) → which ports are exposed for UI and backend → where the UI and backend live in the tree",
+        "Section explains the `usePolling: true` HMR workaround in ui/vite.config.ts and *why* (Docker bind-mount inotify limits on macOS)",
+        "Section documents how to run the cloudflared tunnel for real-device smoke checks (referenced by Phase 1 Definition of Done in docs/v0.2-plan.md line 215)",
+        "Section lists the `lint`, `typecheck`, `format`, `build` commands for both ui/ and backend/",
+        "Section references the 'Pre-commit hooks' subsection added in US-003",
+        "Manual smoke check: a contributor following only README.md from a fresh clone can reach a running UI and backend without having to read the source",
+        "Typecheck passes"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "Depends on US-002. Coexists with the app-level offline banner in App.vue."
-    },
-    {
-      "id": "US-009",
-      "title": "Toggleable wind-arrow overlay",
-      "description": "As a user comparing beaches on the map, I want to see wind direction and relative strength at each beach so I can spot offshore-wind spots without opening each detail page.",
-      "acceptanceCriteria": [
-        "On map 'load', load a small arrow SVG (either bundled via Vite ESM import + URL.createObjectURL or inline data URL) and register it with map.addImage('arrow', image) — the arrow points up by default so icon-rotate rotates around the marker centre",
-        "Add a symbol layer 'beach-wind-arrows' on the existing 'beaches' GeoJSON source with filter ['!', ['has', 'point_count']] (never render arrows on clusters)",
-        "Layer paint/layout: icon-image 'arrow'; icon-rotate ['get', 'windDirection']; icon-size ['interpolate', ['linear'], ['get', 'windSpeed'], 0, 0.5, 30, 1.0]; icon-opacity 0.85; icon-allow-overlap true; icon-ignore-placement true; icon-offset [0, -28] so arrows sit above the score circle",
-        "Features missing windSpeed or windDirection produce null icon-rotate/icon-size; use a second filter that requires both: ['all', ['!', ['has', 'point_count']], ['has', 'windSpeed'], ['has', 'windDirection']]",
-        "Overlay a circular toggle button at the top-right of the map, 44×44 px, positioned BELOW the locate-me button (stacked with ~8px gap), using lucide 'wind' icon — register the icon in surf-icon.ts if missing",
-        "Active state: background var(--color-ocean-800), icon white; inactive state: background '#ffffff', border 1px solid var(--color-ocean-800), icon var(--color-ocean-800)",
-        "Toggling flips map.setLayoutProperty('beach-wind-arrows', 'visibility', 'visible' | 'none') — no re-render",
-        "Persist the toggle state in db.settings under key 'mapWindOverlay' (boolean); read it on map mount to restore the initial visibility (default false on first visit)",
-        "Safe-area insets honoured on the button's top-right offsets",
-        "Typecheck passes (cd ui && yarn typecheck)",
-        "Verify in browser using dev-browser skill: toggle on — arrows appear rotated per beach and sized by wind speed; toggle off — arrows disappear; reload the page with toggle on — arrows are visible on mount"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Depends on US-003 (GeoJSON source) and US-007 (locate-me button position — stack under it). Wind-direction convention assumed: degrees = bearing wind is coming FROM; document this next to the icon registration."
+      "passes": false,
+      "notes": "Source: brief US-001 (Dev experience baseline). PRD US-004. Last in the order so it documents the scripts and hooks introduced by earlier stories — avoids the README drifting as those land."
     }
   ]
 }
