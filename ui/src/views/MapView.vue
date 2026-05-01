@@ -518,7 +518,7 @@ onBeforeUnmount(() => {
     <div v-if="locateError" class="locate-error" role="status" aria-live="polite">
       Can't access your location
     </div>
-    <ViewSwitcherFab />
+    <ViewSwitcherFab v-if="!sheetOpen" />
     <surf-bottom-sheet :open="sheetOpen" @sheet-close="onSheetClose">
       <div v-if="selectedBeach" class="preview">
         <div class="preview-head">

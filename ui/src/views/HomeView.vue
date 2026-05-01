@@ -167,6 +167,13 @@ function toggleFav(b: Beach) {
         <surf-button @click="retry">Retry</surf-button>
       </div>
 
+      <div v-else-if="beachStore.beaches.length === 0" class="empty-state">
+        <surf-icon name="waves" size="48"></surf-icon>
+        <h2 class="empty-title">No beaches available</h2>
+        <p class="empty-subtext">Pull down to refresh, or check back soon.</p>
+        <surf-button variant="secondary" @click="retry">Refresh</surf-button>
+      </div>
+
       <div
         v-else-if="
           beachStore.showFavouritesOnly &&
@@ -268,7 +275,9 @@ function toggleFav(b: Beach) {
       </div>
     </surf-bottom-sheet>
 
-    <ViewSwitcherFab v-if="!beachStore.loading && !beachStore.error" />
+    <ViewSwitcherFab
+      v-if="!beachStore.loading && !beachStore.error && !filterSheetOpen && !showIosGuide"
+    />
   </div>
 </template>
 
@@ -500,6 +509,8 @@ function toggleFav(b: Beach) {
   text-align: center;
   min-height: 60vh;
   color: var(--color-text-secondary);
+  background-color: rgb(from var(--color-surface) r g b / 0.494);
+  border-radius: var(--space-3);
 }
 
 .empty-state surf-icon {
@@ -545,7 +556,7 @@ function toggleFav(b: Beach) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary);
+  color: var(--color-surface);
   overflow: hidden;
   transition: height 0.15s ease-out;
   max-width: 600px;

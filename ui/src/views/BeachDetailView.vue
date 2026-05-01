@@ -278,6 +278,9 @@ onBeforeUnmount(() => {
   justify-content: center;
   cursor: pointer;
   color: var(--color-ocean-800);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
 }
 
 .title {
@@ -305,6 +308,8 @@ onBeforeUnmount(() => {
   text-align: center;
   min-height: 60vh;
   color: var(--color-text-secondary);
+  background-color: rgb(from var(--color-surface) r g b / 0.494);
+  border-radius: var(--space-3);
 }
 
 .empty-state surf-icon {

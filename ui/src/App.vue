@@ -36,13 +36,19 @@ function handleRefresh() {
 
 <style>
 html {
-  /* @NOTE: leaving the comment below for visualvalidation. Clean up if not useful  */
-  /* background: linear-gradient(rgb(90 255 0 / 39%), rgba(255, 0, 0, 0.4)), url('./assets/background-waves.jpg'); */
-  background: linear-gradient(rgb(233 255 0 / 44%), rgba(255, 0, 0, 0.4)), url(/src/assets/background-waves.jpg);
+  background-color:var(--color-surf-maybe);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(from var(--color-surf-maybe) r g b / 0.45),
+      rgb(from var(--color-ocean-500) r g b / 0.15)
+    ),
+    url('./assets/background-waves.jpg');
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
   background-attachment: fixed;
+  background-color: var(--bg-bottom-ocean-500-background-waves);
 }
 </style>
 
