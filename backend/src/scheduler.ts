@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { fetchAllBeaches } from './services/forecastFetcher';
+import { triggerForecastFetch } from './services/forecastWorker';
 
 export function startScheduler(): void {
   const envHours = parseInt(process.env.FORECAST_INTERVAL_HOURS ?? '', 10);
@@ -7,13 +7,13 @@ export function startScheduler(): void {
 
   const cronExpression = `0 */${hours} * * *`;
   cron.schedule(cronExpression, () => {
-    fetchAllBeaches().catch((err: unknown) => {
+    triggerForecastFetch().catch((err: unknown) => {
       console.error('Scheduled forecast fetch failed:', err);
     });
   });
 
   console.log(`Scheduler started — fetching every ${hours}h`);
-  fetchAllBeaches().catch((err: unknown) => {
+  triggerForecastFetch().catch((err: unknown) => {
     console.error('Initial forecast fetch failed:', err);
   });
 }

@@ -96,7 +96,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-003 (Backend performance & resilience). PRD US-007. Depends on US-004 for the structured log wrapper used inside the worker."
     },
     {
