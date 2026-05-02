@@ -5,6 +5,9 @@
 - `backend/src/db/mongo-init.js` is a MongoDB shell script (not Node) — exclude from ESLint.
 - Lint commands: `cd ui && yarn lint`, `cd backend && npm run lint`. Format: same with `format` instead of `lint`.
 - TS strictness: both tsconfigs enable `strict`, `noUncheckedIndexedAccess`, `noFallthroughCasesInSwitch`. Indexed access (`arr[i]`, `record[key]`) returns `T | undefined` — guard with `?? fallback`, narrow via destructuring (`const first = arr[0]; if (!first) return;`), or hoist to a local before use. Avoid `!` non-null assertions; prefer explicit fallbacks.
+- Root package.json (private, version 0.2.0) hosts husky + lint-staged + tsc-files + a pinned `typescript@~5.9.3` so pre-commit type checks use the same TS version as the workspaces (tsc-files resolves typescript from its nearest node_modules — without a root pin, it pulls TS 6.x from npm latest and the strict-deprecations error TS5107 fires on `moduleResolution: "node"`).
+- Pre-commit pipeline (`.husky/pre-commit` → `npx lint-staged`) is configured in root `package.json` `lint-staged` field. Globs are directory-scoped (`ui/**/*.{ts,tsx}`, `ui/**/*.vue`, `backend/**/*.ts`, `*.{js,json,md}`) because eslint flat config and tsc-files both resolve config relative to cwd — so the commands `cd` into the package dir via `bash -c '...'` wrappers.
+- For `.vue` files the pre-commit runs `yarn typecheck` (full project vue-tsc) rather than per-file vue-tsc; vue-tsc has no stable per-file mode that preserves project tsconfig.
 
 ## 2026-05-02 - US-001 (ESLint + Prettier across ui/ and backend/)
 - Added root `.prettierrc` and `.prettierignore` as the single Prettier config source.
@@ -45,4 +48,30 @@
   - When fixing `Record<string, T>` access errors, check whether the underlying type should actually be `Partial<Record<…, T>>` — `noUncheckedIndexedAccess` essentially makes record access behave that way at the call site, so callers must already handle undefined.
   - For `Map.set(key, { a, b })` where `a` and `b` come from indexed reads, destructure first and guard before constructing the object — otherwise the object literal type widens to allow `undefined` properties and conflicts with the Map value type.
   - Future story US-003 (pre-commit hook) will wire `tsc --noEmit` into lint-staged on staged files; the strict flags landed here now apply to that hook.
+---
+
+## 2026-05-02 - US-003 (Pre-commit hook running typecheck on staged files)
+- Added a minimal **root** `package.json` (private, name `surfsapp`, version 0.2.0) hosting husky + lint-staged + prettier + tsc-files + a pinned `typescript@~5.9.3`. The `prepare` script is `husky` so a fresh `npm install` at the root sets up `.husky/_` automatically.
+- `.husky/pre-commit` is a one-line script: `npx lint-staged` (executable). Husky v9 wraps it via `.husky/_/pre-commit`; `git commit --no-verify` continues to bypass.
+- `lint-staged` config in root `package.json`:
+  - `ui/**/*.{ts,tsx}`: `eslint --fix` + `prettier --write` + `tsc-files --noEmit` (all run with cwd=ui via `bash -c 'cd ui && … "$@"' --`).
+  - `ui/**/*.vue`: `eslint --fix` + `prettier --write` + `yarn typecheck` (full vue-tsc; no stable per-file mode).
+  - `backend/**/*.ts`: `eslint --fix` + `prettier --write` + `tsc-files --noEmit` (cwd=backend).
+  - `*.{js,json,md}`: `prettier --write`.
+- README.md gains a "Pre-commit hooks" section (between Common commands and API endpoints) listing what runs per file pattern, the `~1–2s` warm-cache budget, and the `--no-verify` escape hatch.
+- Manual verification:
+  - Staged `backend/src/typo-test.ts` containing `export const x: number = 'foo'` → pre-commit failed at the tsc-files step with `error TS2322: Type 'string' is not assignable to type 'number'`, commit reverted, exit 1, total 1.15s wall-clock.
+  - Same path with the value fixed to `42` → committed cleanly in 1.30s wall-clock (then `git reset --soft HEAD~1` + remove file).
+  - `git commit --no-verify` with the typo file → commit succeeded (then reset).
+- Files added: `package.json` (root), `package-lock.json` (root), `.husky/pre-commit`, `.husky/_/*` (husky wrappers, gitignored by husky's own `.gitignore`).
+- Files modified: `README.md` (Pre-commit hooks section), `prd.json` (US-003 → passes: true), `progress.txt` (this entry + Codebase Patterns).
+- Quality gates: `cd ui && yarn lint && yarn typecheck` ✅ ; `cd backend && npm run lint && npm run typecheck` ✅.
+- **Learnings for future iterations:**
+  - **TypeScript version pin at root is non-obvious but mandatory.** tsc-files resolves `typescript` from its own node_modules dir (root), not from the package whose tsconfig it's loading. Without a root pin, npm pulled TS 6.0.3 (latest), which fires hard error TS5107 on `moduleResolution: "node"` even though TS 5.9 only warns. Symptom: `tsconfig.<rand>.json(5,25): error TS5107` masking real type errors. Fix: pin `typescript` at root to match the workspaces' version.
+  - **lint-staged static config in package.json forces shell wrappers.** Functions are only available in `lint-staged.config.{js,mjs,cjs}`. To `cd` into ui/ or backend/ before invoking eslint/tsc-files, wrap each command in `bash -c 'cd <pkg> && <tool> "$@"' --` — the trailing `--` becomes `$0` so user file paths land in `"$@"`.
+  - **ESLint flat config is cwd-bound, not file-bound.** `eslint <file>` from a directory without an `eslint.config.{js,mjs}` does NOT walk up to find one. lint-staged wrappers must `cd` into the package containing the config.
+  - **Prettier `.prettierignore` is also cwd-bound** — root .prettierignore is found from root cwd, but per-package ones aren't. The pre-commit runs prettier from root cwd, so root .prettierignore applies (acceptable: staged files are unlikely to match the per-package ignores).
+  - **vue-tsc has no clean per-file mode.** `vue-tsc <file>` drops tsconfig context and breaks import resolution. Running `yarn typecheck` (full project) on .vue stages is the pragmatic choice; project is small enough to stay sub-2s warm.
+  - **Husky v9 setup is `prepare: "husky"` (no args).** No more `husky install`. The hook directory is `.husky/_` (managed by husky, gitignored via husky's own .gitignore) and user hooks live in `.husky/pre-commit` (committed).
+  - **tsc-files leaks tmp tsconfigs on Ctrl-C** — it cleans up on normal exit but a kill -9 leaves `tsconfig.<random>.json` files in the package dir. If you see these, add a glob to .gitignore.
 ---

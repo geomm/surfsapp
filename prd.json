@@ -54,7 +54,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-003. Depends on US-001 (lint config) and US-002 (strict tsconfig) so the staged-file checks have something real to run."
     },
     {

@@ -14,18 +14,18 @@ An offline-first PWA that shows surfability scores for Greek beaches. Fetches ma
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Vue 3 + Vite + TypeScript |
-| UI components | Lit Web Components (custom design system) |
-| Styling | SCSS + CSS custom properties |
-| Map | MapLibre GL JS |
-| Local DB | IndexedDB via Dexie |
-| Offline / PWA | Vite PWA Plugin |
-| Backend | Node.js + Express + TypeScript |
-| Database | MongoDB |
+| Layer         | Technology                                    |
+| ------------- | --------------------------------------------- |
+| Frontend      | Vue 3 + Vite + TypeScript                     |
+| UI components | Lit Web Components (custom design system)     |
+| Styling       | SCSS + CSS custom properties                  |
+| Map           | MapLibre GL JS                                |
+| Local DB      | IndexedDB via Dexie                           |
+| Offline / PWA | Vite PWA Plugin                               |
+| Backend       | Node.js + Express + TypeScript                |
+| Database      | MongoDB                                       |
 | Forecast data | Open-Meteo Marine API (free, no key required) |
-| Containers | Docker Compose |
+| Containers    | Docker Compose                                |
 
 ## Getting started
 
@@ -48,6 +48,7 @@ docker compose exec backend npm run seed
 ```
 
 Services:
+
 - UI: http://localhost:5173
 - Backend API: http://localhost:3000
 - MongoDB: localhost:27017
@@ -88,15 +89,38 @@ cloudflared tunnel --url http://localhost:5173
 
 Open the printed `https://*.trycloudflare.com` URL on your phone. API requests go through `/api` on the same tunnel (Vite proxies them to the backend).
 
+## Pre-commit hooks
+
+A husky + lint-staged pre-commit hook runs on every `git commit`. After cloning, run `npm install` once at the repo root to install the hooks (the `prepare` script wires up `.husky/`).
+
+What runs on staged files:
+
+| File pattern                | Checks                                                                      |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `ui/**/*.ts`, `ui/**/*.tsx` | `eslint --fix`, `prettier --write`, `tsc --noEmit` (scoped via `tsc-files`) |
+| `ui/**/*.vue`               | `eslint --fix`, `prettier --write`, `vue-tsc --noEmit` (full ui project)    |
+| `backend/**/*.ts`           | `eslint --fix`, `prettier --write`, `tsc --noEmit` (scoped via `tsc-files`) |
+| `*.{js,json,md}`            | `prettier --write`                                                          |
+
+A typical 1–3 file commit completes in ~1–2 seconds on a warm cache.
+
+To skip the hook in an emergency (rolling back, partial commits, etc.):
+
+```bash
+git commit --no-verify -m "..."
+```
+
+Don't make this a habit — CI will still run the same lint and typecheck.
+
 ## API endpoints
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/beaches` | All beaches with current surf score, sorted best-first |
-| `GET` | `/beaches/:id` | Full beach profile + current score |
-| `GET` | `/beaches/:id/forecast` | Latest ForecastSnapshot (raw hourly data) |
-| `GET` | `/health` | Backend health + MongoDB connection status |
-| `POST` | `/admin/fetch-forecasts` | Manually trigger a forecast fetch for all beaches |
+| Method | Path                     | Description                                            |
+| ------ | ------------------------ | ------------------------------------------------------ |
+| `GET`  | `/beaches`               | All beaches with current surf score, sorted best-first |
+| `GET`  | `/beaches/:id`           | Full beach profile + current score                     |
+| `GET`  | `/beaches/:id/forecast`  | Latest ForecastSnapshot (raw hourly data)              |
+| `GET`  | `/health`                | Backend health + MongoDB connection status             |
+| `POST` | `/admin/fetch-forecasts` | Manually trigger a forecast fetch for all beaches      |
 
 ## Forecast fetching
 
@@ -137,13 +161,13 @@ surfsapp/
 
 8 curated Greek beaches across different regions and surf types:
 
-| Beach | Region | Type |
-|---|---|---|
-| Vouliagmeni | Attica | Enclosed gulf, wave-generating-onshore |
-| Mesachti | Ikaria | Open north-facing, Meltemi-driven |
-| Langouvardos | Filiatra, Peloponnese | Open beach break |
-| Falasarna | Crete | Open north-facing with offshore swell potential |
-| Palaiohora | Crete | Wave-generating-onshore (Libyan Sea) |
-| Agios Georgios | Naxos | Open beach break |
-| Kokkino Limanaki | Rafina, Attica | Enclosed gulf |
-| Kolimpithra | Tinos | Exposed north-facing |
+| Beach            | Region                | Type                                            |
+| ---------------- | --------------------- | ----------------------------------------------- |
+| Vouliagmeni      | Attica                | Enclosed gulf, wave-generating-onshore          |
+| Mesachti         | Ikaria                | Open north-facing, Meltemi-driven               |
+| Langouvardos     | Filiatra, Peloponnese | Open beach break                                |
+| Falasarna        | Crete                 | Open north-facing with offshore swell potential |
+| Palaiohora       | Crete                 | Wave-generating-onshore (Libyan Sea)            |
+| Agios Georgios   | Naxos                 | Open beach break                                |
+| Kokkino Limanaki | Rafina, Attica        | Enclosed gulf                                   |
+| Kolimpithra      | Tinos                 | Exposed north-facing                            |
