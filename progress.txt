@@ -1,4 +1,7 @@
 ## Codebase Patterns
+- Structured logging: `backend/src/lib/log.ts` exposes `log.info/warn/error` emitting single-line JSON to stdout/stderr. `requestId` is carried via AsyncLocalStorage (set by `middleware/requestId.ts`); calls outside request scope (cron/scheduler/worker) omit it automatically. Morgan is configured in `index.ts` with a JSON-shaped format string and a custom `:requestId` token; mount order is `requestId` → `morgan` so the token resolves.
+- Mongoose collection naming: model names are pluralised + lowercased. `ForecastSnapshot` → `forecastsnapshots`. When inspecting indexes via mongosh, query the lowercase plural form.
+- Docker dev workflow: backend/UI containers each have a named volume for `node_modules`. After `npm install` on the host, **also run `docker exec surfsapp-backend-1 npm install`** (or restart the container if the volume is fresh) — host-installed deps don't appear inside the container.
 - ESLint flat config in both packages (ui/eslint.config.js, backend/eslint.config.mjs). Backend uses .mjs because backend/package.json is CommonJS; UI uses .js because ui/package.json has "type": "module".
 - Single root .prettierrc is the source of truth for formatting; per-package .prettierignore files exist because Prettier doesn't traverse parents for ignore files (only for config).
 - Vue files: `no-undef` is disabled in eslint config because TypeScript handles type-name resolution (e.g. `GeoJSON` namespace types from maplibre-gl).
@@ -74,4 +77,25 @@
   - **vue-tsc has no clean per-file mode.** `vue-tsc <file>` drops tsconfig context and breaks import resolution. Running `yarn typecheck` (full project) on .vue stages is the pragmatic choice; project is small enough to stay sub-2s warm.
   - **Husky v9 setup is `prepare: "husky"` (no args).** No more `husky install`. The hook directory is `.husky/_` (managed by husky, gitignored via husky's own .gitignore) and user hooks live in `.husky/pre-commit` (committed).
   - **tsc-files leaks tmp tsconfigs on Ctrl-C** — it cleans up on normal exit but a kill -9 leaves `tsconfig.<random>.json` files in the package dir. If you see these, add a glob to .gitignore.
+---
+
+## 2026-05-02 - US-004 (Structured request logging + MongoDB index verification)
+- Added `morgan` + `@types/morgan` to backend deps.
+- New file `backend/src/lib/log.ts`: AsyncLocalStorage-backed `log.info/warn/error` emitting single-line JSON. `runWithRequestContext({ requestId }, fn)` carries the id; calls outside that scope (cron/scheduler) omit it. Errors go to stderr, info/warn to stdout.
+- New file `backend/src/middleware/requestId.ts`: generates `req.requestId = crypto.randomUUID()`, sets the `x-request-id` response header, then calls `next()` inside `runWithRequestContext`. Augments express's `Request` interface via module declaration.
+- Wired into `backend/src/index.ts`: `requestId` middleware mounted before morgan; morgan uses a custom JSON format string with a custom `:requestId` token. Mount order is cors → json → requestId → morgan → routes.
+- Migrated `forecastFetcher.fetchAllBeaches` from `console.log/error` to `log.info/error` for fetch start, per-beach success, per-beach failure, and final completion. Errors include serialised `error` field (Error.message or String(err)).
+- Verified MongoDB indexes via `docker exec surfsapp-mongo-1 mongosh --quiet --eval 'db = db.getSiblingDB("surfsapp"); JSON.stringify(db.forecastsnapshots.getIndexes(), null, 2)'`. Output captured in `docs/perf-baseline.md` under "Backend baseline > Indexes". Both schema-declared indexes present (`beachId_1`, `fetchedAt_-1`).
+- End-to-end smoke test: `curl -sI http://localhost:3000/health` returned `x-request-id: 0978cce9-…` header; backend container logs showed `{"type":"http", "requestId":"…", "method":"GET", "path":"/health", "status":200, "durationMs":1.080}` JSON line.
+- Files added: `backend/src/lib/log.ts`, `backend/src/middleware/requestId.ts`, `docs/perf-baseline.md`.
+- Files modified: `backend/src/index.ts`, `backend/src/services/forecastFetcher.ts`, `backend/package.json`, `backend/package-lock.json`, `prd.json`, `progress.txt`.
+- Quality gates: `cd backend && npm run typecheck && npm run lint` ✅.
+- **Learnings for future iterations:**
+  - **Express type augmentation needs `declare module 'express-serve-static-core'`, not `'express'`.** `express`'s public types re-export `Request` from `express-serve-static-core`, so augmenting `'express'` doesn't extend `req.requestId` in router handlers. Augment the core module.
+  - **AsyncLocalStorage works through morgan's `res.on('finish')` automatically.** Node maintains the ALS context across event-emitter listeners attached within the context. So `log.*` called from morgan tokens (or anywhere downstream of the `runWithRequestContext` call) sees the requestId without explicit propagation.
+  - **Morgan tokens emit raw text into the format string.** To produce valid JSON, write the format with the field types in mind: string fields as `"key":":token"`, numeric fields as `"key"::token` (no quotes). `:status` and `:response-time` are numeric; `:requestId`, `:method`, `:url` are strings.
+  - **Mongoose pluralises model names to lowercase for the collection.** `mongoose.model('ForecastSnapshot', …)` → `forecastsnapshots`, NOT `forecastSnapshots`. Trips up mongosh queries when verifying indexes.
+  - **Docker bind-mounted node_modules are container-local.** `npm install` on the host went into `./backend/node_modules`, but the backend container has a named volume (`backend-node-modules`) mounted there, hiding the host install. Either `docker exec surfsapp-backend-1 npm install`, or rebuild the container so the Dockerfile reinstalls. Neither restart alone nor `docker compose up` picks up host-side `npm install`.
+  - **morgan's `:url` token is the path + query, not just the path.** Acceptable for our format string; `path` is a slight misnomer if requests carry queries. Rename to `url` later if it matters.
+  - **Future story US-005 (worker offload) reuses the log wrapper as required by AC.** The wrapper already handles non-request scope (no requestId field emitted), so worker code can `import { log }` and call `log.info` without ceremony.
 ---

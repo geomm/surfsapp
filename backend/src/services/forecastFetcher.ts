@@ -2,6 +2,7 @@ import { IBeach } from '../models/Beach';
 import { IHourlyForecast, ForecastSnapshot } from '../models/ForecastSnapshot';
 import { Beach } from '../models/Beach';
 import { scoreHour, computeDailySummaries } from './scoringEngine';
+import { log } from '../lib/log';
 
 const MARINE_VARIABLES = [
   'swell_wave_height',
@@ -109,18 +110,25 @@ export async function saveForecastSnapshot(
 
 export async function fetchAllBeaches(): Promise<void> {
   const beaches = await Beach.find({});
+  log.info('forecast_fetch_start', { beachCount: beaches.length });
   let successCount = 0;
 
   for (const beach of beaches) {
     try {
       const hourlyForecasts = await fetchForecastForBeach(beach);
       await saveForecastSnapshot(beach.id, hourlyForecasts);
-      console.log(`Fetched forecast for ${beach.id}`);
+      log.info('forecast_fetch_beach_ok', { beachId: beach.id });
       successCount++;
     } catch (err) {
-      console.error(`Failed to fetch ${beach.id}:`, err);
+      log.error('forecast_fetch_beach_failed', {
+        beachId: beach.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
-  console.log(`Forecast fetch complete: ${successCount}/${beaches.length} beaches updated`);
+  log.info('forecast_fetch_complete', {
+    successCount,
+    totalCount: beaches.length,
+  });
 }
