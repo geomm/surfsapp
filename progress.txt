@@ -1,1 +1,169 @@
 ## Codebase Patterns
+- Vite v5 `build.chunkSizeWarningLimit` compares against **raw** chunk size (`chunk.code.length / 1000` in `node_modules/vite/dist/node/chunks/dep-*.js`), NOT gzip. PRD specs that quote a gzip-derived budget value need to be applied against raw size, or the warning fires unconditionally on the maplibre-gl chunk (1,047 kB raw / 283 kB gzip).
+- Structured logging: `backend/src/lib/log.ts` exposes `log.info/warn/error` emitting single-line JSON to stdout/stderr. `requestId` is carried via AsyncLocalStorage (set by `middleware/requestId.ts`); calls outside request scope (cron/scheduler/worker) omit it automatically. Morgan is configured in `index.ts` with a JSON-shaped format string and a custom `:requestId` token; mount order is `requestId` → `morgan` so the token resolves.
+- Mongoose collection naming: model names are pluralised + lowercased. `ForecastSnapshot` → `forecastsnapshots`. When inspecting indexes via mongosh, query the lowercase plural form.
+- Docker dev workflow: backend/UI containers each have a named volume for `node_modules`. After `npm install` on the host, **also run `docker exec surfsapp-backend-1 npm install`** (or restart the container if the volume is fresh) — host-installed deps don't appear inside the container.
+- ESLint flat config in both packages (ui/eslint.config.js, backend/eslint.config.mjs). Backend uses .mjs because backend/package.json is CommonJS; UI uses .js because ui/package.json has "type": "module".
+- Single root .prettierrc is the source of truth for formatting; per-package .prettierignore files exist because Prettier doesn't traverse parents for ignore files (only for config).
+- Vue files: `no-undef` is disabled in eslint config because TypeScript handles type-name resolution (e.g. `GeoJSON` namespace types from maplibre-gl).
+- `backend/src/db/mongo-init.js` is a MongoDB shell script (not Node) — exclude from ESLint.
+- Lint commands: `cd ui && yarn lint`, `cd backend && npm run lint`. Format: same with `format` instead of `lint`.
+- TS strictness: both tsconfigs enable `strict`, `noUncheckedIndexedAccess`, `noFallthroughCasesInSwitch`. Indexed access (`arr[i]`, `record[key]`) returns `T | undefined` — guard with `?? fallback`, narrow via destructuring (`const first = arr[0]; if (!first) return;`), or hoist to a local before use. Avoid `!` non-null assertions; prefer explicit fallbacks.
+- Root package.json (private, version 0.2.0) hosts husky + lint-staged + tsc-files + a pinned `typescript@~5.9.3` so pre-commit type checks use the same TS version as the workspaces (tsc-files resolves typescript from its nearest node_modules — without a root pin, it pulls TS 6.x from npm latest and the strict-deprecations error TS5107 fires on `moduleResolution: "node"`).
+- Pre-commit pipeline (`.husky/pre-commit` → `npx lint-staged`) is configured in root `package.json` `lint-staged` field. Globs are directory-scoped (`ui/**/*.{ts,tsx}`, `ui/**/*.vue`, `backend/**/*.ts`, `*.{js,json,md}`) because eslint flat config and tsc-files both resolve config relative to cwd — so the commands `cd` into the package dir via `bash -c '...'` wrappers.
+- For `.vue` files the pre-commit runs `yarn typecheck` (full project vue-tsc) rather than per-file vue-tsc; vue-tsc has no stable per-file mode that preserves project tsconfig.
+- Worker_threads + tsx coexistence: `backend/src/services/forecastWorker.ts` resolves the worker path via `__filename.endsWith('.ts')` (tsx preserves the original extension at runtime). In dev it spawns the worker with `execArgv: ['-r', 'tsx/cjs']` so the worker can `import` TS files without a build step; in compiled output (`dist/workers/forecastFetcher.worker.js`) `execArgv` is empty. Each worker thread has its own JS context, so it must call `connectDB()` itself — Mongoose state does NOT cross thread boundaries.
+- Forecast fetch trigger pattern: callers (cron in `scheduler.ts`, admin route in `routes/admin.ts`) go through `triggerForecastFetch()` from `services/forecastWorker.ts`. The wrapper coalesces overlapping triggers via an `inflight` promise (only one fetch cycle runs at a time) and tracks per-job promises in a Map keyed by `jobId` for clean message routing.
+
+## 2026-05-02 - US-001 (ESLint + Prettier across ui/ and backend/)
+- Added root `.prettierrc` and `.prettierignore` as the single Prettier config source.
+- Added per-package `.prettierignore` (Prettier ignore files don't cascade up the tree).
+- Created `ui/eslint.config.js` (flat config) using `@eslint/js`, `typescript-eslint`, `eslint-plugin-vue`, `vue-eslint-parser`, with `eslint-config-prettier` last.
+- Created `backend/eslint.config.mjs` (flat config) using `@eslint/js`, `typescript-eslint`, with `eslint-config-prettier` last. Used `.mjs` to avoid `MODULE_TYPELESS_PACKAGE_JSON` warning since backend is CommonJS.
+- Added `lint` and `format` scripts to both `ui/package.json` and `backend/package.json`.
+- Installed devDeps: ui (yarn) and backend (npm) — eslint, @eslint/js, typescript-eslint, eslint-config-prettier, prettier, globals, plus eslint-plugin-vue + vue-eslint-parser for ui.
+- Ran `prettier --write .` then `eslint --fix .` in both packages.
+- Fixed real lint findings: renamed unused catch param `e` → `_err` in `ui/src/components/BeachMap.vue`; disabled `no-undef` for Vue/TS files (TS handles it).
+- Excluded `backend/src/db/mongo-init.js` from ESLint (MongoDB shell script).
+- All quality gates pass: `cd ui && yarn lint && yarn typecheck`; `cd backend && npm run lint && npm run typecheck`.
+- Files changed: 50+ (mostly Prettier formatting). New files: `.prettierrc`, `.prettierignore`, `ui/.prettierignore`, `backend/.prettierignore`, `ui/eslint.config.js`, `backend/eslint.config.mjs`. Modified `package.json` and lockfiles for both packages.
+- **Learnings for future iterations:**
+  - When running Prettier from a subdirectory, it does not pick up the root `.prettierignore` — must add per-package files. Prettier also formatted `ui/dist/*` on first run (rebuilt afterwards; dist is gitignored).
+  - eslint-plugin-vue v10 supports the flat config via `vue.configs['flat/recommended']`.
+  - For Vue/TS, set `parser: vueParser` with `parserOptions.parser: tseslint.parser` so `<script lang="ts">` blocks parse as TS.
+  - `no-undef` must be turned off for Vue/TS files — TS already handles it, and ESLint's no-undef can't see ambient namespaces like `GeoJSON`.
+  - typescript-eslint v8 + eslint v10 compose cleanly; spread `tseslint.configs.recommended` (it returns an array) into the flat config.
+  - `--max-warnings 0` only counts ESLint warnings; the Node `MODULE_TYPELESS_PACKAGE_JSON` notice is unrelated to exit code but worth silencing by using `.mjs`.
+  - Future stories (US-002 strict TS, US-003 husky/lint-staged) build directly on these scripts.
+---
+
+## 2026-05-02 - US-002 (Tighten TypeScript strictness in both packages)
+- Added `noUncheckedIndexedAccess: true` and `noFallthroughCasesInSwitch: true` to both `ui/tsconfig.json` and `backend/tsconfig.json` (alongside existing `strict: true`).
+- Fixed all resulting type errors without using `as any` or `@ts-expect-error` suppressions:
+  - `ui/src/composables/usePullToRefresh.ts`: guard `e.touches[0]` (touch may be missing).
+  - `ui/src/utils/compass.ts`: replaced `dirs[idx]` with `dirs[idx] ?? 'N'`.
+  - `ui/src/views/BeachDetailView.vue`: hoisted `hourly[0]` to a local with truthy guard; replaced `r.swell_wave_*` direct access with `?? 0` fallbacks (the surrounding `hasForecast` gate already guarantees presence at runtime, but TS can't follow that across computeds).
+  - `backend/src/scripts/seed.ts`: skip the loop iteration if `STUB_SCORES[beachId]` is missing.
+  - `backend/src/services/forecastFetcher.ts`: read `wind_speed_10m[i]` and `wind_direction_10m[i]` separately; skip the entry when either is undefined instead of pushing `undefined` into a `Map<…,{speed:number;direction:number}>`.
+  - `backend/src/services/scoringEngine.ts`: in `computeDailySummaries`, hoisted `hours[0]` to `first`, guarded the inner-window loop's `hours[j]`, and used `hours[bestStart] ?? first` / `hours[bestEnd] ?? first` for the summary timestamps.
+- Files changed: `ui/tsconfig.json`, `backend/tsconfig.json`, plus the six fix sites above.
+- Quality gates: `cd ui && yarn lint && yarn typecheck` ✅ ; `cd backend && npm run lint && npm run typecheck` ✅.
+- **Learnings for future iterations:**
+  - `noUncheckedIndexedAccess` is the bigger of the two flags by far — `noFallthroughCasesInSwitch` produced zero errors in this codebase. Plan future work assuming most fixes will cluster around array/record access sites.
+  - Vue `computed` blocks lose narrowing across boundaries: `hasForecast` (computed) gating `swellText` (also computed) does NOT propagate `r.swell_wave_height` being defined. Use `?? fallback` inside each computed instead of relying on a sibling guard.
+  - When fixing `Record<string, T>` access errors, check whether the underlying type should actually be `Partial<Record<…, T>>` — `noUncheckedIndexedAccess` essentially makes record access behave that way at the call site, so callers must already handle undefined.
+  - For `Map.set(key, { a, b })` where `a` and `b` come from indexed reads, destructure first and guard before constructing the object — otherwise the object literal type widens to allow `undefined` properties and conflicts with the Map value type.
+  - Future story US-003 (pre-commit hook) will wire `tsc --noEmit` into lint-staged on staged files; the strict flags landed here now apply to that hook.
+---
+
+## 2026-05-02 - US-003 (Pre-commit hook running typecheck on staged files)
+- Added a minimal **root** `package.json` (private, name `surfsapp`, version 0.2.0) hosting husky + lint-staged + prettier + tsc-files + a pinned `typescript@~5.9.3`. The `prepare` script is `husky` so a fresh `npm install` at the root sets up `.husky/_` automatically.
+- `.husky/pre-commit` is a one-line script: `npx lint-staged` (executable). Husky v9 wraps it via `.husky/_/pre-commit`; `git commit --no-verify` continues to bypass.
+- `lint-staged` config in root `package.json`:
+  - `ui/**/*.{ts,tsx}`: `eslint --fix` + `prettier --write` + `tsc-files --noEmit` (all run with cwd=ui via `bash -c 'cd ui && … "$@"' --`).
+  - `ui/**/*.vue`: `eslint --fix` + `prettier --write` + `yarn typecheck` (full vue-tsc; no stable per-file mode).
+  - `backend/**/*.ts`: `eslint --fix` + `prettier --write` + `tsc-files --noEmit` (cwd=backend).
+  - `*.{js,json,md}`: `prettier --write`.
+- README.md gains a "Pre-commit hooks" section (between Common commands and API endpoints) listing what runs per file pattern, the `~1–2s` warm-cache budget, and the `--no-verify` escape hatch.
+- Manual verification:
+  - Staged `backend/src/typo-test.ts` containing `export const x: number = 'foo'` → pre-commit failed at the tsc-files step with `error TS2322: Type 'string' is not assignable to type 'number'`, commit reverted, exit 1, total 1.15s wall-clock.
+  - Same path with the value fixed to `42` → committed cleanly in 1.30s wall-clock (then `git reset --soft HEAD~1` + remove file).
+  - `git commit --no-verify` with the typo file → commit succeeded (then reset).
+- Files added: `package.json` (root), `package-lock.json` (root), `.husky/pre-commit`, `.husky/_/*` (husky wrappers, gitignored by husky's own `.gitignore`).
+- Files modified: `README.md` (Pre-commit hooks section), `prd.json` (US-003 → passes: true), `progress.txt` (this entry + Codebase Patterns).
+- Quality gates: `cd ui && yarn lint && yarn typecheck` ✅ ; `cd backend && npm run lint && npm run typecheck` ✅.
+- **Learnings for future iterations:**
+  - **TypeScript version pin at root is non-obvious but mandatory.** tsc-files resolves `typescript` from its own node_modules dir (root), not from the package whose tsconfig it's loading. Without a root pin, npm pulled TS 6.0.3 (latest), which fires hard error TS5107 on `moduleResolution: "node"` even though TS 5.9 only warns. Symptom: `tsconfig.<rand>.json(5,25): error TS5107` masking real type errors. Fix: pin `typescript` at root to match the workspaces' version.
+  - **lint-staged static config in package.json forces shell wrappers.** Functions are only available in `lint-staged.config.{js,mjs,cjs}`. To `cd` into ui/ or backend/ before invoking eslint/tsc-files, wrap each command in `bash -c 'cd <pkg> && <tool> "$@"' --` — the trailing `--` becomes `$0` so user file paths land in `"$@"`.
+  - **ESLint flat config is cwd-bound, not file-bound.** `eslint <file>` from a directory without an `eslint.config.{js,mjs}` does NOT walk up to find one. lint-staged wrappers must `cd` into the package containing the config.
+  - **Prettier `.prettierignore` is also cwd-bound** — root .prettierignore is found from root cwd, but per-package ones aren't. The pre-commit runs prettier from root cwd, so root .prettierignore applies (acceptable: staged files are unlikely to match the per-package ignores).
+  - **vue-tsc has no clean per-file mode.** `vue-tsc <file>` drops tsconfig context and breaks import resolution. Running `yarn typecheck` (full project) on .vue stages is the pragmatic choice; project is small enough to stay sub-2s warm.
+  - **Husky v9 setup is `prepare: "husky"` (no args).** No more `husky install`. The hook directory is `.husky/_` (managed by husky, gitignored via husky's own .gitignore) and user hooks live in `.husky/pre-commit` (committed).
+  - **tsc-files leaks tmp tsconfigs on Ctrl-C** — it cleans up on normal exit but a kill -9 leaves `tsconfig.<random>.json` files in the package dir. If you see these, add a glob to .gitignore.
+---
+
+## 2026-05-02 - US-004 (Structured request logging + MongoDB index verification)
+- Added `morgan` + `@types/morgan` to backend deps.
+- New file `backend/src/lib/log.ts`: AsyncLocalStorage-backed `log.info/warn/error` emitting single-line JSON. `runWithRequestContext({ requestId }, fn)` carries the id; calls outside that scope (cron/scheduler) omit it. Errors go to stderr, info/warn to stdout.
+- New file `backend/src/middleware/requestId.ts`: generates `req.requestId = crypto.randomUUID()`, sets the `x-request-id` response header, then calls `next()` inside `runWithRequestContext`. Augments express's `Request` interface via module declaration.
+- Wired into `backend/src/index.ts`: `requestId` middleware mounted before morgan; morgan uses a custom JSON format string with a custom `:requestId` token. Mount order is cors → json → requestId → morgan → routes.
+- Migrated `forecastFetcher.fetchAllBeaches` from `console.log/error` to `log.info/error` for fetch start, per-beach success, per-beach failure, and final completion. Errors include serialised `error` field (Error.message or String(err)).
+- Verified MongoDB indexes via `docker exec surfsapp-mongo-1 mongosh --quiet --eval 'db = db.getSiblingDB("surfsapp"); JSON.stringify(db.forecastsnapshots.getIndexes(), null, 2)'`. Output captured in `docs/perf-baseline.md` under "Backend baseline > Indexes". Both schema-declared indexes present (`beachId_1`, `fetchedAt_-1`).
+- End-to-end smoke test: `curl -sI http://localhost:3000/health` returned `x-request-id: 0978cce9-…` header; backend container logs showed `{"type":"http", "requestId":"…", "method":"GET", "path":"/health", "status":200, "durationMs":1.080}` JSON line.
+- Files added: `backend/src/lib/log.ts`, `backend/src/middleware/requestId.ts`, `docs/perf-baseline.md`.
+- Files modified: `backend/src/index.ts`, `backend/src/services/forecastFetcher.ts`, `backend/package.json`, `backend/package-lock.json`, `prd.json`, `progress.txt`.
+- Quality gates: `cd backend && npm run typecheck && npm run lint` ✅.
+- **Learnings for future iterations:**
+  - **Express type augmentation needs `declare module 'express-serve-static-core'`, not `'express'`.** `express`'s public types re-export `Request` from `express-serve-static-core`, so augmenting `'express'` doesn't extend `req.requestId` in router handlers. Augment the core module.
+  - **AsyncLocalStorage works through morgan's `res.on('finish')` automatically.** Node maintains the ALS context across event-emitter listeners attached within the context. So `log.*` called from morgan tokens (or anywhere downstream of the `runWithRequestContext` call) sees the requestId without explicit propagation.
+  - **Morgan tokens emit raw text into the format string.** To produce valid JSON, write the format with the field types in mind: string fields as `"key":":token"`, numeric fields as `"key"::token` (no quotes). `:status` and `:response-time` are numeric; `:requestId`, `:method`, `:url` are strings.
+  - **Mongoose pluralises model names to lowercase for the collection.** `mongoose.model('ForecastSnapshot', …)` → `forecastsnapshots`, NOT `forecastSnapshots`. Trips up mongosh queries when verifying indexes.
+  - **Docker bind-mounted node_modules are container-local.** `npm install` on the host went into `./backend/node_modules`, but the backend container has a named volume (`backend-node-modules`) mounted there, hiding the host install. Either `docker exec surfsapp-backend-1 npm install`, or rebuild the container so the Dockerfile reinstalls. Neither restart alone nor `docker compose up` picks up host-side `npm install`.
+  - **morgan's `:url` token is the path + query, not just the path.** Acceptable for our format string; `path` is a slight misnomer if requests carry queries. Rename to `url` later if it matters.
+  - **Future story US-005 (worker offload) reuses the log wrapper as required by AC.** The wrapper already handles non-request scope (no requestId field emitted), so worker code can `import { log }` and call `log.info` without ceremony.
+---
+
+## 2026-05-02 - US-005 (Backend latency baseline + offload forecast fetcher to a worker)
+- Added `backend/src/workers/forecastFetcher.worker.ts`: worker_threads entry point. Lazily calls `connectDB()` on first trigger (each worker has its own Mongoose connection — state does not cross thread boundaries), then runs `fetchAllBeaches()` on every `{type:'trigger', jobId}` message. Posts back `{type:'done'|'error', jobId, error?}`. Logs `forecast_fetch_worker_start`/`forecast_fetch_worker_finish` via `log.info`; the existing per-beach logs inside `fetchAllBeaches` already use `log.info` so AC's "use the log wrapper from US-004 inside the worker" is satisfied.
+- Added `backend/src/services/forecastWorker.ts`: spawns a singleton `Worker` and routes per-job promises via a `Map<jobId, {resolve, reject}>`. Resolves the worker path through `__filename.endsWith('.ts')` so `tsx --watch src/index.ts` (dev) and `node dist/index.js` (post-build) both work — dev passes `execArgv: ['-r', 'tsx/cjs']`, prod passes none. Coalesces overlapping triggers behind a single `inflight` promise.
+- Rewired `backend/src/scheduler.ts` and `backend/src/routes/admin.ts` to call `triggerForecastFetch()`. Both the cron entry point and `POST /admin/fetch-forecasts` go through the same code path; neither runs the fetcher inline on the HTTP main thread anymore. Admin route's catch is a no-op (worker logs its own errors; the HTTP caller already received a 200 fire-and-forget response).
+- Bench harnesses added under `scripts/`:
+  - `bench-backend.mjs` — N sequential GETs against any URL, reports min/p50/p95/max via `performance.now()`.
+  - `bench-during-fetch.mjs` — concurrently spams `POST /admin/fetch-forecasts` (`BENCH_TRIGGERS` controls fan-out; loop wakes every 50ms) and runs the same sample loop against `/beaches` and `/beaches/:id/forecast`.
+  - `bench-single-fetch.mjs` — fires one trigger then samples (closer to real cron load).
+- Numbers (3-run medians, N=60, all in ms; full table in `docs/perf-baseline.md` "Backend baseline > Latency" sections):
+  - Idle:                     /beaches p95=9.4   /beaches/:id p95=2.8
+  - During fetch (inline):    /beaches p95=27.2  /beaches/:id p95=15.7
+  - During fetch (worker):    /beaches p95=10.7  /beaches/:id p95=3.7
+  - Improvements vs inline: ~60% on /beaches, ~76% on /beaches/:id. After-offload p95 deltas vs idle (1.3ms, 0.9ms) are within bench noise floor (idle p95 itself varied ±2ms run-to-run).
+- Smoke check: `POST /admin/fetch-forecasts` then 5× `curl GET /beaches` — all returned in 27–51ms (sub-second AC). Backend logs showed `forecast_fetch_worker_start` followed by `forecast_fetch_worker_finish` confirming worker execution.
+- Files added: `backend/src/workers/forecastFetcher.worker.ts`, `backend/src/services/forecastWorker.ts`, `scripts/bench-backend.mjs`, `scripts/bench-during-fetch.mjs`, `scripts/bench-single-fetch.mjs`.
+- Files modified: `backend/src/scheduler.ts`, `backend/src/routes/admin.ts`, `docs/perf-baseline.md`, `prd.json`, `progress.txt`.
+- Quality gates: `cd backend && npm run typecheck && npm run lint` ✅. (Run inside `surfsapp-backend-1` because the named volume holds the only authoritative `node_modules`.)
+- **Learnings for future iterations:**
+  - **tsx + worker_threads needs `__filename` extension detection.** tsx preserves `.ts` on `__filename` at runtime, so `__filename.endsWith('.ts')` reliably distinguishes dev (tsx) from prod (compiled). Pass `execArgv: ['-r', 'tsx/cjs']` only when the worker file is a `.ts` source — otherwise the spawned worker tries to load the JS Standard Library through tsx and ignores `dist/`.
+  - **Mongoose state does not cross thread boundaries.** Each `worker_threads.Worker` has its own JS context, so `mongoose.connection` in the worker is separate from the main thread's. The worker must call `connectDB()` itself. The two connections share only the underlying mongod (different sockets, different Mongoose models).
+  - **Outbound HTTP from a worker doesn't block main-thread sockets.** libuv is per-process but TCP I/O is non-blocking, so the worker's 16+ outbound `fetch()`s to open-meteo don't slow `/beaches` reads. The remaining post-offload p95 delta on `/beaches` is mongod-side contention from the worker's writes interleaving with the main thread's reads — not solvable at the Node level.
+  - **Bench harness load matters at sub-10ms latencies.** The `BENCH_TRIGGERS=5` mode (5 concurrent admin POSTs every 50ms) doubled p95 on `/beaches` because morgan + JSON middleware on the main thread were running at ~100 POST/s. Single-trigger mode (`BENCH_TRIGGERS=1`) keeps the worker constantly fetching while leaving the main thread free, which matches a real cron cycle better.
+  - **For sustained-load benchmarks, coalesce duplicate triggers.** `triggerForecastFetch()` returns the same `inflight` promise for overlapping calls, so even at 20 POST/s the worker runs back-to-back without stacking. Without coalescing, a clogged trigger queue would defeat the offload entirely.
+  - **AsyncLocalStorage requestId context does NOT cross worker_threads boundaries.** Worker logs (`forecast_fetch_worker_start`, per-beach logs) emit without `requestId` because the `runWithRequestContext` set in main-thread middleware doesn't propagate across `worker.postMessage`. This matches the `log.ts` design (request-scope id only) and is documented in US-004 learnings.
+  - **Worker error handling needs both `'error'` and `'exit'` listeners.** A `'error'` event fires for sync throws inside the worker; an unclean `'exit'` (non-zero code) can also happen without a prior `'error'`. Both reject any pending jobs and clear `workerInstance` so the next trigger respawns.
+---
+
+## 2026-05-02 - US-008 (Document Docker + HMR developer workflow in README.md)
+- Restructured README.md: renamed `Getting started` + `Common commands` into a single `## Local development` umbrella section so all dev-workflow info sits in one place.
+- New subsections under Local development:
+  - `First-time setup` — clone → `cp backend/.env.example .env` → `docker compose up` → seed → root `npm install` (the last step explicit so the husky hook is wired up — previously buried in the Pre-commit hooks section only).
+  - `Where things live` — table of `ui/`, `backend/`, `docker-compose.yml`, `docs/`, `scripts/`.
+  - `Ports` — table mapping host:container for ui (5173), backend (3000), mongo (27017).
+  - `Dev workflow` — preserved the existing dev/HMR commands.
+  - `HMR over Docker bind mounts (usePolling)` — explains why `server.watch.usePolling: true` is set in `ui/vite.config.ts`: macOS/Windows Docker VMs don't propagate fsevents/inotify across the bind-mount boundary, so polling is the only reliable cross-platform watcher.
+  - `Production build + preview` — preserved.
+  - `Quality commands` — explicit table listing `lint`, `typecheck`, `format`, `build` for both `ui/` (yarn) and `backend/` (npm), with the `cd` prefix because eslint flat config + tsc both resolve config from cwd. Cross-links to the Pre-commit hooks section.
+  - `Real-device testing over HTTPS (cloudflared)` — preserved + added an explicit pointer to the Phase 1 DoD line in `docs/v0.2-plan.md` and noted the `allowedHosts: ['.trycloudflare.com']` allow-list in `vite.config.ts`.
+- `## Pre-commit hooks` section preserved at root level so the in-page link from Quality commands resolves to a stable anchor.
+- Files modified: `README.md`, `prd.json`, `progress.txt`.
+- Quality gates: `cd ui && yarn typecheck && yarn lint` ✅ ; `cd backend && npm run typecheck && npm run lint` ✅. Prettier ran clean on README.md (root `.prettierrc`).
+- Manual verification: re-read the README top-to-bottom — a fresh contributor following only "Local development → First-time setup" reaches a running stack on `localhost:5173` (UI) and `localhost:3000` (backend) without needing to read source files. Cloudflared block tells them how to expose it for phone smoke tests; Quality commands block tells them what to run before committing; Pre-commit hooks block reassures them that those checks also run automatically.
+- **Learnings for future iterations:**
+  - **README is the install side of the contract for `npm install` at root.** Steps 1–4 of First-time setup boot the stack but the husky hook only wires up after the root `npm install` (step 5). Without it, contributors silently bypass pre-commit. This was previously only mentioned in the Pre-commit hooks section deeper down — now hoisted into the bootstrap sequence.
+  - **Anchor links to `## Pre-commit hooks` rely on the section staying at heading level `##` (not nested under Local development).** Prettier doesn't rewrite heading-link slugs but moving the section into a subsection would change the anchor from `#pre-commit-hooks` to keep the same slug — fine in this case, but worth checking if you reorganize.
+  - **The Phase 1 DoD line in docs/v0.2-plan.md (line 215) explicitly cross-references README's cloudflared section.** When updating either, keep them aligned — the DoD bullet says "via the cloudflared tunnel workflow documented in README.md", so removing the README block would orphan the DoD reference.
+  - **`Where things live` is a small table on purpose.** The `## Project structure` section near the bottom of the README has the deeper tree. Two views (high-level pointer near setup; detailed tree near the docs index) is cheaper than maintaining one sprawling tree at the top.
+  - **No code changes needed for this story** — it's pure docs. The pre-commit hook still runs `prettier --write` on the README via the `*.{js,json,md}` glob, so the file stayed in canonical form post-commit.
+  - **All US-001 through US-008 now pass** — Phase 1 (Foundation) of v0.2 is complete. Next phase per `docs/v0.2-plan.md` will need a fresh PRD (this `prd.json` ends here).
+---
+
+## 2026-05-02 - US-007 (Bundle-size baseline and perf budget in vite.config.ts)
+- Captured fresh `yarn build` output (commit `3881cf3` plus US-007 changes). Largest chunk: `maplibre-gl-<hash>.js` at 1,047.86 kB raw / 283.21 kB gzip. Entry chunk drifted slightly from the US-006 docs snapshot (now 263.91 kB raw / 91.66 kB gzip vs the earlier 458/159) — included a fresh per-chunk markdown table in `docs/perf-baseline.md` under a new "Bundle size budget (US-007)" subsection.
+- Set `build.chunkSizeWarningLimit: 1155` in `ui/vite.config.ts` with the AC-required comment. Computation: 1,047.86 → 1,050 (round up to nearest 10) → ×1.10 = 1,155 kB.
+- **Deviation from AC, documented in perf-baseline.md and the commit message.** AC instructs computing the budget from the largest chunk's gzip size (283 → 290 → 319 kB). vite v5's `chunkSizeWarningLimit` is compared against raw bytes (`chunk.code.length / 1000`, see `node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:17973-18001`), so a 319 kB raw threshold would warn on every build (maplibre-gl raw is 1,047 kB) and contradict the "yarn build completes without any chunk-size warnings" AC. Applied the same round-up + 10% formula to raw size instead. Headroom on gzip is comparable: 1,155 kB raw ≈ 312 kB gzip (~10% over current 283).
+- Manual verification: `yarn build` post-change → no `(!) Some chunks are larger than …` line; build completes cleanly in ~2s.
+- Files modified: `ui/vite.config.ts`, `docs/perf-baseline.md`, `prd.json`, `progress.txt`.
+- Quality gates: `cd ui && yarn build && yarn typecheck && yarn lint` ✅.
+- **Learnings for future iterations:**
+  - **Vite v5 chunkSizeWarningLimit is raw-size, not gzip.** Confirmed in `node_modules/vite/dist/node/chunks/dep-*.js` — `entry.size` is `chunk.code.length` and the warning fires when `entry.size / 1000 > chunkLimit`. Anyone copy-pasting a "set the budget to gzip + 10%" recipe from a blog post will get a budget that always trips when bundling a dependency like maplibre-gl. Either compute from raw or accept the warning.
+  - **PRD numbers in baseline docs go stale fast.** The US-006 chunk table claimed entry was 458 kB raw / 159 kB gzip; six commits later (with no obvious source-side cause) it's 263 / 92. Don't reuse US-006's numbers for US-007 — re-run `yarn build` and re-record. Likely cause is dependency-graph reshuffling after the maplibre CSS move.
+  - **The `build` key goes inside `defineConfig({...})` at the top level, not inside `plugins`.** Easy to land it in the wrong scope and silently no-op.
+  - **Future story US-008 (Docker + HMR README) does not depend on this; US-007 was the last code-changing story before docs cleanup.**
+---

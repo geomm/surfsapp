@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from 'vue'
-import maplibregl from 'maplibre-gl'
+import { onMounted, onBeforeUnmount, ref } from 'vue';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 const props = defineProps<{
-  coords: { lat: number; lon: number }
-  name: string
-}>()
+  coords: { lat: number; lon: number };
+  name: string;
+}>();
 
-const container = ref<HTMLDivElement | null>(null)
-const failed = ref(false)
-let map: maplibregl.Map | null = null
+const container = ref<HTMLDivElement | null>(null);
+const failed = ref(false);
+let map: maplibregl.Map | null = null;
 
 onMounted(() => {
-  if (!container.value) return
+  if (!container.value) return;
   try {
     map = new maplibregl.Map({
       container: container.value,
@@ -20,23 +21,23 @@ onMounted(() => {
       style: 'https://demotiles.maplibre.org/style.json',
       center: [props.coords.lon, props.coords.lat],
       zoom: 12,
-    })
-    const popup = new maplibregl.Popup({ offset: 24 }).setText(props.name)
+    });
+    const popup = new maplibregl.Popup({ offset: 24 }).setText(props.name);
     new maplibregl.Marker()
       .setLngLat([props.coords.lon, props.coords.lat])
       .setPopup(popup)
-      .addTo(map)
-  } catch (e) {
-    failed.value = true
+      .addTo(map);
+  } catch (_err) {
+    failed.value = true;
   }
-})
+});
 
 onBeforeUnmount(() => {
   if (map) {
-    map.remove()
-    map = null
+    map.remove();
+    map = null;
   }
-})
+});
 </script>
 
 <template>

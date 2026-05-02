@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { useBeachStore } from '../stores/beachStore'
+import { useBeachStore } from '../stores/beachStore';
 
 defineProps<{
-  open: boolean
-}>()
+  open: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+  (e: 'close'): void;
+}>();
 
-const beachStore = useBeachStore()
+const beachStore = useBeachStore();
 
 function capitalise(value: string): string {
-  if (!value) return value
-  return value.charAt(0).toUpperCase() + value.slice(1)
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function onSheetClose() {
-  emit('close')
+  emit('close');
 }
 
 function onDone() {
-  emit('close')
+  emit('close');
 }
 </script>
 

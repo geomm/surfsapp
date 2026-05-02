@@ -1,27 +1,27 @@
-import mongoose, { Schema } from 'mongoose'
+import mongoose, { Schema } from 'mongoose';
 
 export interface IHourlyForecast {
-  timestamp: Date
-  rawData: Record<string, unknown>
-  surfScore: number
-  label: 'poor' | 'maybe' | 'good' | 'very-good'
-  reasons: string[]
-  confidence: number
+  timestamp: Date;
+  rawData: Record<string, unknown>;
+  surfScore: number;
+  label: 'poor' | 'maybe' | 'good' | 'very-good';
+  reasons: string[];
+  confidence: number;
 }
 
 export interface IDailySummary {
-  date: string
-  bestWindowStart: string
-  bestWindowEnd: string
-  peakScore: number
-  overallLabel: 'poor' | 'maybe' | 'good' | 'very-good'
+  date: string;
+  bestWindowStart: string;
+  bestWindowEnd: string;
+  peakScore: number;
+  overallLabel: 'poor' | 'maybe' | 'good' | 'very-good';
 }
 
 export interface IForecastSnapshot {
-  beachId: string
-  fetchedAt: Date
-  hourlyForecasts: IHourlyForecast[]
-  dailySummaries: IDailySummary[]
+  beachId: string;
+  fetchedAt: Date;
+  hourlyForecasts: IHourlyForecast[];
+  dailySummaries: IDailySummary[];
 }
 
 const HourlyForecastSchema = new Schema<IHourlyForecast>(
@@ -37,8 +37,8 @@ const HourlyForecastSchema = new Schema<IHourlyForecast>(
     reasons: { type: [String], required: true },
     confidence: { type: Number, required: true },
   },
-  { _id: false }
-)
+  { _id: false },
+);
 
 const DailySummarySchema = new Schema<IDailySummary>(
   {
@@ -52,20 +52,20 @@ const DailySummarySchema = new Schema<IDailySummary>(
       enum: ['poor', 'maybe', 'good', 'very-good'],
     },
   },
-  { _id: false }
-)
+  { _id: false },
+);
 
 export const ForecastSnapshotSchema = new Schema<IForecastSnapshot>({
   beachId: { type: String, required: true },
   fetchedAt: { type: Date, required: true },
   hourlyForecasts: { type: [HourlyForecastSchema], required: true },
   dailySummaries: { type: [DailySummarySchema], required: true },
-})
+});
 
-ForecastSnapshotSchema.index({ beachId: 1 })
-ForecastSnapshotSchema.index({ fetchedAt: -1 })
+ForecastSnapshotSchema.index({ beachId: 1 });
+ForecastSnapshotSchema.index({ fetchedAt: -1 });
 
 export const ForecastSnapshot = mongoose.model<IForecastSnapshot>(
   'ForecastSnapshot',
-  ForecastSnapshotSchema
-)
+  ForecastSnapshotSchema,
+);

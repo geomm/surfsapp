@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
-const sheetOpen = ref(false)
+const sheetOpen = ref(false);
 </script>
 
 <template>
@@ -61,13 +61,39 @@ const sheetOpen = ref(false)
     <section>
       <h2>surf-icon</h2>
       <div class="row">
-        <div v-for="icon in ['waves','heart','map-pin','wind','star','chevron-right','arrow-left','refresh-cw']" :key="icon" class="item">
+        <div
+          v-for="icon in [
+            'waves',
+            'heart',
+            'map-pin',
+            'wind',
+            'star',
+            'chevron-right',
+            'arrow-left',
+            'refresh-cw',
+          ]"
+          :key="icon"
+          class="item"
+        >
           <span class="label">{{ icon }} / 24</span>
           <surf-icon :name="icon" :size="24"></surf-icon>
         </div>
       </div>
       <div class="row">
-        <div v-for="icon in ['waves','heart','map-pin','wind','star','chevron-right','arrow-left','refresh-cw']" :key="icon + '-32'" class="item">
+        <div
+          v-for="icon in [
+            'waves',
+            'heart',
+            'map-pin',
+            'wind',
+            'star',
+            'chevron-right',
+            'arrow-left',
+            'refresh-cw',
+          ]"
+          :key="icon + '-32'"
+          class="item"
+        >
           <span class="label">{{ icon }} / 32</span>
           <surf-icon :name="icon" :size="32"></surf-icon>
         </div>
@@ -77,8 +103,8 @@ const sheetOpen = ref(false)
     <!-- surf-button -->
     <section>
       <h2>surf-button</h2>
-      <div v-for="variant in ['primary','secondary','ghost']" :key="variant" class="row">
-        <div v-for="size in ['sm','md','lg']" :key="size" class="item">
+      <div v-for="variant in ['primary', 'secondary', 'ghost']" :key="variant" class="row">
+        <div v-for="size in ['sm', 'md', 'lg']" :key="size" class="item">
           <span class="label">{{ variant }} / {{ size }}</span>
           <surf-button :variant="variant" :size="size">{{ variant }}</surf-button>
         </div>
@@ -97,13 +123,13 @@ const sheetOpen = ref(false)
       <div class="row">
         <div class="item">
           <span class="label">non-clickable</span>
-          <surf-card style="width:200px">
+          <surf-card style="width: 200px">
             <p>This is a card with sample content.</p>
           </surf-card>
         </div>
         <div class="item">
           <span class="label">clickable</span>
-          <surf-card clickable style="width:200px">
+          <surf-card clickable style="width: 200px">
             <p>Hover me for shadow. Click me for event.</p>
           </surf-card>
         </div>
@@ -132,11 +158,7 @@ const sheetOpen = ref(false)
     <section>
       <h2>surf-bottom-sheet</h2>
       <surf-button @click="sheetOpen = true">Open Sheet</surf-button>
-      <surf-bottom-sheet
-        :open="sheetOpen"
-        title="Filters"
-        @sheet-close="sheetOpen = false"
-      >
+      <surf-bottom-sheet :open="sheetOpen" title="Filters" @sheet-close="sheetOpen = false">
         <p>Sample sheet content goes here.</p>
         <surf-button @click="sheetOpen = false">Close</surf-button>
       </surf-bottom-sheet>

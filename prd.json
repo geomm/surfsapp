@@ -20,7 +20,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-001."
     },
     {
@@ -36,7 +36,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-002. Depends on US-001 only insofar as both should land before US-003's pre-commit hook is added."
     },
     {
@@ -54,7 +54,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-003. Depends on US-001 (lint config) and US-002 (strict tsconfig) so the staged-file checks have something real to run."
     },
     {
@@ -73,7 +73,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-003 (Backend performance & resilience). PRD US-008. Sequenced before the worker offload so the worker code can use the new log wrapper from day one."
     },
     {
@@ -96,7 +96,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-003 (Backend performance & resilience). PRD US-007. Depends on US-004 for the structured log wrapper used inside the worker."
     },
     {
@@ -116,7 +116,7 @@
         "Verify in browser using dev-browser skill: home loads, list scrolls smoothly, navigating to /map still mounts the map after the lazy chunk loads"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-002 (Frontend performance pass). PRD US-005. Depends on US-001/US-002 (lint + tsconfig) and US-003 (pre-commit) only insofar as those gates must already pass on main when this story lands."
     },
     {
@@ -134,7 +134,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-002 (Frontend performance pass). PRD US-006. Depends on US-006 because the budget value is the largest chunk size measured at that point."
     },
     {
@@ -151,7 +151,7 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-004. Last in the order so it documents the scripts and hooks introduced by earlier stories — avoids the README drifting as those land."
     }
   ]

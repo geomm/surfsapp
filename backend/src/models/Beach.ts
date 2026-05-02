@@ -1,57 +1,57 @@
-import mongoose, { Schema } from 'mongoose'
+import mongoose, { Schema } from 'mongoose';
 
 export interface IWindScoringLogic {
-  type: 'wave-generating-onshore'
+  type: 'wave-generating-onshore';
   swellGeneratingWind: {
-    directionDeg: number
-    directionLabel: string
-    minSpeedKmh: number
-    comment: string
-  }
+    directionDeg: number;
+    directionLabel: string;
+    minSpeedKmh: number;
+    comment: string;
+  };
   qualityMultiplier: {
-    triggerWind: string
-    triggerDirectionDeg: number
-    effect: 'increase' | 'decrease'
-    comment: string
-  }
+    triggerWind: string;
+    triggerDirectionDeg: number;
+    effect: 'increase' | 'decrease';
+    comment: string;
+  };
   messinesspenalty: {
-    triggerWind: string
-    thresholdSpeedKmh: number
-    effect: 'increase' | 'decrease'
-    comment: string
-  }
-  optimalScenario: string
+    triggerWind: string;
+    thresholdSpeedKmh: number;
+    effect: 'increase' | 'decrease';
+    comment: string;
+  };
+  optimalScenario: string;
 }
 
 export interface IBeach {
-  id: string
-  name: string
-  coords: { lat: number; lon: number }
-  offshoreCoords?: { lat: number; lon: number }
-  region: string
-  description: string
-  shorelineNormalDeg: number
-  idealSwellDirection: [number, number]
-  acceptableSwellDirection: [number, number]
-  minSwellHeightM: number
-  idealSwellHeightM: [number, number]
-  minSwellPeriodS: number
-  idealSwellPeriodS: [number, number]
-  maxOnshoreWindKmh: number
-  idealWindDescription: 'wave-generating-onshore' | 'offshore-or-light'
-  windScoringLogic?: IWindScoringLogic
+  id: string;
+  name: string;
+  coords: { lat: number; lon: number };
+  offshoreCoords?: { lat: number; lon: number };
+  region: string;
+  description: string;
+  shorelineNormalDeg: number;
+  idealSwellDirection: [number, number];
+  acceptableSwellDirection: [number, number];
+  minSwellHeightM: number;
+  idealSwellHeightM: [number, number];
+  minSwellPeriodS: number;
+  idealSwellPeriodS: [number, number];
+  maxOnshoreWindKmh: number;
+  idealWindDescription: 'wave-generating-onshore' | 'offshore-or-light';
+  windScoringLogic?: IWindScoringLogic;
   weights: {
-    swellDirection: number
-    swellPeriod: number
-    swellHeight: number
-    wind: number
-    tide: number
-  }
-  sheltered: boolean
-  longPeriodSwellRefracts: boolean
-  skillLevel: 'beginner' | 'intermediate' | 'advanced'
-  tags: string[]
-  notes?: string
+    swellDirection: number;
+    swellPeriod: number;
+    swellHeight: number;
+    wind: number;
+    tide: number;
+  };
+  sheltered: boolean;
+  longPeriodSwellRefracts: boolean;
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  tags: string[];
+  notes?: string;
 }
 
 export const BeachSchema = new Schema<IBeach>(
@@ -123,7 +123,7 @@ export const BeachSchema = new Schema<IBeach>(
     tags: { type: [String], required: true },
     notes: { type: String },
   },
-  { _id: true }
-)
+  { _id: true },
+);
 
-export const Beach = mongoose.model<IBeach>('Beach', BeachSchema)
+export const Beach = mongoose.model<IBeach>('Beach', BeachSchema);

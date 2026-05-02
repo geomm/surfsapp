@@ -53,7 +53,14 @@
       <div class="spacing-list">
         <div v-for="token in spacingTokens" :key="token.name" class="spacing-row">
           <span class="spacing-label">{{ token.name }} ({{ token.value }})</span>
-          <div class="spacing-bar" :style="{ width: `var(${token.name})`, height: '16px', backgroundColor: 'var(--color-primary)' }"></div>
+          <div
+            class="spacing-bar"
+            :style="{
+              width: `var(${token.name})`,
+              height: '16px',
+              backgroundColor: 'var(--color-primary)',
+            }"
+          ></div>
         </div>
       </div>
     </section>
@@ -102,7 +109,7 @@ const oceanTokens = [
   { name: '--color-ocean-700' },
   { name: '--color-ocean-800' },
   { name: '--color-ocean-900' },
-]
+];
 
 const sandTokens = [
   { name: '--color-sand-50' },
@@ -115,7 +122,7 @@ const sandTokens = [
   { name: '--color-sand-700' },
   { name: '--color-sand-800' },
   { name: '--color-sand-900' },
-]
+];
 
 const neutralTokens = [
   { name: '--color-neutral-0' },
@@ -129,14 +136,14 @@ const neutralTokens = [
   { name: '--color-neutral-700' },
   { name: '--color-neutral-800' },
   { name: '--color-neutral-900' },
-]
+];
 
 const surfScoreTokens = [
   { name: '--color-surf-very-good' },
   { name: '--color-surf-good' },
   { name: '--color-surf-maybe' },
   { name: '--color-surf-poor' },
-]
+];
 
 const uiAliasTokens = [
   { name: '--color-background' },
@@ -146,7 +153,7 @@ const uiAliasTokens = [
   { name: '--color-border' },
   { name: '--color-primary' },
   { name: '--color-accent' },
-]
+];
 
 const spacingTokens = [
   { name: '--space-1', value: '4px' },
@@ -161,7 +168,7 @@ const spacingTokens = [
   { name: '--space-10', value: '40px' },
   { name: '--space-11', value: '44px' },
   { name: '--space-12', value: '48px' },
-]
+];
 
 const typographyTokens = [
   { name: '--font-size-xs' },
@@ -172,7 +179,7 @@ const typographyTokens = [
   { name: '--font-size-2xl' },
   { name: '--font-size-3xl' },
   { name: '--font-size-4xl' },
-]
+];
 
 const zIndexTokens = [
   { name: '--z-below', value: '-1' },
@@ -182,7 +189,7 @@ const zIndexTokens = [
   { name: '--z-overlay', value: '200' },
   { name: '--z-modal', value: '300' },
   { name: '--z-toast', value: '400' },
-]
+];
 </script>
 
 <style scoped>

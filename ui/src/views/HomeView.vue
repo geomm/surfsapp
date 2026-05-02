@@ -1,30 +1,30 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useBeachStore } from '../stores/beachStore'
-import type { Beach } from '../types/beach'
-import { degreesToCompass } from '../utils/compass'
-import { formatRelativeTime, isStale } from '../utils/time'
-import { usePullToRefresh } from '../composables/usePullToRefresh'
-import { useInstallPrompt } from '../composables/useInstallPrompt'
-import FilterSheet from '../components/FilterSheet.vue'
-import ViewSwitcherFab from '../components/ViewSwitcherFab.vue'
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useBeachStore } from '../stores/beachStore';
+import type { Beach } from '../types/beach';
+import { degreesToCompass } from '../utils/compass';
+import { formatRelativeTime, isStale } from '../utils/time';
+import { usePullToRefresh } from '../composables/usePullToRefresh';
+import { useInstallPrompt } from '../composables/useInstallPrompt';
+import FilterSheet from '../components/FilterSheet.vue';
+import ViewSwitcherFab from '../components/ViewSwitcherFab.vue';
 
-const beachStore = useBeachStore()
-const router = useRouter()
-const scrollRoot = ref<HTMLElement | null>(null)
-const filterSheetOpen = ref(false)
+const beachStore = useBeachStore();
+const router = useRouter();
+const scrollRoot = ref<HTMLElement | null>(null);
+const filterSheetOpen = ref(false);
 
 function openBeach(b: Beach) {
-  router.push({ name: 'beach-detail', params: { id: b.id } })
+  router.push({ name: 'beach-detail', params: { id: b.id } });
 }
 
 const { isPulling, pullDistance, isRefreshing, trigger } = usePullToRefresh(scrollRoot, {
   threshold: 60,
   onRefresh: () => beachStore.fetchBeaches(),
-})
+});
 
-const { canInstall, promptInstall, showIosGuide, dismissIosGuide } = useInstallPrompt()
+const { canInstall, promptInstall, showIosGuide, dismissIosGuide } = useInstallPrompt();
 
 function hasForecast(b: Beach): boolean {
   return (
@@ -33,61 +33,63 @@ function hasForecast(b: Beach): boolean {
     b.swellDirection != null &&
     b.windSpeed != null &&
     b.windDirection != null
-  )
+  );
 }
 
 function swellText(b: Beach): string {
-  return `${(b.swellHeight as number).toFixed(1)}m · ${Math.round(b.swellPeriod as number)}s · ${degreesToCompass(b.swellDirection as number)}`
+  return `${(b.swellHeight as number).toFixed(1)}m · ${Math.round(b.swellPeriod as number)}s · ${degreesToCompass(b.swellDirection as number)}`;
 }
 
 function windText(b: Beach): string {
-  return `${Math.round(b.windSpeed as number)} km/h ${degreesToCompass(b.windDirection as number)}`
+  return `${Math.round(b.windSpeed as number)} km/h ${degreesToCompass(b.windDirection as number)}`;
 }
 
 function hhmm(iso: string): string {
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function bestWindow(b: Beach): string | null {
-  if (!b.bestWindowStart || !b.bestWindowEnd) return null
-  return `Best: ${hhmm(b.bestWindowStart)}–${hhmm(b.bestWindowEnd)}`
+  if (!b.bestWindowStart || !b.bestWindowEnd) return null;
+  return `Best: ${hhmm(b.bestWindowStart)}–${hhmm(b.bestWindowEnd)}`;
 }
 
 onMounted(() => {
-  beachStore.fetchBeaches()
-})
+  beachStore.fetchBeaches();
+});
 
 function retry() {
-  trigger()
+  trigger();
 }
 
 function badgeVariant(beach: Beach): string {
-  return beach.currentLabel ?? 'neutral'
+  return beach.currentLabel ?? 'neutral';
 }
 
 function stalenessText(b: Beach): string {
-  if (!b.lastUpdated) return 'No data yet'
-  return formatRelativeTime(b.lastUpdated)
+  if (!b.lastUpdated) return 'No data yet';
+  return formatRelativeTime(b.lastUpdated);
 }
 
 function stalenessWarn(b: Beach): boolean {
-  return !!b.lastUpdated && isStale(b.lastUpdated, 6)
+  return !!b.lastUpdated && isStale(b.lastUpdated, 6);
 }
 
 function isFavourite(b: Beach): boolean {
-  return beachStore.favourites.has(b.id)
+  return beachStore.favourites.has(b.id);
 }
 
 function toggleFav(b: Beach) {
-  beachStore.toggleFavourite(b.id)
+  beachStore.toggleFavourite(b.id);
 }
 </script>
 
 <template>
   <div ref="scrollRoot" class="home">
     <header class="header">
-      <h1 class="title"><img src="/logo.svg" width="24px" height="24px" alt="surfsapp" />surfsapp</h1>
+      <h1 class="title">
+        <img src="/logo.svg" width="24px" height="24px" alt="surfsapp" />surfsapp
+      </h1>
       <button
         type="button"
         class="fav-filter-btn"
@@ -105,7 +107,11 @@ function toggleFav(b: Beach) {
         @click="filterSheetOpen = true"
       >
         <surf-icon name="sliders-horizontal"></surf-icon>
-        <span v-if="beachStore.activeFilterCount > 0" class="filter-badge" aria-hidden="true"></span>
+        <span
+          v-if="beachStore.activeFilterCount > 0"
+          class="filter-badge"
+          aria-hidden="true"
+        ></span>
       </button>
       <button
         v-if="canInstall"
@@ -256,18 +262,11 @@ function toggleFav(b: Beach) {
 
     <FilterSheet :open="filterSheetOpen" @close="filterSheetOpen = false" />
 
-    <surf-bottom-sheet
-      :open="showIosGuide"
-      @close="dismissIosGuide"
-    >
+    <surf-bottom-sheet :open="showIosGuide" @close="dismissIosGuide">
       <div class="ios-guide">
         <h2 class="ios-guide-title">Install surfsapp</h2>
-        <p class="ios-guide-step">
-          1. Tap the <strong>Share</strong> button in Safari's toolbar.
-        </p>
-        <p class="ios-guide-step">
-          2. Choose <strong>Add to Home Screen</strong>.
-        </p>
+        <p class="ios-guide-step">1. Tap the <strong>Share</strong> button in Safari's toolbar.</p>
+        <p class="ios-guide-step">2. Choose <strong>Add to Home Screen</strong>.</p>
         <p class="ios-guide-step">
           3. Tap <strong>Add</strong> — surfsapp will launch fullscreen from your home screen.
         </p>
@@ -569,8 +568,12 @@ function toggleFav(b: Beach) {
 }
 
 @keyframes ptr-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .refresh-btn[disabled] {
@@ -636,8 +639,12 @@ function toggleFav(b: Beach) {
 }
 
 @keyframes skeleton-shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

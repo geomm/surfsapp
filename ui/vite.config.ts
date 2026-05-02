@@ -1,8 +1,11 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  build: {
+    chunkSizeWarningLimit: 1155, // v0.2 baseline largest chunk + 10% headroom — see docs/perf-baseline.md
+  },
   plugins: [
     vue({
       template: {
@@ -71,4 +74,4 @@ export default defineConfig({
       },
     },
   },
-})
+});

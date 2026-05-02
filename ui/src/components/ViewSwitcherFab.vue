@@ -1,32 +1,25 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const isOnMap = computed(() => route.name === 'beach-map')
-const iconName = computed(() => (isOnMap.value ? 'list' : 'map'))
-const ariaLabel = computed(() =>
-  isOnMap.value ? 'Open list view' : 'Open map view'
-)
+const isOnMap = computed(() => route.name === 'beach-map');
+const iconName = computed(() => (isOnMap.value ? 'list' : 'map'));
+const ariaLabel = computed(() => (isOnMap.value ? 'Open list view' : 'Open map view'));
 
 function handleClick() {
   if (isOnMap.value) {
-    router.push('/')
+    router.push('/');
   } else {
-    router.push({ name: 'beach-map' })
+    router.push({ name: 'beach-map' });
   }
 }
 </script>
 
 <template>
-  <button
-    type="button"
-    class="view-switcher-fab"
-    :aria-label="ariaLabel"
-    @click="handleClick"
-  >
+  <button type="button" class="view-switcher-fab" :aria-label="ariaLabel" @click="handleClick">
     <surf-icon :name="iconName" color="#ffffff"></surf-icon>
   </button>
 </template>

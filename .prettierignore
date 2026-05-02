@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+.cache
+.vite
+ui/dist
+ui/public
+backend/dist
+**/*.min.js
+yarn.lock
+package-lock.json

@@ -1,18 +1,18 @@
-import { LitElement, html, css } from 'lit'
+import { LitElement, html, css } from 'lit';
 
 class SurfCard extends LitElement {
   static properties = {
     clickable: { type: Boolean },
     padding: { type: String },
-  }
+  };
 
-  declare clickable: boolean
-  declare padding: 'sm' | 'md' | 'lg'
+  declare clickable: boolean;
+  declare padding: 'sm' | 'md' | 'lg';
 
   constructor() {
-    super()
-    this.clickable = false
-    this.padding = 'sm'
+    super();
+    this.clickable = false;
+    this.padding = 'sm';
   }
 
   static styles = css`
@@ -42,28 +42,28 @@ class SurfCard extends LitElement {
     .card.clickable:hover {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
-  `
+  `;
 
   private handleClick() {
     if (this.clickable) {
-      this.dispatchEvent(new CustomEvent('card-click', { bubbles: true, composed: true }))
+      this.dispatchEvent(new CustomEvent('card-click', { bubbles: true, composed: true }));
     }
   }
 
   render() {
-    const classes = `card padding-${this.padding}${this.clickable ? ' clickable' : ''}`
+    const classes = `card padding-${this.padding}${this.clickable ? ' clickable' : ''}`;
     return html`
       <div class="${classes}" @click="${this.handleClick}">
         <slot></slot>
       </div>
-    `
+    `;
   }
 }
 
-customElements.define('surf-card', SurfCard)
+customElements.define('surf-card', SurfCard);
 
 declare global {
   interface HTMLElementTagNameMap {
-    'surf-card': SurfCard
+    'surf-card': SurfCard;
   }
 }
