@@ -230,7 +230,7 @@
 ## 2026-04-11 - US-001 (Phase 9)
 - Branch ralph/phase-9-offline-first created from main.
 - Installed vite-plugin-pwa@1.2.0 as a dev dependency in ui/.
-- Updated ui/vite.config.ts: imported VitePWA and added to plugins array with registerType 'prompt', workbox globPatterns ['**/*.{js,css,html,ico,png,svg,woff2}'], and a minimal manifest (name/short_name 'surfsapp', theme_color '#1a73e8', background_color '#ffffff', display 'standalone'). No icons included (Phase 10).
+- Updated ui/vite.config.ts: imported VitePWA and added to plugins array with registerType 'prompt', workbox globPatterns ['**/*.{js,css,html,ico,png,svg,woff2}'], and a minimal manifest (name/short_name 'surfsapp', theme_color '#65dfbf', background_color '#ffffff', display 'standalone'). No icons included (Phase 10).
 - Created ui/src/vite-env.d.ts with /// <reference types="vite/client" /> and /// <reference types="vite-plugin-pwa/vue" /> so future virtual:pwa-register/vue imports typecheck.
 - Files changed: ui/package.json, ui/yarn.lock, ui/vite.config.ts, ui/src/vite-env.d.ts, prd.json
 - **Learnings for future iterations:**
@@ -242,7 +242,7 @@
 
 ## 2026-04-11 - US-006 (Phase 9)
 - Created ui/src/composables/useServiceWorker.ts: wraps useRegisterSW from virtual:pwa-register/vue, exposes needRefresh ref + updateServiceWorker function, logs onRegisterError.
-- App.vue: imported useServiceWorker and added a second fixed-top banner (.update-banner) rendered via <Transition name="banner"> that reuses the existing slide-down/up CSS. Blue background (var(--color-primary, #1a73e8)), white 'New version available' text and a <surf-button variant="secondary" size="sm"> Refresh button that calls updateServiceWorker(true). Offline takes priority: showUpdateBanner is gated by `needRefresh && isOnline`, so when offline the update banner is hidden even if a new SW is waiting.
+- App.vue: imported useServiceWorker and added a second fixed-top banner (.update-banner) rendered via <Transition name="banner"> that reuses the existing slide-down/up CSS. Blue background (var(--color-primary, #65dfbf)), white 'New version available' text and a <surf-button variant="secondary" size="sm"> Refresh button that calls updateServiceWorker(true). Offline takes priority: showUpdateBanner is gated by `needRefresh && isOnline`, so when offline the update banner is hidden even if a new SW is waiting.
 - The app-shell--banner padding-top is now driven by a shared showAnyBanner computed so either banner pushes the page content down by 40px.
 - The update banner's surf-button overrides --color-primary to #ffffff so the secondary variant's text/border render white on the blue banner background.
 - Files changed: ui/src/composables/useServiceWorker.ts, ui/src/App.vue, prd.json
@@ -292,7 +292,7 @@
 ## 2026-04-18 - US-001 (Phase 10)
 - Branch ralph/phase-10-pwa-installation created from main.
 - Installed @vite-pwa/assets-generator@1.0.2 as dev dependency in ui/.
-- Created ui/public/logo.svg: 512x512 viewBox, rounded-square background #1a73e8, two stacked white wave silhouettes (the back wave at 0.65 opacity for depth). No gradients, no text, geometric Bézier curves only. 15 lines.
+- Created ui/public/logo.svg: 512x512 viewBox, rounded-square background #65dfbf, two stacked white wave silhouettes (the back wave at 0.65 opacity for depth). No gradients, no text, geometric Bézier curves only. 15 lines.
 - Created ui/pwa-assets.config.ts using minimal2023Preset spread + override maskable sizes to [192, 512] (the preset only ships 512) and override assetName to emit pwa-maskable-* instead of the default maskable-icon-* prefix. Source image public/logo.svg, headLinkOptions preset '2023'.
 - Added "generate-pwa-assets": "pwa-assets-generator" script to ui/package.json.
 - Running yarn generate-pwa-assets produced ui/public/: pwa-64x64.png (bonus from preset), pwa-192x192.png, pwa-512x512.png, pwa-maskable-192x192.png, pwa-maskable-512x512.png, favicon.ico, apple-touch-icon-180x180.png.

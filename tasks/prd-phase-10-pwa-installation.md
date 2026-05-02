@@ -19,11 +19,13 @@ Phase 10 makes surfsapp installable as a native-feeling app on desktop (Chrome, 
 ## User Stories
 
 ### US-001: Generate placeholder icon asset set
+
 **Description:** As a developer, I need a consistent set of app icons so the manifest can reference real image files.
 
 **Acceptance Criteria:**
+
 - [ ] Install `@vite-pwa/assets-generator` as a dev dependency via `yarn add -D @vite-pwa/assets-generator` in `ui/`
-- [ ] Create `ui/public/logo.svg` — a simple placeholder: a blue rounded-square background (`#1a73e8`) with a stylised white wave silhouette (3-line wave or single curve) centered, 512x512 viewBox; no text
+- [ ] Create `ui/public/logo.svg` — a simple placeholder: a blue rounded-square background (`#65dfbf`) with a stylised white wave silhouette (3-line wave or single curve) centered, 512x512 viewBox; no text
 - [ ] Create `ui/pwa-assets.config.ts` using the `createAppIconsOnlyPreset` from `@vite-pwa/assets-generator/config` with source image `public/logo.svg`
 - [ ] Add script to `ui/package.json`: `"generate-pwa-assets": "pwa-assets-generator"`
 - [ ] Run the generator (`yarn generate-pwa-assets`) to output into `ui/public/`: `pwa-192x192.png`, `pwa-512x512.png`, `pwa-maskable-192x192.png`, `pwa-maskable-512x512.png`, `favicon.ico`, `apple-touch-icon-180x180.png`
@@ -33,14 +35,16 @@ Phase 10 makes surfsapp installable as a native-feeling app on desktop (Chrome, 
 **Notes:** Use a hand-written SVG source for the logo — keep it under 50 lines, no gradients, clean geometric shapes. The generator handles producing all PNG sizes and the maskable variants (with safe-area padding).
 
 ### US-002: Expand PWA manifest
+
 **Description:** As a user, I want the installed app to show a proper icon, name, and metadata so it feels like a native app.
 
 **Acceptance Criteria:**
+
 - [ ] `ui/vite.config.ts` manifest config expanded with:
   - `name: 'surfsapp — Greek Surf Conditions'`
   - `short_name: 'surfsapp'`
   - `description: 'Surf conditions and forecasts for beaches across Greece. Offline-ready.'`
-  - `theme_color: '#1a73e8'`
+  - `theme_color: '#65dfbf'`
   - `background_color: '#ffffff'`
   - `display: 'standalone'`
   - `orientation: 'portrait'`
@@ -54,9 +58,11 @@ Phase 10 makes surfsapp installable as a native-feeling app on desktop (Chrome, 
 - [ ] Verify in browser using dev-browser skill (check Application tab shows all icons loaded and no manifest errors)
 
 ### US-003: Add iOS-specific meta tags and favicon
+
 **Description:** As an iOS user, I want "Add to Home Screen" to use the correct icon and launch the app in standalone mode.
 
 **Acceptance Criteria:**
+
 - [ ] `ui/index.html` `<head>` updated with:
   - `<link rel="icon" href="/favicon.ico" sizes="48x48">`
   - `<link rel="icon" href="/logo.svg" type="image/svg+xml">`
@@ -64,16 +70,18 @@ Phase 10 makes surfsapp installable as a native-feeling app on desktop (Chrome, 
   - `<meta name="apple-mobile-web-app-capable" content="yes">`
   - `<meta name="apple-mobile-web-app-status-bar-style" content="default">`
   - `<meta name="apple-mobile-web-app-title" content="surfsapp">`
-  - `<meta name="theme-color" content="#1a73e8">`
+  - `<meta name="theme-color" content="#65dfbf">`
   - `<meta name="description" content="Surf conditions and forecasts for beaches across Greece. Offline-ready.">`
 - [ ] Existing `<title>` and viewport meta tags preserved
 - [ ] Typecheck passes
 - [ ] Verify in browser using dev-browser skill (inspect `<head>` and confirm all meta tags are present)
 
 ### US-004: Generate iOS splash screens
+
 **Description:** As an iOS user, I want a polished splash screen when launching the installed app so it feels native.
 
 **Acceptance Criteria:**
+
 - [ ] Update `ui/pwa-assets.config.ts` to use `createAppIconsAndSplashScreensPreset` (or equivalent) so the generator also produces iOS splash screens
 - [ ] Re-run `yarn generate-pwa-assets` to output splash screen PNGs in `ui/public/` for at least: iPhone 14/15 (1170x2532), iPhone 14/15 Pro Max (1290x2796), iPad 10.9" (1640x2360), iPad Pro 12.9" (2048x2732) — both portrait orientation
 - [ ] `ui/index.html` `<head>` updated with `<link rel="apple-touch-startup-image" ...>` entries for each generated splash screen size, each with a matching `media` query for the target device (e.g., `(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)`)
@@ -84,9 +92,11 @@ Phase 10 makes surfsapp installable as a native-feeling app on desktop (Chrome, 
 **Notes:** The `@vite-pwa/assets-generator` output includes an HTML snippet for the splash `<link>` tags — copy it verbatim into `index.html` rather than hand-writing. Splash screens only activate when the app is launched from the home screen on iOS.
 
 ### US-005: Install prompt composable and "Install app" button
+
 **Description:** As a user, I want a clear "Install app" button so I can add surfsapp to my home screen without hunting through the browser menu.
 
 **Acceptance Criteria:**
+
 - [ ] `ui/src/composables/useInstallPrompt.ts` created:
   - Exports `canInstall` (reactive boolean ref, true when a `beforeinstallprompt` event has been captured)
   - Exports `promptInstall` (function that calls `prompt()` on the captured event, awaits `userChoice`, then clears the captured event)

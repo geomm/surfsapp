@@ -449,7 +449,7 @@ function toggleFav(b: Beach) {
 }
 
 .beach-name {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }

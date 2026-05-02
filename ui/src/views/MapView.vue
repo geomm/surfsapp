@@ -360,7 +360,7 @@ function handleLocateMe() {
             'width: 18px',
             'height: 18px',
             'border-radius: 50%',
-            'background: #1a73e8',
+            'background: #65dfbf',
             'border: 3px solid #ffffff',
             'box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3)',
             'box-sizing: border-box',

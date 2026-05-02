@@ -41,11 +41,10 @@ function handleRefresh() {
 
 <style>
 html {
-  background-color: var(--color-surf-maybe);
   background:
     linear-gradient(
       180deg,
-      rgb(from var(--color-surf-maybe) r g b / 0.45),
+      rgb(from var(--bg-top-pure-tone-color) r g b / 0.45),
       rgb(from var(--color-ocean-500) r g b / 0.15)
     ),
     url('./assets/background-waves.jpg');
@@ -53,7 +52,7 @@ html {
   background-position: center center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  background-color: var(--bg-bottom-ocean-500-background-waves);
+  background-color: var(--bg-top-surf-maybe-background-waves);
 }
 </style>
 
@@ -88,7 +87,7 @@ html {
   align-items: center;
   justify-content: center;
   gap: var(--space-3, 0.75rem);
-  background: var(--color-primary, #1a73e8);
+  background: var(--color-primary, #65dfbf);
   color: #ffffff;
   font-weight: 600;
   font-size: var(--font-size-sm, 0.875rem);

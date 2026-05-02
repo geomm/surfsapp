@@ -29,7 +29,7 @@ export default defineConfig({
     basePreset,
     {
       padding: 0.3,
-      resizeOptions: { fit: 'contain', background: '#1a73e8' },
+      resizeOptions: { fit: 'contain', background: '#65dfbf' },
       linkMediaOptions: { log: true, addMediaScreen: true, basePath: '/', xhtml: false },
     },
     ['iPhone 14', 'iPhone 14 Pro Max', 'iPad Air 10.9"', 'iPad Pro 12.9"'],

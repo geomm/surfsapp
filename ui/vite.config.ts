@@ -23,7 +23,7 @@ export default defineConfig({
         name: 'surfsapp — Greek Surf Conditions',
         short_name: 'surfsapp',
         description: 'Surf conditions and forecasts for beaches across Greece. Offline-ready.',
-        theme_color: '#1a73e8',
+        theme_color: '#65dfbf',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',

@@ -11,7 +11,7 @@
         "vite-plugin-pwa installed via yarn add -D vite-plugin-pwa in ui/",
         "vite.config.ts updated: import VitePWA from vite-plugin-pwa and add to plugins array",
         "PWA config: registerType 'prompt', workbox.globPatterns ['**/*.{js,css,html,ico,png,svg,woff2}']",
-        "manifest section with name 'surfsapp', short_name 'surfsapp', theme_color '#1a73e8', background_color '#ffffff', display 'standalone'",
+        "manifest section with name 'surfsapp', short_name 'surfsapp', theme_color '#65dfbf', background_color '#ffffff', display 'standalone'",
         "Add type reference for vite-plugin-pwa/vue in env.d.ts or vite-env.d.ts (/// <reference types='vite-plugin-pwa/vue' />) so virtual:pwa-register/vue imports typecheck",
         "Typecheck passes"
       ],

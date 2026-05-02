@@ -21,22 +21,26 @@ Phase 9 makes surfsapp fully usable offline after the first load. It installs th
 ## User Stories
 
 ### US-001: Install vite-plugin-pwa and configure service worker
+
 **Description:** As a developer, I need a service worker registered so the app shell is cached and the app loads offline.
 
 **Acceptance Criteria:**
+
 - [ ] `vite-plugin-pwa` installed via `yarn add -D vite-plugin-pwa` in `ui/`
 - [ ] `vite.config.ts` updated: import `VitePWA` from `vite-plugin-pwa` and add to plugins array
 - [ ] PWA config: `registerType: 'prompt'`, `workbox.globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']`
-- [ ] `manifest` section with `name: 'surfsapp'`, `short_name: 'surfsapp'`, `theme_color` matching `--color-primary` (or `#1a73e8`), `background_color: '#ffffff'`, `display: 'standalone'`
+- [ ] `manifest` section with `name: 'surfsapp'`, `short_name: 'surfsapp'`, `theme_color` matching `--color-primary` (or `#65dfbf`), `background_color: '#ffffff'`, `display: 'standalone'`
 - [ ] Service worker registers successfully in production build (`yarn build && yarn preview`)
 - [ ] Typecheck passes
 
 **Notes:** Do NOT add icon files in this story — Phase 10 handles icons. The manifest can reference placeholder paths. `registerType: 'prompt'` means the new SW waits for user action before activating (US-006 builds the prompt UI).
 
 ### US-002: Extend Dexie schema for beaches and forecasts cache
+
 **Description:** As a developer, I need IndexedDB tables to cache API responses so the app can serve data offline.
 
 **Acceptance Criteria:**
+
 - [ ] `ui/src/db.ts` updated: Dexie version bumped to 2
 - [ ] New table `beachesCache` with schema `&id` — stores full `Beach` objects
 - [ ] New table `forecastsCache` with schema `&beachId` — stores full `ForecastSnapshot` objects
@@ -46,9 +50,11 @@ Phase 9 makes surfsapp fully usable offline after the first load. It installs th
 - [ ] Typecheck passes
 
 ### US-003: Cache beaches and forecasts on successful fetch
+
 **Description:** As a user, I want the app to save the latest data locally so it's available when I'm offline.
 
 **Acceptance Criteria:**
+
 - [ ] In `beachStore.fetchBeaches()`: after successful API response and enrichment, write all beaches to `db.beachesCache` via `db.beachesCache.bulkPut(enriched)`
 - [ ] In `beachStore.fetchBeaches()`: for each beach where the forecast fetch succeeded, write the forecast to `db.forecastsCache` via `db.forecastsCache.put(forecast)` (where forecast includes `beachId`)
 - [ ] In `beachStore.fetchBeachDetail(id)`: after successful API response, write the beach to `db.beachesCache.put(beach)` and forecast to `db.forecastsCache.put(forecast)`
@@ -56,9 +62,11 @@ Phase 9 makes surfsapp fully usable offline after the first load. It installs th
 - [ ] Typecheck passes
 
 ### US-004: Network-first fetch with IndexedDB fallback
+
 **Description:** As a user, I want the app to show cached data when I'm offline so I can still check conditions.
 
 **Acceptance Criteria:**
+
 - [ ] In `beachStore.fetchBeaches()`: wrap the existing network fetch in a try/catch; on network failure, read from `db.beachesCache.toArray()` and for each cached beach read its forecast from `db.forecastsCache.get(beach.id)`; enrich cached beaches the same way as network beaches (swell/wind/bestWindow extraction); set `this.beaches` from cache
 - [ ] If both network and cache fail (no cached data), set `this.error` to a user-friendly message: "No internet connection and no cached data available"
 - [ ] In `beachStore.fetchBeachDetail(id)`: on network failure, read from `db.beachesCache.get(id)` and `db.forecastsCache.get(id)`; set `selectedBeach` and `selectedForecast` from cache
@@ -67,9 +75,11 @@ Phase 9 makes surfsapp fully usable offline after the first load. It installs th
 - [ ] Typecheck passes
 
 ### US-005: Offline banner
+
 **Description:** As a user, I want to know when I'm offline so I understand the data may be stale.
 
 **Acceptance Criteria:**
+
 - [ ] `ui/src/composables/useOnlineStatus.ts` created: exports a reactive `isOnline` ref that tracks `navigator.onLine` and listens to `online`/`offline` window events
 - [ ] `App.vue` imports `useOnlineStatus` and renders a top banner when `!isOnline`: yellow/amber background (`--color-surf-maybe` or `#f59e0b`), white text, full-width, fixed to top (z-index above header), text: "You're offline — showing cached data"
 - [ ] Banner has a subtle slide-down animation when appearing and slide-up when disappearing
@@ -79,9 +89,11 @@ Phase 9 makes surfsapp fully usable offline after the first load. It installs th
 - [ ] Verify in browser using dev-browser skill
 
 ### US-006: Prompt-to-update banner for new service worker
+
 **Description:** As a user, I want to know when a new version of the app is available so I can update.
 
 **Acceptance Criteria:**
+
 - [ ] `ui/src/composables/useServiceWorker.ts` created: imports `useRegisterSW` from `virtual:pwa-register/vue`, exposes `needRefresh` (boolean ref) and `updateServiceWorker` (function)
 - [ ] `App.vue` imports `useServiceWorker` and renders a top banner when `needRefresh` is true: blue/primary background, white text, text: "New version available", with a `<surf-button>` labelled "Refresh" that calls `updateServiceWorker(true)`
 - [ ] If both offline banner and update banner would show simultaneously, the offline banner takes priority (update banner hidden)

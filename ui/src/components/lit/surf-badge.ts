@@ -47,7 +47,7 @@ class SurfBadge extends LitElement {
     }
     .badge.variant-maybe {
       background: var(--color-surf-maybe);
-      color: var(--color-neutral-900);
+      color: var(--color-neutral-0);
     }
     .badge.variant-poor {
       background: var(--color-surf-poor);
