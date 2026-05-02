@@ -52,7 +52,7 @@ html {
   background-position: center center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  background-color: var(--bg-top-surf-maybe-background-waves);
+  background-color: var(--bg-top-pure-tone-color-background-waves);
 }
 </style>
 
