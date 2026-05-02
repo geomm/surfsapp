@@ -46,7 +46,7 @@ cp backend/.env.example .env
 docker compose up
 
 # 4. Seed beach data (first run only)
-docker compose exec backend npm run seed
+docker compose exec backend yarn seed
 
 # 5. Install root devDeps so the husky pre-commit hook is wired up
 npm install
@@ -57,7 +57,7 @@ npm install
 | Path                 | What it is                                                      |
 | -------------------- | --------------------------------------------------------------- |
 | `ui/`                | Vue 3 + Vite frontend (PWA). Yarn workspace.                    |
-| `backend/`           | Node.js + Express API + cron forecast fetcher. npm workspace.   |
+| `backend/`           | Node.js + Express API + cron forecast fetcher. Yarn workspace.  |
 | `docker-compose.yml` | Orchestrates `ui`, `backend`, `mongo` containers                |
 | `docs/`              | Plans, scoring engine, beach profiles, perf baselines           |
 | `scripts/`           | Bench harnesses (`bench-backend.mjs`, `bench-during-fetch.mjs`) |
@@ -77,7 +77,7 @@ docker compose up                                    # start everything
 docker compose logs -f ui backend                    # tail logs
 docker compose exec ui yarn typecheck                # typecheck the frontend
 docker compose restart ui                            # pick up vite.config changes
-docker compose exec backend npm run seed             # reseed beaches
+docker compose exec backend yarn seed                # reseed beaches
 ```
 
 The UI runs `vite` in dev mode. Fast HMR, but the service worker is **not registered** and PWA install is unavailable.
@@ -87,7 +87,7 @@ The UI runs `vite` in dev mode. Fast HMR, but the service worker is **not regist
 `docker-compose.yml` mounts `node_modules` as a **named volume** (`ui-node-modules`, `backend-node-modules`) so host edits don't churn the container's module cache. The downside: the volume is initialised once from the image and then ignores image rebuilds — pulling a branch that adds a new dep (e.g. `morgan`) leaves the container with stale `node_modules`, so it crash-loops with `Cannot find module '...'`. Install into the live volume and restart:
 
 ```bash
-docker compose exec backend npm install   # or: docker compose exec ui yarn install
+docker compose exec backend yarn install  # or: docker compose exec ui yarn install
 docker compose restart backend             # tsx --watch doesn't reload on node_modules changes
 ```
 
@@ -112,16 +112,16 @@ Serves the built `dist/` on port 5173 (same mapping as dev) with the service wor
 
 Run from the host (the lint and typecheck tools resolve config relative to cwd, so `cd` into the package first):
 
-| Package    | Command                           | What it does                              |
-| ---------- | --------------------------------- | ----------------------------------------- |
-| `ui/`      | `cd ui && yarn lint`              | ESLint flat config, `--max-warnings 0`    |
-| `ui/`      | `cd ui && yarn typecheck`         | `vue-tsc --noEmit` (full project)         |
-| `ui/`      | `cd ui && yarn format`            | `prettier --write .` (root `.prettierrc`) |
-| `ui/`      | `cd ui && yarn build`             | `vue-tsc && vite build` → `ui/dist/`      |
-| `backend/` | `cd backend && npm run lint`      | ESLint flat config, `--max-warnings 0`    |
-| `backend/` | `cd backend && npm run typecheck` | `tsc --noEmit`                            |
-| `backend/` | `cd backend && npm run format`    | `prettier --write .`                      |
-| `backend/` | `cd backend && npm run build`     | `tsc` → `backend/dist/`                   |
+| Package    | Command                        | What it does                              |
+| ---------- | ------------------------------ | ----------------------------------------- |
+| `ui/`      | `cd ui && yarn lint`           | ESLint flat config, `--max-warnings 0`    |
+| `ui/`      | `cd ui && yarn typecheck`      | `vue-tsc --noEmit` (full project)         |
+| `ui/`      | `cd ui && yarn format`         | `prettier --write .` (root `.prettierrc`) |
+| `ui/`      | `cd ui && yarn build`          | `vue-tsc && vite build` → `ui/dist/`      |
+| `backend/` | `cd backend && yarn lint`      | ESLint flat config, `--max-warnings 0`    |
+| `backend/` | `cd backend && yarn typecheck` | `tsc --noEmit`                            |
+| `backend/` | `cd backend && yarn format`    | `prettier --write .`                      |
+| `backend/` | `cd backend && yarn build`     | `tsc` → `backend/dist/`                   |
 
 These same commands run automatically on staged files via the pre-commit hook — see [Pre-commit hooks](#pre-commit-hooks) below.
 
