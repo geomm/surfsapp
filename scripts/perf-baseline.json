@@ -1,0 +1,42 @@
+{
+  "$schema": "machine-readable mirror of docs/perf-baseline.md — update both together",
+  "version": "v0.2-phase-1",
+  "recordedAt": "2026-05-02",
+  "recordedAtCommit": "7c3bd14",
+  "thresholds": {
+    "lighthousePerformanceHardFloor": 90,
+    "lighthousePerformanceRegressionPoints": 2,
+    "entryChunkGzipRegressionPct": 10,
+    "backendP95RegressionPct": 10
+  },
+  "frontend": {
+    "lighthouseMobile": {
+      "performance": 98,
+      "accessibility": 95,
+      "bestPractices": 96,
+      "seo": 92,
+      "tool": "lighthouse 12.8 default mobile preset (Moto G Power emulation, simulated 4G)",
+      "url": "http://127.0.0.1:4173/"
+    },
+    "chunksGzipKB": {
+      "indexEntry": 159,
+      "indexEntryCss": 3,
+      "maplibreLazyJs": 282,
+      "maplibreLazyCss": 10,
+      "mapView": 5,
+      "beachDetailView": 4
+    }
+  },
+  "backend": {
+    "host": "http://127.0.0.1:3000",
+    "samplesPerEndpoint": 60,
+    "idle": {
+      "GET /beaches": { "p50Ms": 6.0, "p95Ms": 9.4 },
+      "GET /beaches/:id/forecast": { "p50Ms": 2.3, "p95Ms": 2.8 }
+    },
+    "duringFetch": {
+      "GET /beaches": { "p50Ms": 6.3, "p95Ms": 10.7 },
+      "GET /beaches/:id/forecast": { "p50Ms": 2.4, "p95Ms": 3.7 }
+    }
+  }
+}

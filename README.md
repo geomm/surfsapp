@@ -82,6 +82,17 @@ docker compose exec backend npm run seed             # reseed beaches
 
 The UI runs `vite` in dev mode. Fast HMR, but the service worker is **not registered** and PWA install is unavailable.
 
+### After pulling a branch that adds dependencies
+
+`docker-compose.yml` mounts `node_modules` as a **named volume** (`ui-node-modules`, `backend-node-modules`) so host edits don't churn the container's module cache. The downside: the volume is initialised once from the image and then ignores image rebuilds — pulling a branch that adds a new dep (e.g. `morgan`) leaves the container with stale `node_modules`, so it crash-loops with `Cannot find module '...'`. Install into the live volume and restart:
+
+```bash
+docker compose exec backend npm install   # or: docker compose exec ui yarn install
+docker compose restart backend             # tsx --watch doesn't reload on node_modules changes
+```
+
+If `exec` fails because the container is in a crash loop, recreate the volume: `docker compose down && docker volume rm surfsapp_backend-node-modules && docker compose up backend -d`.
+
 ### HMR over Docker bind mounts (`usePolling`)
 
 `ui/vite.config.ts` sets `server.watch.usePolling: true`. The UI source is bind-mounted into the container (`./ui:/app`), and on macOS / Windows the Docker VM does not propagate native file-system events (`fsevents`/`inotify`) across that boundary. Without polling, edits on the host never trigger an HMR reload inside the container. Polling adds a small CPU cost but is the only reliable cross-platform watcher inside Docker — leave it on.
