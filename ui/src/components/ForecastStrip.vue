@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { DailySummary } from '../types/beach'
-import { formatWeekday, formatDayOfMonth } from '../utils/time'
+import type { DailySummary } from '../types/beach';
+import { formatWeekday, formatDayOfMonth } from '../utils/time';
 
 defineProps<{
-  dailySummaries: DailySummary[]
-}>()
+  dailySummaries: DailySummary[];
+}>();
 </script>
 
 <template>

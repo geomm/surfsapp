@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit'
-import { unsafeSVG } from 'lit/directives/unsafe-svg.js'
+import { LitElement, html, css } from 'lit';
+import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import {
   Waves,
   Heart,
@@ -15,9 +15,9 @@ import {
   Map,
   List,
   LocateFixed,
-} from 'lucide'
+} from 'lucide';
 
-type IconNode = [string, Record<string, string>]
+type IconNode = [string, Record<string, string>];
 
 const ICONS: Record<string, IconNode[]> = {
   waves: Waves as unknown as IconNode[],
@@ -34,17 +34,17 @@ const ICONS: Record<string, IconNode[]> = {
   map: Map as unknown as IconNode[],
   list: List as unknown as IconNode[],
   'locate-fixed': LocateFixed as unknown as IconNode[],
-}
+};
 
 function buildSvgChildren(nodes: IconNode[]): string {
   return nodes
     .map(([tag, attrs]) => {
       const attrStr = Object.entries(attrs)
         .map(([k, v]) => `${k}="${v}"`)
-        .join(' ')
-      return `<${tag} ${attrStr}/>`
+        .join(' ');
+      return `<${tag} ${attrStr}/>`;
     })
-    .join('')
+    .join('');
 }
 
 class SurfIcon extends LitElement {
@@ -52,17 +52,17 @@ class SurfIcon extends LitElement {
     name: { type: String },
     size: { type: Number },
     color: { type: String },
-  }
+  };
 
-  declare name: string
-  declare size: number
-  declare color: string
+  declare name: string;
+  declare size: number;
+  declare color: string;
 
   constructor() {
-    super()
-    this.name = ''
-    this.size = 24
-    this.color = 'currentColor'
+    super();
+    this.name = '';
+    this.size = 24;
+    this.color = 'currentColor';
   }
 
   static styles = css`
@@ -74,15 +74,15 @@ class SurfIcon extends LitElement {
     svg {
       display: block;
     }
-  `
+  `;
 
   render() {
-    const iconNodes = ICONS[this.name]
+    const iconNodes = ICONS[this.name];
     if (!iconNodes) {
       if (this.name) {
-        console.warn(`surf-icon: unknown icon "${this.name}"`)
+        console.warn(`surf-icon: unknown icon "${this.name}"`);
       }
-      return html``
+      return html``;
     }
 
     return html`
@@ -96,15 +96,17 @@ class SurfIcon extends LitElement {
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-      >${unsafeSVG(buildSvgChildren(iconNodes))}</svg>
-    `
+      >
+        ${unsafeSVG(buildSvgChildren(iconNodes))}
+      </svg>
+    `;
   }
 }
 
-customElements.define('surf-icon', SurfIcon)
+customElements.define('surf-icon', SurfIcon);
 
 declare global {
   interface HTMLElementTagNameMap {
-    'surf-icon': SurfIcon
+    'surf-icon': SurfIcon;
   }
 }

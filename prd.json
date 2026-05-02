@@ -20,7 +20,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-001."
     },
     {
@@ -36,7 +36,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-002. Depends on US-001 only insofar as both should land before US-003's pre-commit hook is added."
     },
     {

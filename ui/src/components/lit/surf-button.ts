@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit'
+import { LitElement, html, css } from 'lit';
 
 class SurfButton extends LitElement {
   static properties = {
@@ -6,19 +6,19 @@ class SurfButton extends LitElement {
     size: { type: String },
     disabled: { type: Boolean },
     type: { type: String },
-  }
+  };
 
-  declare variant: 'primary' | 'secondary' | 'ghost'
-  declare size: 'sm' | 'md' | 'lg'
-  declare disabled: boolean
-  declare type: 'button' | 'submit'
+  declare variant: 'primary' | 'secondary' | 'ghost';
+  declare size: 'sm' | 'md' | 'lg';
+  declare disabled: boolean;
+  declare type: 'button' | 'submit';
 
   constructor() {
-    super()
-    this.variant = 'primary'
-    this.size = 'md'
-    this.disabled = false
-    this.type = 'button'
+    super();
+    this.variant = 'primary';
+    this.size = 'md';
+    this.disabled = false;
+    this.type = 'button';
   }
 
   static styles = css`
@@ -33,7 +33,10 @@ class SurfButton extends LitElement {
       border: none;
       font-family: inherit;
       font-weight: var(--font-weight-medium);
-      transition: opacity 150ms ease, background 150ms ease, box-shadow 150ms ease;
+      transition:
+        opacity 150ms ease,
+        background 150ms ease,
+        box-shadow 150ms ease;
       white-space: nowrap;
     }
     button:disabled {
@@ -86,7 +89,7 @@ class SurfButton extends LitElement {
     button.variant-ghost:hover:not(:disabled) {
       background: var(--color-neutral-100);
     }
-  `
+  `;
 
   render() {
     return html`
@@ -98,14 +101,14 @@ class SurfButton extends LitElement {
       >
         <slot></slot>
       </button>
-    `
+    `;
   }
 }
 
-customElements.define('surf-button', SurfButton)
+customElements.define('surf-button', SurfButton);
 
 declare global {
   interface HTMLElementTagNameMap {
-    'surf-button': SurfButton
+    'surf-button': SurfButton;
   }
 }

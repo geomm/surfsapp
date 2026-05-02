@@ -36,7 +36,13 @@
       },
       "optimalScenario": "SSE wind has built swell AND is now easing or shifting north — clean residual swell running"
     },
-    "weights": { "swellDirection": 0.20, "swellPeriod": 0.20, "swellHeight": 0.25, "wind": 0.30, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.2,
+      "swellPeriod": 0.2,
+      "swellHeight": 0.25,
+      "wind": 0.3,
+      "tide": 0.05
+    },
     "sheltered": true,
     "longPeriodSwellRefracts": false,
     "skillLevel": "beginner",
@@ -80,7 +86,13 @@
       },
       "optimalScenario": "Meltemi has built swell AND is now easing or shifting to SSE — clean residual north swell with offshore wind"
     },
-    "weights": { "swellDirection": 0.20, "swellPeriod": 0.20, "swellHeight": 0.25, "wind": 0.30, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.2,
+      "swellPeriod": 0.2,
+      "swellHeight": 0.25,
+      "wind": 0.3,
+      "tide": 0.05
+    },
     "sheltered": false,
     "longPeriodSwellRefracts": false,
     "skillLevel": "intermediate",
@@ -102,7 +114,13 @@
     "idealSwellPeriodS": [9, 15],
     "maxOnshoreWindKmh": 20,
     "idealWindDescription": "offshore-or-light",
-    "weights": { "swellDirection": 0.35, "swellPeriod": 0.25, "swellHeight": 0.20, "wind": 0.15, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.35,
+      "swellPeriod": 0.25,
+      "swellHeight": 0.2,
+      "wind": 0.15,
+      "tide": 0.05
+    },
     "sheltered": false,
     "longPeriodSwellRefracts": false,
     "skillLevel": "advanced",
@@ -146,11 +164,24 @@
       },
       "optimalScenario": "Winter: W/WSW Mediterranean storm swell + east offshore wind. Summer: Meltemi-generated swell with moderate NW wind or easing to east."
     },
-    "weights": { "swellDirection": 0.20, "swellPeriod": 0.20, "swellHeight": 0.25, "wind": 0.30, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.2,
+      "swellPeriod": 0.2,
+      "swellHeight": 0.25,
+      "wind": 0.3,
+      "tide": 0.05
+    },
     "sheltered": false,
     "longPeriodSwellRefracts": false,
     "skillLevel": "beginner",
-    "tags": ["sandy-beach", "beach-break", "reef-break", "west-facing", "surf-school", "dual-season"],
+    "tags": [
+      "sandy-beach",
+      "beach-break",
+      "reef-break",
+      "west-facing",
+      "surf-school",
+      "dual-season"
+    ],
     "notes": "Two distinct surf seasons. Summer (Jun–Sep): Meltemi-driven NW wind-swell, short period (6–8s), onshore conditions — wave-generating-onshore logic applies. Winter (Nov–Apr): Mediterranean storm swell from W/WSW, longer period (8–14s), east offshore wind — standard scoring applies. Beginner-friendly shallow sections. Surf-Forecast rates overall consistency low (2/10) but it works reliably in both season windows."
   },
   {
@@ -190,11 +221,24 @@
       },
       "optimalScenario": "S/SSW storm has built Libyan Sea swell AND wind is shifting to NNE/N offshore — clean residual swell with glassy surface"
     },
-    "weights": { "swellDirection": 0.20, "swellPeriod": 0.20, "swellHeight": 0.25, "wind": 0.30, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.2,
+      "swellPeriod": 0.2,
+      "swellHeight": 0.25,
+      "wind": 0.3,
+      "tide": 0.05
+    },
     "sheltered": false,
     "longPeriodSwellRefracts": false,
     "skillLevel": "intermediate",
-    "tags": ["sandy-beach", "beach-break", "libyan-sea", "south-coast", "winter-spot", "side-onshore"],
+    "tags": [
+      "sandy-beach",
+      "beach-break",
+      "libyan-sea",
+      "south-coast",
+      "winter-spot",
+      "side-onshore"
+    ],
     "notes": "South/SSW wind is the key condition driver — confirmed by user and research. Side-onshore angle (~65° off beach normal) means it generates swell without the worst of dead-onshore chop. Best window: S/SSW storm builds swell, then wind eases or shifts NNE/N for clean offshore conditions. On the east side (Halikia pebble beach) conditions are sheltered from the W — useful for beginners when west beach is too big. Summer is flat — Meltemi blows offshore here, no wave generation. SurfinGR spot #73. Draft — not field-verified by user."
   },
   {
@@ -234,7 +278,13 @@
       },
       "optimalScenario": "Moderate Meltemi-generated swell with wind easing or shifting to S/SW offshore"
     },
-    "weights": { "swellDirection": 0.20, "swellPeriod": 0.20, "swellHeight": 0.25, "wind": 0.30, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.2,
+      "swellPeriod": 0.2,
+      "swellHeight": 0.25,
+      "wind": 0.3,
+      "tide": 0.05
+    },
     "sheltered": false,
     "longPeriodSwellRefracts": false,
     "skillLevel": "beginner",
@@ -278,7 +328,13 @@
       },
       "optimalScenario": "SE/S storm has built chop AND wind is easing — short-period wind waves with cleaner surface"
     },
-    "weights": { "swellDirection": 0.20, "swellPeriod": 0.20, "swellHeight": 0.25, "wind": 0.30, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.2,
+      "swellPeriod": 0.2,
+      "swellHeight": 0.25,
+      "wind": 0.3,
+      "tide": 0.05
+    },
     "sheltered": true,
     "longPeriodSwellRefracts": false,
     "skillLevel": "beginner",
@@ -322,7 +378,13 @@
       },
       "optimalScenario": "Meltemi has built north swell AND is easing or shifting to SE offshore — clean residual swell running"
     },
-    "weights": { "swellDirection": 0.20, "swellPeriod": 0.20, "swellHeight": 0.25, "wind": 0.30, "tide": 0.05 },
+    "weights": {
+      "swellDirection": 0.2,
+      "swellPeriod": 0.2,
+      "swellHeight": 0.25,
+      "wind": 0.3,
+      "tide": 0.05
+    },
     "sheltered": false,
     "longPeriodSwellRefracts": false,
     "skillLevel": "intermediate",

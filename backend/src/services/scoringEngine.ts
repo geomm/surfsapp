@@ -1,13 +1,13 @@
-import { IBeach } from '../models/Beach'
-import { IDailySummary } from '../models/ForecastSnapshot'
+import { IBeach } from '../models/Beach';
+import { IDailySummary } from '../models/ForecastSnapshot';
 
-type Label = 'poor' | 'maybe' | 'good' | 'very-good'
+type Label = 'poor' | 'maybe' | 'good' | 'very-good';
 
 interface ScoreHourResult {
-  surfScore: number
-  label: string
-  reasons: string[]
-  confidence: number
+  surfScore: number;
+  label: string;
+  reasons: string[];
+  confidence: number;
 }
 
 /**
@@ -15,8 +15,8 @@ interface ScoreHourResult {
  * Handles 360° wraparound.
  */
 export function angularDistance(a: number, b: number): number {
-  const diff = Math.abs(((a - b + 540) % 360) - 180)
-  return diff
+  const diff = Math.abs(((a - b + 540) % 360) - 180);
+  return diff;
 }
 
 /**
@@ -24,42 +24,39 @@ export function angularDistance(a: number, b: number): number {
  * Handles ranges crossing 360° (e.g. [340, 20] includes 350 and 10).
  */
 export function isAngleInRange(angle: number, range: [number, number]): boolean {
-  const [from, to] = range
-  const a = ((angle % 360) + 360) % 360
-  const f = ((from % 360) + 360) % 360
-  const t = ((to % 360) + 360) % 360
+  const [from, to] = range;
+  const a = ((angle % 360) + 360) % 360;
+  const f = ((from % 360) + 360) % 360;
+  const t = ((to % 360) + 360) % 360;
 
   if (f <= t) {
     // Normal range, e.g. [90, 270]
-    return a >= f && a <= t
+    return a >= f && a <= t;
   } else {
     // Wrapping range, e.g. [340, 20]
-    return a >= f || a <= t
+    return a >= f || a <= t;
   }
 }
 
 interface GateResult {
-  gated: true
-  score: number
-  label: string
-  reason: string
+  gated: true;
+  score: number;
+  label: string;
+  reason: string;
 }
 
 /**
  * Applies hard gates that short-circuit scoring when deal-breaker conditions are met.
  * Returns a gate result if triggered, null if all gates pass.
  */
-export function applyHardGates(
-  beach: IBeach,
-  rawData: Record<string, unknown>
-): GateResult | null {
-  const swellDir = Number(rawData.swell_wave_direction)
-  const swellHeight = Number(rawData.swell_wave_height)
-  const windDir = Number(rawData.wind_direction_10m)
+export function applyHardGates(beach: IBeach, rawData: Record<string, unknown>): GateResult | null {
+  const swellDir = Number(rawData.swell_wave_direction);
+  const swellHeight = Number(rawData.swell_wave_height);
+  const windDir = Number(rawData.wind_direction_10m);
 
   // Fail-safe: missing or NaN data
   if (isNaN(swellDir) || isNaN(swellHeight)) {
-    return { gated: true, score: 0, label: 'poor', reason: 'Missing forecast data' }
+    return { gated: true, score: 0, label: 'poor', reason: 'Missing forecast data' };
   }
 
   // Gate 1 — Swell direction outside acceptable range
@@ -69,7 +66,7 @@ export function applyHardGates(
       score: 0,
       label: 'poor',
       reason: 'Swell direction blocked by land/orientation',
-    }
+    };
   }
 
   // Gate 2 — Swell height below minimum
@@ -79,22 +76,19 @@ export function applyHardGates(
       score: 0,
       label: 'poor',
       reason: `Swell too small (${swellHeight}m, min ${beach.minSwellHeightM}m)`,
-    }
+    };
   }
 
   // Gate 3 — Wave-generating-onshore: generating wind absent with no residual swell
-  if (
-    beach.idealWindDescription === 'wave-generating-onshore' &&
-    beach.windScoringLogic
-  ) {
+  if (beach.idealWindDescription === 'wave-generating-onshore' && beach.windScoringLogic) {
     // Need wind direction for this gate
     if (isNaN(windDir)) {
-      return { gated: true, score: 0, label: 'poor', reason: 'Missing forecast data' }
+      return { gated: true, score: 0, label: 'poor', reason: 'Missing forecast data' };
     }
 
-    const generatingWindDir = beach.windScoringLogic.swellGeneratingWind.directionDeg
-    const windWithin30 = angularDistance(windDir, generatingWindDir) <= 30
-    const hasResidualSwell = swellHeight >= beach.minSwellHeightM * 1.5
+    const generatingWindDir = beach.windScoringLogic.swellGeneratingWind.directionDeg;
+    const windWithin30 = angularDistance(windDir, generatingWindDir) <= 30;
+    const hasResidualSwell = swellHeight >= beach.minSwellHeightM * 1.5;
 
     if (!windWithin30 && !hasResidualSwell) {
       return {
@@ -102,11 +96,11 @@ export function applyHardGates(
         score: 5,
         label: 'poor',
         reason: 'Generating wind absent, no residual swell',
-      }
+      };
     }
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -114,9 +108,9 @@ export function applyHardGates(
  * E.g. midpoint of [340, 20] is 0 (not 180).
  */
 function rangeMidpoint(range: [number, number]): number {
-  const [from, to] = range
-  const span = ((to - from) % 360 + 360) % 360
-  return (from + span / 2) % 360
+  const [from, to] = range;
+  const span = (((to - from) % 360) + 360) % 360;
+  return (from + span / 2) % 360;
 }
 
 /**
@@ -125,52 +119,52 @@ function rangeMidpoint(range: [number, number]): number {
  * 79→40 through acceptable range, 0 outside.
  */
 export function scoreSwellDirection(beach: IBeach, swellDir: number): number {
-  const idealMid = rangeMidpoint(beach.idealSwellDirection)
+  const idealMid = rangeMidpoint(beach.idealSwellDirection);
 
   // Half-widths computed as angular distance from midpoint to range edges
-  const idealHalfWidth = angularDistance(idealMid, beach.idealSwellDirection[0])
+  const idealHalfWidth = angularDistance(idealMid, beach.idealSwellDirection[0]);
   const acceptHalfWidth = Math.max(
     angularDistance(idealMid, beach.acceptableSwellDirection[0]),
-    angularDistance(idealMid, beach.acceptableSwellDirection[1])
-  )
+    angularDistance(idealMid, beach.acceptableSwellDirection[1]),
+  );
 
-  const angleFromCentre = angularDistance(swellDir, idealMid)
+  const angleFromCentre = angularDistance(swellDir, idealMid);
 
   // Dead centre
   if (idealHalfWidth === 0) {
     // Degenerate case: ideal range is a single direction
     if (isAngleInRange(swellDir, beach.acceptableSwellDirection)) {
-      const t = acceptHalfWidth > 0 ? angleFromCentre / acceptHalfWidth : 0
-      return Math.round(100 - t * 60)
+      const t = acceptHalfWidth > 0 ? angleFromCentre / acceptHalfWidth : 0;
+      return Math.round(100 - t * 60);
     }
-    return 0
+    return 0;
   }
 
   // Inside ideal range: 100 at centre → 80 at edge
   if (angleFromCentre <= idealHalfWidth) {
-    return Math.round(100 - (angleFromCentre / idealHalfWidth) * 20)
+    return Math.round(100 - (angleFromCentre / idealHalfWidth) * 20);
   }
 
   // Inside acceptable but outside ideal: 79 → 40
   if (isAngleInRange(swellDir, beach.acceptableSwellDirection)) {
-    const distPastIdeal = angleFromCentre - idealHalfWidth
-    const acceptableOnlyWidth = acceptHalfWidth - idealHalfWidth
-    if (acceptableOnlyWidth <= 0) return 40
-    const t = Math.min(distPastIdeal / acceptableOnlyWidth, 1)
-    return Math.round(79 - t * 39)
+    const distPastIdeal = angleFromCentre - idealHalfWidth;
+    const acceptableOnlyWidth = acceptHalfWidth - idealHalfWidth;
+    if (acceptableOnlyWidth <= 0) return 40;
+    const t = Math.min(distPastIdeal / acceptableOnlyWidth, 1);
+    return Math.round(79 - t * 39);
   }
 
   // Outside acceptable (should be gated, but return 0)
-  return 0
+  return 0;
 }
 
 /**
  * Linear interpolation helper.
  */
 function lerp(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
-  if (inMax === inMin) return (outMin + outMax) / 2
-  const t = Math.max(0, Math.min(1, (value - inMin) / (inMax - inMin)))
-  return outMin + t * (outMax - outMin)
+  if (inMax === inMin) return (outMin + outMax) / 2;
+  const t = Math.max(0, Math.min(1, (value - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
 }
 
 /**
@@ -179,33 +173,33 @@ function lerp(value: number, inMin: number, inMax: number, outMin: number, outMa
  * All using linear interpolation.
  */
 export function scoreSwellPeriod(beach: IBeach, period: number): number {
-  const min = beach.minSwellPeriodS
-  const [idealLow, idealHigh] = beach.idealSwellPeriodS
+  const min = beach.minSwellPeriodS;
+  const [idealLow, idealHigh] = beach.idealSwellPeriodS;
 
   if (period < min) {
     // 0 at period=0, 20 at period=min
-    return Math.round(lerp(period, 0, min, 0, 20))
+    return Math.round(lerp(period, 0, min, 0, 20));
   }
 
   if (period < idealLow) {
     // 20 at min, 60 at idealLow
-    return Math.round(lerp(period, min, idealLow, 20, 60))
+    return Math.round(lerp(period, min, idealLow, 20, 60));
   }
 
   if (period <= idealHigh) {
     // Inside ideal range: 70 at edges, 100 at midpoint
-    const mid = (idealLow + idealHigh) / 2
+    const mid = (idealLow + idealHigh) / 2;
     if (period <= mid) {
-      return Math.round(lerp(period, idealLow, mid, 70, 100))
+      return Math.round(lerp(period, idealLow, mid, 70, 100));
     } else {
-      return Math.round(lerp(period, mid, idealHigh, 100, 70))
+      return Math.round(lerp(period, mid, idealHigh, 100, 70));
     }
   }
 
   // Above ideal: 80 just above, decaying to 60
   // Use idealHigh * 2 as the far end
-  const farEnd = idealHigh * 2
-  return Math.round(lerp(period, idealHigh, farEnd, 80, 60))
+  const farEnd = idealHigh * 2;
+  return Math.round(lerp(period, idealHigh, farEnd, 80, 60));
 }
 
 /**
@@ -222,101 +216,101 @@ export function scoreSwellPeriod(beach: IBeach, period: number): number {
 export function scoreWind(beach: IBeach, windDir: number, windSpeed: number): number {
   // Dual-mode check: if beach has windScoringLogic AND wind is near generating wind dir, use WGO logic
   if (beach.windScoringLogic && beach.idealWindDescription === 'wave-generating-onshore') {
-    const genDir = beach.windScoringLogic.swellGeneratingWind.directionDeg
-    const nearGeneratingWind = angularDistance(windDir, genDir) <= 30
+    const genDir = beach.windScoringLogic.swellGeneratingWind.directionDeg;
+    const nearGeneratingWind = angularDistance(windDir, genDir) <= 30;
 
     if (nearGeneratingWind) {
-      return scoreWindWaveGenerating(beach, windDir, windSpeed)
+      return scoreWindWaveGenerating(beach, windDir, windSpeed);
     } else {
-      return scoreWindStandard(beach, windDir, windSpeed)
+      return scoreWindStandard(beach, windDir, windSpeed);
     }
   }
 
-  return scoreWindStandard(beach, windDir, windSpeed)
+  return scoreWindStandard(beach, windDir, windSpeed);
 }
 
 function scoreWindStandard(beach: IBeach, windDir: number, windSpeed: number): number {
-  const windAngle = angularDistance(windDir, beach.shorelineNormalDeg)
+  const windAngle = angularDistance(windDir, beach.shorelineNormalDeg);
 
   // Glassy: any direction, speed < 5 km/h
-  if (windSpeed < 5) return 100
+  if (windSpeed < 5) return 100;
 
   // Offshore (< 30°)
   if (windAngle < 30) {
     if (windSpeed < 15) {
       // Light offshore: 90–100 (100 at 5, 90 at 15)
-      return Math.round(lerp(windSpeed, 5, 15, 100, 90))
+      return Math.round(lerp(windSpeed, 5, 15, 100, 90));
     }
     if (windSpeed <= 25) {
       // Moderate offshore: 70–85
-      return Math.round(lerp(windSpeed, 15, 25, 85, 70))
+      return Math.round(lerp(windSpeed, 15, 25, 85, 70));
     }
     if (windSpeed <= 35) {
       // Between moderate and strong: 60–70
-      return Math.round(lerp(windSpeed, 25, 35, 70, 60))
+      return Math.round(lerp(windSpeed, 25, 35, 70, 60));
     }
     // Strong offshore (> 35): 40–60
-    return Math.round(lerp(windSpeed, 35, 60, 60, 40))
+    return Math.round(lerp(windSpeed, 35, 60, 60, 40));
   }
 
   // Cross-shore (30–70°): 40–70
   if (windAngle <= 70) {
-    return Math.round(lerp(windAngle, 30, 70, 70, 40))
+    return Math.round(lerp(windAngle, 30, 70, 70, 40));
   }
 
   // Onshore (70–120°): 20–45
   if (windAngle <= 120) {
     // Strong onshore check within this range
     if (windAngle > 120 && windSpeed > 20) {
-      return Math.round(lerp(windSpeed, 20, 40, 20, 0))
+      return Math.round(lerp(windSpeed, 20, 40, 20, 0));
     }
-    return Math.round(lerp(windAngle, 70, 120, 45, 20))
+    return Math.round(lerp(windAngle, 70, 120, 45, 20));
   }
 
   // Strong onshore (> 120° and speed > 20): 0–20
   if (windSpeed > 20) {
-    return Math.round(lerp(windSpeed, 20, 40, 20, 0))
+    return Math.round(lerp(windSpeed, 20, 40, 20, 0));
   }
   // > 120° but light wind: still poor but not worst
-  return Math.round(lerp(windAngle, 120, 180, 20, 10))
+  return Math.round(lerp(windAngle, 120, 180, 20, 10));
 }
 
 function scoreWindWaveGenerating(beach: IBeach, windDir: number, windSpeed: number): number {
-  const wsl = beach.windScoringLogic!
-  let score = 50
+  const wsl = beach.windScoringLogic!;
+  let score = 50;
 
-  const genDir = wsl.swellGeneratingWind.directionDeg
-  const nearGenWind = angularDistance(windDir, genDir) <= 20
+  const genDir = wsl.swellGeneratingWind.directionDeg;
+  const nearGenWind = angularDistance(windDir, genDir) <= 20;
 
   // +20 if generating wind present (direction ±20° and speed >= min)
   if (nearGenWind && windSpeed >= wsl.swellGeneratingWind.minSpeedKmh) {
-    score += 20
+    score += 20;
   }
 
   // +25 if wind near quality multiplier direction (±20°)
   if (angularDistance(windDir, wsl.qualityMultiplier.triggerDirectionDeg) <= 20) {
-    score += 25
+    score += 25;
   }
 
   // -35 (or -21 for side-onshore) if generating wind is too strong
   if (nearGenWind && windSpeed > wsl.messinesspenalty.thresholdSpeedKmh) {
-    const windAngleToNormal = angularDistance(windDir, beach.shorelineNormalDeg)
+    const windAngleToNormal = angularDistance(windDir, beach.shorelineNormalDeg);
     if (windAngleToNormal > 45) {
       // Side-onshore: reduce penalty by 40% (35 * 0.6 = 21)
-      score -= 21
+      score -= 21;
     } else {
-      score -= 35
+      score -= 35;
     }
   }
 
-  return Math.max(0, Math.min(100, score))
+  return Math.max(0, Math.min(100, score));
 }
 
 function mapLabel(score: number): Label {
-  if (score >= 80) return 'very-good'
-  if (score >= 60) return 'good'
-  if (score >= 40) return 'maybe'
-  return 'poor'
+  if (score >= 80) return 'very-good';
+  if (score >= 60) return 'good';
+  if (score >= 40) return 'maybe';
+  return 'poor';
 }
 
 /**
@@ -327,65 +321,73 @@ export function scoreHour(
   beach: IBeach,
   rawData: Record<string, unknown>,
   forecastTimestamp: Date,
-  fetchedAt: Date
+  fetchedAt: Date,
 ): ScoreHourResult {
-  const hoursFromNow = (forecastTimestamp.getTime() - fetchedAt.getTime()) / (1000 * 60 * 60)
-  const confidence = Math.max(0, 1.0 - hoursFromNow / 240)
+  const hoursFromNow = (forecastTimestamp.getTime() - fetchedAt.getTime()) / (1000 * 60 * 60);
+  const confidence = Math.max(0, 1.0 - hoursFromNow / 240);
 
   // Hard gates
-  const gate = applyHardGates(beach, rawData)
+  const gate = applyHardGates(beach, rawData);
   if (gate) {
     return {
       surfScore: gate.score,
       label: gate.label,
       reasons: [gate.reason],
       confidence,
-    }
+    };
   }
 
   // Extract raw values
-  const swellDir = Number(rawData.swell_wave_direction)
-  const swellPeriod = Number(rawData.swell_wave_period)
-  const swellHeight = Number(rawData.swell_wave_height)
-  const windDir = Number(rawData.wind_direction_10m)
-  const windSpeed = Number(rawData.wind_speed_10m)
+  const swellDir = Number(rawData.swell_wave_direction);
+  const swellPeriod = Number(rawData.swell_wave_period);
+  const swellHeight = Number(rawData.swell_wave_height);
+  const windDir = Number(rawData.wind_direction_10m);
+  const windSpeed = Number(rawData.wind_speed_10m);
 
   // Compute subscores
-  const swellDirScore = scoreSwellDirection(beach, swellDir)
-  const swellPeriodScore = scoreSwellPeriod(beach, swellPeriod)
-  const swellHeightScore = scoreSwellHeight(beach, swellHeight)
-  const windScore = scoreWind(beach, windDir, windSpeed)
+  const swellDirScore = scoreSwellDirection(beach, swellDir);
+  const swellPeriodScore = scoreSwellPeriod(beach, swellPeriod);
+  const swellHeightScore = scoreSwellHeight(beach, swellHeight);
+  const windScore = scoreWind(beach, windDir, windSpeed);
 
   // Secondary swell modifier
-  let secondaryModifier = 0
-  const secondaryHeight = Number(rawData.swell_wave_height_2)
-  const secondaryDir = Number(rawData.swell_wave_direction_2)
+  let secondaryModifier = 0;
+  const secondaryHeight = Number(rawData.swell_wave_height_2);
+  const secondaryDir = Number(rawData.swell_wave_direction_2);
   if (secondaryHeight && !isNaN(secondaryHeight) && secondaryHeight > 0 && !isNaN(secondaryDir)) {
     if (isAngleInRange(secondaryDir, beach.acceptableSwellDirection)) {
-      secondaryModifier = 5
+      secondaryModifier = 5;
     } else if (angularDistance(secondaryDir, swellDir) >= 150) {
-      secondaryModifier = -10
+      secondaryModifier = -10;
     }
   }
 
   // Weighted final score
-  const w = beach.weights
+  const w = beach.weights;
   const rawScore =
     swellDirScore * w.swellDirection +
     swellPeriodScore * w.swellPeriod +
     swellHeightScore * w.swellHeight +
     windScore * w.wind +
     0 * w.tide +
-    secondaryModifier
-  const surfScore = Math.round(Math.max(0, Math.min(100, rawScore)))
+    secondaryModifier;
+  const surfScore = Math.round(Math.max(0, Math.min(100, rawScore)));
 
   // Label
-  const label = mapLabel(surfScore)
+  const label = mapLabel(surfScore);
 
   // Reasons
-  const reasons = buildReasons(beach, swellDir, swellPeriod, swellHeight, windDir, windSpeed, secondaryModifier)
+  const reasons = buildReasons(
+    beach,
+    swellDir,
+    swellPeriod,
+    swellHeight,
+    windDir,
+    windSpeed,
+    secondaryModifier,
+  );
 
-  return { surfScore, label, reasons, confidence }
+  return { surfScore, label, reasons, confidence };
 }
 
 function buildReasons(
@@ -395,64 +397,72 @@ function buildReasons(
   swellHeight: number,
   windDir: number,
   windSpeed: number,
-  secondaryModifier: number
+  secondaryModifier: number,
 ): string[] {
-  const reasons: string[] = []
-  const idealDirMid = rangeMidpoint(beach.idealSwellDirection)
+  const reasons: string[] = [];
+  const idealDirMid = rangeMidpoint(beach.idealSwellDirection);
 
   // Direction reason
-  const dirDist = angularDistance(swellDir, idealDirMid)
-  const idealHalfWidth = angularDistance(idealDirMid, beach.idealSwellDirection[0])
+  const dirDist = angularDistance(swellDir, idealDirMid);
+  const idealHalfWidth = angularDistance(idealDirMid, beach.idealSwellDirection[0]);
   if (dirDist <= idealHalfWidth) {
-    reasons.push('Swell direction matches beach exposure')
+    reasons.push('Swell direction matches beach exposure');
   } else {
-    reasons.push('Swell direction is marginal for this beach')
+    reasons.push('Swell direction is marginal for this beach');
   }
 
   // Period reason
-  const [idealPeriodLow, idealPeriodHigh] = beach.idealSwellPeriodS
+  const [idealPeriodLow, idealPeriodHigh] = beach.idealSwellPeriodS;
   if (swellPeriod >= idealPeriodLow && swellPeriod <= idealPeriodHigh) {
-    reasons.push(`Swell period is solid (${swellPeriod}s)`)
+    reasons.push(`Swell period is solid (${swellPeriod}s)`);
   } else if (swellPeriod < beach.minSwellPeriodS) {
-    reasons.push(`Swell too short (${swellPeriod}s, ideal ${idealPeriodLow}–${idealPeriodHigh}s)`)
+    reasons.push(`Swell too short (${swellPeriod}s, ideal ${idealPeriodLow}–${idealPeriodHigh}s)`);
   } else if (swellPeriod < idealPeriodLow) {
-    reasons.push(`Swell period below ideal (${swellPeriod}s, ideal ${idealPeriodLow}–${idealPeriodHigh}s)`)
+    reasons.push(
+      `Swell period below ideal (${swellPeriod}s, ideal ${idealPeriodLow}–${idealPeriodHigh}s)`,
+    );
   } else {
-    reasons.push(`Long-period swell (${swellPeriod}s) — powerful but may exceed tolerance`)
+    reasons.push(`Long-period swell (${swellPeriod}s) — powerful but may exceed tolerance`);
   }
 
   // Height reason
-  const [idealHeightLow, idealHeightHigh] = beach.idealSwellHeightM
+  const [idealHeightLow, idealHeightHigh] = beach.idealSwellHeightM;
   if (swellHeight >= idealHeightLow && swellHeight <= idealHeightHigh) {
-    reasons.push(`Swell height in ideal range (${swellHeight}m)`)
+    reasons.push(`Swell height in ideal range (${swellHeight}m)`);
   } else if (swellHeight < idealHeightLow) {
-    reasons.push(`Swell on the small side (${swellHeight}m, ideal ${idealHeightLow}–${idealHeightHigh}m)`)
+    reasons.push(
+      `Swell on the small side (${swellHeight}m, ideal ${idealHeightLow}–${idealHeightHigh}m)`,
+    );
   } else {
-    reasons.push(`Large swell (${swellHeight}m) — ${beach.skillLevel === 'advanced' ? 'manageable for experienced surfers' : 'may be challenging'}`)
+    reasons.push(
+      `Large swell (${swellHeight}m) — ${beach.skillLevel === 'advanced' ? 'manageable for experienced surfers' : 'may be challenging'}`,
+    );
   }
 
   // Wind reason
-  const windAngle = angularDistance(windDir, beach.shorelineNormalDeg)
+  const windAngle = angularDistance(windDir, beach.shorelineNormalDeg);
   if (windSpeed < 5) {
-    reasons.push('Glassy conditions — virtually no wind')
+    reasons.push('Glassy conditions — virtually no wind');
   } else if (windAngle < 30 && windSpeed < 15) {
-    reasons.push('Wind is light offshore — clean conditions')
+    reasons.push('Wind is light offshore — clean conditions');
   } else if (windAngle < 30) {
-    reasons.push(`Offshore wind at ${windSpeed} km/h — ${windSpeed > 35 ? 'strong but keeping face clean' : 'good surface conditions'}`)
+    reasons.push(
+      `Offshore wind at ${windSpeed} km/h — ${windSpeed > 35 ? 'strong but keeping face clean' : 'good surface conditions'}`,
+    );
   } else if (windAngle <= 70) {
-    reasons.push(`Cross-shore wind (${windSpeed} km/h) — variable surface`)
+    reasons.push(`Cross-shore wind (${windSpeed} km/h) — variable surface`);
   } else {
-    reasons.push(`Onshore wind (${windSpeed} km/h) is reducing quality`)
+    reasons.push(`Onshore wind (${windSpeed} km/h) is reducing quality`);
   }
 
   // Secondary swell
   if (secondaryModifier > 0) {
-    reasons.push('Secondary swell reinforcing from a good direction')
+    reasons.push('Secondary swell reinforcing from a good direction');
   } else if (secondaryModifier < 0) {
-    reasons.push('Secondary swell from opposing direction — confused seas')
+    reasons.push('Secondary swell from opposing direction — confused seas');
   }
 
-  return reasons
+  return reasons;
 }
 
 /**
@@ -460,109 +470,116 @@ function buildReasons(
  * Groups by calendar date (UTC), finds best window (sizes 2–4), returns one summary per day.
  */
 export function computeDailySummaries(
-  hourlyForecasts: Array<{ timestamp: Date; surfScore: number; label: string }>
+  hourlyForecasts: Array<{ timestamp: Date; surfScore: number; label: string }>,
 ): IDailySummary[] {
   // Group by UTC date
-  const byDate = new Map<string, Array<{ timestamp: Date; surfScore: number; label: string }>>()
+  const byDate = new Map<string, Array<{ timestamp: Date; surfScore: number; label: string }>>();
   for (const hf of hourlyForecasts) {
-    const dateStr = hf.timestamp.toISOString().slice(0, 10)
-    if (!byDate.has(dateStr)) byDate.set(dateStr, [])
-    byDate.get(dateStr)!.push(hf)
+    const dateStr = hf.timestamp.toISOString().slice(0, 10);
+    if (!byDate.has(dateStr)) byDate.set(dateStr, []);
+    byDate.get(dateStr)!.push(hf);
   }
 
-  const summaries: IDailySummary[] = []
+  const summaries: IDailySummary[] = [];
 
   for (const [date, hours] of byDate) {
     // Sort by timestamp
-    hours.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+    hours.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    const peakScore = Math.max(...hours.map((h) => h.surfScore))
+    const first = hours[0];
+    if (!first) continue;
 
-    let bestAvg = -1
-    let bestStart = 0
-    let bestEnd = 0
+    const peakScore = Math.max(...hours.map((h) => h.surfScore));
+
+    let bestAvg = -1;
+    let bestStart = 0;
+    let bestEnd = 0;
 
     if (hours.length < 2) {
       // Single hour as the window
-      bestAvg = hours[0].surfScore
-      bestStart = 0
-      bestEnd = 0
+      bestAvg = first.surfScore;
+      bestStart = 0;
+      bestEnd = 0;
     } else {
       // Try window sizes 2, 3, 4
       for (const size of [2, 3, 4]) {
-        if (size > hours.length) continue
+        if (size > hours.length) continue;
         for (let i = 0; i <= hours.length - size; i++) {
-          let sum = 0
+          let sum = 0;
           for (let j = i; j < i + size; j++) {
-            sum += hours[j].surfScore
+            const hour = hours[j];
+            if (!hour) continue;
+            sum += hour.surfScore;
           }
-          const avg = sum / size
+          const avg = sum / size;
           if (avg > bestAvg) {
-            bestAvg = avg
-            bestStart = i
-            bestEnd = i + size - 1
+            bestAvg = avg;
+            bestStart = i;
+            bestEnd = i + size - 1;
           }
         }
       }
     }
 
-    const overallLabel = mapLabel(Math.round(bestAvg))
+    const overallLabel = mapLabel(Math.round(bestAvg));
 
+    const startHour = hours[bestStart] ?? first;
+    const endHour = hours[bestEnd] ?? first;
     summaries.push({
       date,
-      bestWindowStart: hours[bestStart].timestamp.toISOString(),
-      bestWindowEnd: hours[bestEnd].timestamp.toISOString(),
+      bestWindowStart: startHour.timestamp.toISOString(),
+      bestWindowEnd: endHour.timestamp.toISOString(),
       peakScore,
       overallLabel,
-    })
+    });
   }
 
   // Sort by date
-  summaries.sort((a, b) => a.date.localeCompare(b.date))
+  summaries.sort((a, b) => a.date.localeCompare(b.date));
 
-  return summaries
+  return summaries;
 }
 
 export function scoreSwellHeight(beach: IBeach, height: number): number {
-  const min = beach.minSwellHeightM
-  const [idealLow, idealHigh] = beach.idealSwellHeightM
+  const min = beach.minSwellHeightM;
+  const [idealLow, idealHigh] = beach.idealSwellHeightM;
 
   if (height < min) {
     // Should be gated, but return 0
-    return 0
+    return 0;
   }
 
   if (height < idealLow) {
     // 20 at min, 70 at idealLow
-    return Math.round(lerp(height, min, idealLow, 20, 70))
+    return Math.round(lerp(height, min, idealLow, 20, 70));
   }
 
   if (height <= idealHigh) {
     // Inside ideal: 80 at edges, 100 at midpoint
-    const mid = (idealLow + idealHigh) / 2
+    const mid = (idealLow + idealHigh) / 2;
     if (height <= mid) {
-      return Math.round(lerp(height, idealLow, mid, 80, 100))
+      return Math.round(lerp(height, idealLow, mid, 80, 100));
     } else {
-      return Math.round(lerp(height, mid, idealHigh, 100, 80))
+      return Math.round(lerp(height, mid, idealHigh, 100, 80));
     }
   }
 
   // Above ideal: penalty scaled by skill level
   // Penalty range depends on how far above ideal
-  const overFactor = (height - idealHigh) / idealHigh // 0 at edge, 1 at 2x ideal
-  const clampedOver = Math.min(overFactor, 1)
+  const overFactor = (height - idealHigh) / idealHigh; // 0 at edge, 1 at 2x ideal
+  const clampedOver = Math.min(overFactor, 1);
 
   switch (beach.skillLevel) {
     case 'advanced':
       // 70 just above → 50 at far end
-      return Math.round(70 - clampedOver * 20)
+      return Math.round(70 - clampedOver * 20);
     case 'intermediate':
       // 55 just above → 30 at far end
-      return Math.round(55 - clampedOver * 25)
+      return Math.round(55 - clampedOver * 25);
     case 'beginner':
       // 30 just above → 0 at far end
-      return Math.round(30 - clampedOver * 30)
+      return Math.round(30 - clampedOver * 30);
     default:
-      return Math.round(55 - clampedOver * 25)
+      return Math.round(55 - clampedOver * 25);
   }
 }

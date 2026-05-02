@@ -1,1 +1,48 @@
 ## Codebase Patterns
+- ESLint flat config in both packages (ui/eslint.config.js, backend/eslint.config.mjs). Backend uses .mjs because backend/package.json is CommonJS; UI uses .js because ui/package.json has "type": "module".
+- Single root .prettierrc is the source of truth for formatting; per-package .prettierignore files exist because Prettier doesn't traverse parents for ignore files (only for config).
+- Vue files: `no-undef` is disabled in eslint config because TypeScript handles type-name resolution (e.g. `GeoJSON` namespace types from maplibre-gl).
+- `backend/src/db/mongo-init.js` is a MongoDB shell script (not Node) — exclude from ESLint.
+- Lint commands: `cd ui && yarn lint`, `cd backend && npm run lint`. Format: same with `format` instead of `lint`.
+- TS strictness: both tsconfigs enable `strict`, `noUncheckedIndexedAccess`, `noFallthroughCasesInSwitch`. Indexed access (`arr[i]`, `record[key]`) returns `T | undefined` — guard with `?? fallback`, narrow via destructuring (`const first = arr[0]; if (!first) return;`), or hoist to a local before use. Avoid `!` non-null assertions; prefer explicit fallbacks.
+
+## 2026-05-02 - US-001 (ESLint + Prettier across ui/ and backend/)
+- Added root `.prettierrc` and `.prettierignore` as the single Prettier config source.
+- Added per-package `.prettierignore` (Prettier ignore files don't cascade up the tree).
+- Created `ui/eslint.config.js` (flat config) using `@eslint/js`, `typescript-eslint`, `eslint-plugin-vue`, `vue-eslint-parser`, with `eslint-config-prettier` last.
+- Created `backend/eslint.config.mjs` (flat config) using `@eslint/js`, `typescript-eslint`, with `eslint-config-prettier` last. Used `.mjs` to avoid `MODULE_TYPELESS_PACKAGE_JSON` warning since backend is CommonJS.
+- Added `lint` and `format` scripts to both `ui/package.json` and `backend/package.json`.
+- Installed devDeps: ui (yarn) and backend (npm) — eslint, @eslint/js, typescript-eslint, eslint-config-prettier, prettier, globals, plus eslint-plugin-vue + vue-eslint-parser for ui.
+- Ran `prettier --write .` then `eslint --fix .` in both packages.
+- Fixed real lint findings: renamed unused catch param `e` → `_err` in `ui/src/components/BeachMap.vue`; disabled `no-undef` for Vue/TS files (TS handles it).
+- Excluded `backend/src/db/mongo-init.js` from ESLint (MongoDB shell script).
+- All quality gates pass: `cd ui && yarn lint && yarn typecheck`; `cd backend && npm run lint && npm run typecheck`.
+- Files changed: 50+ (mostly Prettier formatting). New files: `.prettierrc`, `.prettierignore`, `ui/.prettierignore`, `backend/.prettierignore`, `ui/eslint.config.js`, `backend/eslint.config.mjs`. Modified `package.json` and lockfiles for both packages.
+- **Learnings for future iterations:**
+  - When running Prettier from a subdirectory, it does not pick up the root `.prettierignore` — must add per-package files. Prettier also formatted `ui/dist/*` on first run (rebuilt afterwards; dist is gitignored).
+  - eslint-plugin-vue v10 supports the flat config via `vue.configs['flat/recommended']`.
+  - For Vue/TS, set `parser: vueParser` with `parserOptions.parser: tseslint.parser` so `<script lang="ts">` blocks parse as TS.
+  - `no-undef` must be turned off for Vue/TS files — TS already handles it, and ESLint's no-undef can't see ambient namespaces like `GeoJSON`.
+  - typescript-eslint v8 + eslint v10 compose cleanly; spread `tseslint.configs.recommended` (it returns an array) into the flat config.
+  - `--max-warnings 0` only counts ESLint warnings; the Node `MODULE_TYPELESS_PACKAGE_JSON` notice is unrelated to exit code but worth silencing by using `.mjs`.
+  - Future stories (US-002 strict TS, US-003 husky/lint-staged) build directly on these scripts.
+---
+
+## 2026-05-02 - US-002 (Tighten TypeScript strictness in both packages)
+- Added `noUncheckedIndexedAccess: true` and `noFallthroughCasesInSwitch: true` to both `ui/tsconfig.json` and `backend/tsconfig.json` (alongside existing `strict: true`).
+- Fixed all resulting type errors without using `as any` or `@ts-expect-error` suppressions:
+  - `ui/src/composables/usePullToRefresh.ts`: guard `e.touches[0]` (touch may be missing).
+  - `ui/src/utils/compass.ts`: replaced `dirs[idx]` with `dirs[idx] ?? 'N'`.
+  - `ui/src/views/BeachDetailView.vue`: hoisted `hourly[0]` to a local with truthy guard; replaced `r.swell_wave_*` direct access with `?? 0` fallbacks (the surrounding `hasForecast` gate already guarantees presence at runtime, but TS can't follow that across computeds).
+  - `backend/src/scripts/seed.ts`: skip the loop iteration if `STUB_SCORES[beachId]` is missing.
+  - `backend/src/services/forecastFetcher.ts`: read `wind_speed_10m[i]` and `wind_direction_10m[i]` separately; skip the entry when either is undefined instead of pushing `undefined` into a `Map<…,{speed:number;direction:number}>`.
+  - `backend/src/services/scoringEngine.ts`: in `computeDailySummaries`, hoisted `hours[0]` to `first`, guarded the inner-window loop's `hours[j]`, and used `hours[bestStart] ?? first` / `hours[bestEnd] ?? first` for the summary timestamps.
+- Files changed: `ui/tsconfig.json`, `backend/tsconfig.json`, plus the six fix sites above.
+- Quality gates: `cd ui && yarn lint && yarn typecheck` ✅ ; `cd backend && npm run lint && npm run typecheck` ✅.
+- **Learnings for future iterations:**
+  - `noUncheckedIndexedAccess` is the bigger of the two flags by far — `noFallthroughCasesInSwitch` produced zero errors in this codebase. Plan future work assuming most fixes will cluster around array/record access sites.
+  - Vue `computed` blocks lose narrowing across boundaries: `hasForecast` (computed) gating `swellText` (also computed) does NOT propagate `r.swell_wave_height` being defined. Use `?? fallback` inside each computed instead of relying on a sibling guard.
+  - When fixing `Record<string, T>` access errors, check whether the underlying type should actually be `Partial<Record<…, T>>` — `noUncheckedIndexedAccess` essentially makes record access behave that way at the call site, so callers must already handle undefined.
+  - For `Map.set(key, { a, b })` where `a` and `b` come from indexed reads, destructure first and guard before constructing the object — otherwise the object literal type widens to allow `undefined` properties and conflicts with the Map value type.
+  - Future story US-003 (pre-commit hook) will wire `tsc --noEmit` into lint-staged on staged files; the strict flags landed here now apply to that hook.
+---

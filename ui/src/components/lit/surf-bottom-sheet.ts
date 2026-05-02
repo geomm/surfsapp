@@ -1,21 +1,21 @@
-import { LitElement, html, css } from 'lit'
+import { LitElement, html, css } from 'lit';
 
 class SurfBottomSheet extends LitElement {
   static properties = {
     open: { type: Boolean },
     title: { type: String },
-  }
+  };
 
-  declare open: boolean
-  declare title: string
+  declare open: boolean;
+  declare title: string;
 
   constructor() {
-    super()
-    this.open = false
-    this.title = ''
+    super();
+    this.open = false;
+    this.title = '';
   }
 
-  private _keydownHandler: ((e: KeyboardEvent) => void) | null = null
+  private _keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   static styles = css`
     :host {
@@ -65,57 +65,54 @@ class SurfBottomSheet extends LitElement {
       font-weight: var(--font-weight-semibold);
       margin: 0 0 var(--space-3);
     }
-  `
+  `;
 
   updated(changed: Map<string, unknown>) {
     if (changed.has('open')) {
       if (this.open) {
         this._keydownHandler = (e: KeyboardEvent) => {
           if (e.key === 'Escape') {
-            this._dispatchClose()
+            this._dispatchClose();
           }
-        }
-        document.addEventListener('keydown', this._keydownHandler)
+        };
+        document.addEventListener('keydown', this._keydownHandler);
       } else {
         if (this._keydownHandler) {
-          document.removeEventListener('keydown', this._keydownHandler)
-          this._keydownHandler = null
+          document.removeEventListener('keydown', this._keydownHandler);
+          this._keydownHandler = null;
         }
       }
     }
   }
 
   disconnectedCallback() {
-    super.disconnectedCallback()
+    super.disconnectedCallback();
     if (this._keydownHandler) {
-      document.removeEventListener('keydown', this._keydownHandler)
-      this._keydownHandler = null
+      document.removeEventListener('keydown', this._keydownHandler);
+      this._keydownHandler = null;
     }
   }
 
   private _dispatchClose() {
-    this.dispatchEvent(new CustomEvent('sheet-close', { bubbles: true, composed: true }))
+    this.dispatchEvent(new CustomEvent('sheet-close', { bubbles: true, composed: true }));
   }
 
   render() {
     return html`
-      <div
-        class="backdrop${this.open ? ' visible' : ''}"
-        @click="${this._dispatchClose}"
-      ></div>
+      <div class="backdrop${this.open ? ' visible' : ''}" @click="${this._dispatchClose}"></div>
       <div class="sheet${this.open ? ' open' : ''}">
         <div class="handle"></div>
         ${this.title ? html`<p class="sheet-title">${this.title}</p>` : ''}
         <slot></slot>
       </div>
-    `
+    `;
   }
 }
 
-customElements.define('surf-bottom-sheet', SurfBottomSheet)
+customElements.define('surf-bottom-sheet', SurfBottomSheet);
 
 declare global {
   interface HTMLElementTagNameMap {
-    'surf-bottom-sheet': SurfBottomSheet
+    'surf-bottom-sheet': SurfBottomSheet;
   }
 }

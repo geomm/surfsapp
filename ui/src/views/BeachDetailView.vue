@@ -1,124 +1,126 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useBeachStore } from '../stores/beachStore'
-import { formatRelativeTime, isStale } from '../utils/time'
-import { classifyReason } from '../utils/reasons'
-import { degreesToCompass } from '../utils/compass'
-import BeachMap from '../components/BeachMap.vue'
-import ForecastStrip from '../components/ForecastStrip.vue'
+import { onMounted, onBeforeUnmount, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useBeachStore } from '../stores/beachStore';
+import { formatRelativeTime, isStale } from '../utils/time';
+import { classifyReason } from '../utils/reasons';
+import { degreesToCompass } from '../utils/compass';
+import BeachMap from '../components/BeachMap.vue';
+import ForecastStrip from '../components/ForecastStrip.vue';
 
-const route = useRoute()
-const router = useRouter()
-const beachStore = useBeachStore()
+const route = useRoute();
+const router = useRouter();
+const beachStore = useBeachStore();
 
-const beachId = computed(() => String(route.params.id))
-const beach = computed(() => beachStore.selectedBeach)
+const beachId = computed(() => String(route.params.id));
+const beach = computed(() => beachStore.selectedBeach);
 const isFavourite = computed(() =>
-  beach.value ? beachStore.favourites.has(beach.value.id) : false
-)
-const stalenessWarn = computed(() =>
-  !!beach.value?.lastUpdated && isStale(beach.value.lastUpdated, 6)
-)
+  beach.value ? beachStore.favourites.has(beach.value.id) : false,
+);
+const stalenessWarn = computed(
+  () => !!beach.value?.lastUpdated && isStale(beach.value.lastUpdated, 6),
+);
 const stalenessText = computed(() =>
-  beach.value?.lastUpdated ? formatRelativeTime(beach.value.lastUpdated) : ''
-)
+  beach.value?.lastUpdated ? formatRelativeTime(beach.value.lastUpdated) : '',
+);
 
 const currentReasons = computed<string[]>(() => {
-  const hourly = beachStore.selectedForecast?.hourlyForecasts
-  return hourly && hourly.length > 0 ? hourly[0].reasons ?? [] : []
-})
+  const first = beachStore.selectedForecast?.hourlyForecasts?.[0];
+  return first?.reasons ?? [];
+});
 
 const currentScoreForClassify = computed(() => {
-  const hourly = beachStore.selectedForecast?.hourlyForecasts
-  if (hourly && hourly.length > 0) return hourly[0].surfScore ?? 0
-  return beach.value?.currentScore ?? 0
-})
+  const first = beachStore.selectedForecast?.hourlyForecasts?.[0];
+  if (first) return first.surfScore ?? 0;
+  return beach.value?.currentScore ?? 0;
+});
 
 const pros = computed(() =>
-  currentReasons.value.filter((r) => classifyReason(r, currentScoreForClassify.value) === 'pro')
-)
+  currentReasons.value.filter((r) => classifyReason(r, currentScoreForClassify.value) === 'pro'),
+);
 const cons = computed(() =>
-  currentReasons.value.filter((r) => classifyReason(r, currentScoreForClassify.value) === 'con')
-)
+  currentReasons.value.filter((r) => classifyReason(r, currentScoreForClassify.value) === 'con'),
+);
 
 const currentRaw = computed<Record<string, number>>(
   () => beachStore.selectedForecast?.hourlyForecasts?.[0]?.rawData ?? {},
-)
+);
 
 const todaySummary = computed(() => {
-  const summaries = beachStore.selectedForecast?.dailySummaries
-  if (!summaries || summaries.length === 0) return null
-  const today = new Date().toISOString().slice(0, 10)
-  return summaries.find((d) => typeof d?.date === 'string' && d.date.startsWith(today)) ?? summaries[0]
-})
+  const summaries = beachStore.selectedForecast?.dailySummaries;
+  if (!summaries || summaries.length === 0) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    summaries.find((d) => typeof d?.date === 'string' && d.date.startsWith(today)) ?? summaries[0]
+  );
+});
 
 const hasForecast = computed(() => {
-  const r = currentRaw.value
+  const r = currentRaw.value;
   return (
     r.swell_wave_height != null &&
     r.swell_wave_period != null &&
     r.swell_wave_direction != null &&
     r.wind_speed_10m != null &&
     r.wind_direction_10m != null
-  )
-})
+  );
+});
 
 const swellText = computed(() => {
-  const r = currentRaw.value
-  return `${r.swell_wave_height.toFixed(1)}m · ${Math.round(r.swell_wave_period)}s · ${degreesToCompass(r.swell_wave_direction)}`
-})
+  const r = currentRaw.value;
+  const h = r.swell_wave_height ?? 0;
+  const p = r.swell_wave_period ?? 0;
+  const d = r.swell_wave_direction ?? 0;
+  return `${h.toFixed(1)}m · ${Math.round(p)}s · ${degreesToCompass(d)}`;
+});
 
 const windText = computed(() => {
-  const r = currentRaw.value
-  return `${Math.round(r.wind_speed_10m)} km/h ${degreesToCompass(r.wind_direction_10m)}`
-})
+  const r = currentRaw.value;
+  const s = r.wind_speed_10m ?? 0;
+  const d = r.wind_direction_10m ?? 0;
+  return `${Math.round(s)} km/h ${degreesToCompass(d)}`;
+});
 
 function hhmm(iso: string): string {
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 const bestWindowText = computed(() => {
-  const t = todaySummary.value
-  if (!t?.bestWindowStart || !t?.bestWindowEnd) return null
-  return `Best: ${hhmm(t.bestWindowStart)}–${hhmm(t.bestWindowEnd)}`
-})
+  const t = todaySummary.value;
+  if (!t?.bestWindowStart || !t?.bestWindowEnd) return null;
+  return `Best: ${hhmm(t.bestWindowStart)}–${hhmm(t.bestWindowEnd)}`;
+});
 
 function goBack() {
   if (window.history.length > 1) {
-    router.back()
+    router.back();
   } else {
-    router.push('/')
+    router.push('/');
   }
 }
 
 function retry() {
-  beachStore.fetchBeachDetail(beachId.value)
+  beachStore.fetchBeachDetail(beachId.value);
 }
 
 function toggleFav() {
-  if (beach.value) beachStore.toggleFavourite(beach.value.id)
+  if (beach.value) beachStore.toggleFavourite(beach.value.id);
 }
 
 onMounted(() => {
-  beachStore.fetchBeachDetail(beachId.value)
-})
+  beachStore.fetchBeachDetail(beachId.value);
+});
 
 onBeforeUnmount(() => {
-  beachStore.clearSelectedBeach()
-})
+  beachStore.clearSelectedBeach();
+});
 </script>
 
 <template>
   <div class="detail">
     <header class="header">
-      <button
-        type="button"
-        class="back-btn"
-        aria-label="Back"
-        @click="goBack"
-      >
+      <button type="button" class="back-btn" aria-label="Back" @click="goBack">
         <surf-icon name="arrow-left"></surf-icon>
       </button>
       <h1 class="title">{{ beachStore.selectedBeach?.name ?? '' }}</h1>
@@ -197,11 +199,7 @@ onBeforeUnmount(() => {
         <div v-else class="staleness">No data yet</div>
       </section>
 
-      <surf-disclosure
-        v-if="beach"
-        class="reasons-disclosure"
-        summary="Why this score"
-      >
+      <surf-disclosure v-if="beach" class="reasons-disclosure" summary="Why this score">
         <div v-if="currentReasons.length === 0" class="no-reasons">
           No detailed reasons available
         </div>
@@ -227,15 +225,14 @@ onBeforeUnmount(() => {
         </div>
       </surf-disclosure>
 
-      <BeachMap
-        v-if="beach"
-        class="beach-map-wrap"
-        :coords="beach.coords"
-        :name="beach.name"
-      />
+      <BeachMap v-if="beach" class="beach-map-wrap" :coords="beach.coords" :name="beach.name" />
 
       <ForecastStrip
-        v-if="beach && beachStore.selectedForecast && beachStore.selectedForecast.dailySummaries.length > 0"
+        v-if="
+          beach &&
+          beachStore.selectedForecast &&
+          beachStore.selectedForecast.dailySummaries.length > 0
+        "
         class="forecast-strip-wrap"
         :daily-summaries="beachStore.selectedForecast.dailySummaries"
       />
@@ -414,7 +411,8 @@ onBeforeUnmount(() => {
   color: var(--color-ocean-800);
 }
 
-.fav-btn-on, .hero .fav-btn-on {
+.fav-btn-on,
+.hero .fav-btn-on {
   color: var(--color-surf-poor);
 }
 
@@ -544,8 +542,12 @@ onBeforeUnmount(() => {
 }
 
 @keyframes skeleton-shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

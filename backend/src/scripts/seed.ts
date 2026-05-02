@@ -1,9 +1,12 @@
-import { connectDB } from '../db/connection'
-import { Beach } from '../models/Beach'
-import { ForecastSnapshot } from '../models/ForecastSnapshot'
-import beachProfiles from '../data/beach_profiles.json'
+import { connectDB } from '../db/connection';
+import { Beach } from '../models/Beach';
+import { ForecastSnapshot } from '../models/ForecastSnapshot';
+import beachProfiles from '../data/beach_profiles.json';
 
-const STUB_SCORES: Record<string, { score: number; label: 'poor' | 'maybe' | 'good' | 'very-good' }> = {
+const STUB_SCORES: Record<
+  string,
+  { score: number; label: 'poor' | 'maybe' | 'good' | 'very-good' }
+> = {
   'vouliagmeni-athens': { score: 42, label: 'maybe' },
   'mesachti-ikaria': { score: 71, label: 'good' },
   'langouvardos-filiatra': { score: 58, label: 'maybe' },
@@ -12,36 +15,37 @@ const STUB_SCORES: Record<string, { score: number; label: 'poor' | 'maybe' | 'go
   'agios-georgios-naxos': { score: 61, label: 'good' },
   'kokkino-limanaki-rafina': { score: 48, label: 'maybe' },
   'kolimpithra-tinos': { score: 77, label: 'good' },
-}
+};
 
 async function seed(): Promise<void> {
-  await connectDB()
+  await connectDB();
 
   // Upsert all beaches
   for (const beach of beachProfiles) {
-    await Beach.findOneAndUpdate(
-      { id: (beach as { id: string }).id },
-      beach,
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    )
+    await Beach.findOneAndUpdate({ id: (beach as { id: string }).id }, beach, {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    });
   }
-  console.log(`Seeded ${beachProfiles.length} beaches`)
+  console.log(`Seeded ${beachProfiles.length} beaches`);
 
   // Create stub ForecastSnapshots
-  const now = new Date()
-  const todayIso = now.toISOString().split('T')[0]
-  let created = 0
-  let skipped = 0
+  const now = new Date();
+  const todayIso = now.toISOString().split('T')[0];
+  let created = 0;
+  let skipped = 0;
 
   for (const beach of beachProfiles) {
-    const beachId = (beach as { id: string }).id
-    const existing = await ForecastSnapshot.findOne({ beachId })
+    const beachId = (beach as { id: string }).id;
+    const existing = await ForecastSnapshot.findOne({ beachId });
     if (existing) {
-      skipped++
-      continue
+      skipped++;
+      continue;
     }
 
-    const stub = STUB_SCORES[beachId]
+    const stub = STUB_SCORES[beachId];
+    if (!stub) continue;
     await ForecastSnapshot.create({
       beachId,
       fetchedAt: now,
@@ -64,15 +68,15 @@ async function seed(): Promise<void> {
           overallLabel: stub.label,
         },
       ],
-    })
-    created++
+    });
+    created++;
   }
 
-  console.log(`Created ${created} snapshots (${skipped} already existed)`)
-  process.exit(0)
+  console.log(`Created ${created} snapshots (${skipped} already existed)`);
+  process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+  console.error(err);
+  process.exit(1);
+});

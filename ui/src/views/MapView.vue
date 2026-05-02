@@ -1,44 +1,44 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import maplibregl from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
-import { useBeachStore } from '../stores/beachStore'
-import { db } from '../db'
-import type { Beach } from '../types/beach'
-import { degreesToCompass } from '../utils/compass'
-import { formatRelativeTime } from '../utils/time'
-import ViewSwitcherFab from '../components/ViewSwitcherFab.vue'
-import { useOnlineStatus } from '../composables/useOnlineStatus'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useBeachStore } from '../stores/beachStore';
+import { db } from '../db';
+import type { Beach } from '../types/beach';
+import { degreesToCompass } from '../utils/compass';
+import { formatRelativeTime } from '../utils/time';
+import ViewSwitcherFab from '../components/ViewSwitcherFab.vue';
+import { useOnlineStatus } from '../composables/useOnlineStatus';
 
-const beachStore = useBeachStore()
-const router = useRouter()
-const { isOnline } = useOnlineStatus()
-const container = ref<HTMLDivElement | null>(null)
-const selectedBeach = ref<Beach | null>(null)
-const sheetOpen = ref(false)
-const locating = ref(false)
-const locateError = ref(false)
-const windOverlayOn = ref(false)
-let map: maplibregl.Map | null = null
-let beachesPlotted = false
-let hasPersistedCamera = false
-let persistTimer: ReturnType<typeof setTimeout> | null = null
-let locateErrorTimer: ReturnType<typeof setTimeout> | null = null
-let arrowImage: HTMLImageElement | null = null
-let userLocationMarker: maplibregl.Marker | null = null
+const beachStore = useBeachStore();
+const router = useRouter();
+const { isOnline } = useOnlineStatus();
+const container = ref<HTMLDivElement | null>(null);
+const selectedBeach = ref<Beach | null>(null);
+const sheetOpen = ref(false);
+const locating = ref(false);
+const locateError = ref(false);
+const windOverlayOn = ref(false);
+let map: maplibregl.Map | null = null;
+let beachesPlotted = false;
+let hasPersistedCamera = false;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let locateErrorTimer: ReturnType<typeof setTimeout> | null = null;
+let arrowImage: HTMLImageElement | null = null;
+let userLocationMarker: maplibregl.Marker | null = null;
 
-const BEACH_SOURCE_ID = 'beaches'
-const BEACH_CIRCLE_LAYER = 'beach-markers'
-const BEACH_LABEL_LAYER = 'beach-marker-labels'
-const CLUSTER_CIRCLE_LAYER = 'beach-clusters'
-const CLUSTER_COUNT_LAYER = 'beach-cluster-count'
-const WIND_ARROW_LAYER = 'beach-wind-arrows'
-const ARROW_IMAGE_ID = 'arrow'
-const MAP_CENTER_KEY = 'mapCenter'
-const MAP_ZOOM_KEY = 'mapZoom'
-const WIND_OVERLAY_KEY = 'mapWindOverlay'
-const PERSIST_DEBOUNCE_MS = 400
+const BEACH_SOURCE_ID = 'beaches';
+const BEACH_CIRCLE_LAYER = 'beach-markers';
+const BEACH_LABEL_LAYER = 'beach-marker-labels';
+const CLUSTER_CIRCLE_LAYER = 'beach-clusters';
+const CLUSTER_COUNT_LAYER = 'beach-cluster-count';
+const WIND_ARROW_LAYER = 'beach-wind-arrows';
+const ARROW_IMAGE_ID = 'arrow';
+const MAP_CENTER_KEY = 'mapCenter';
+const MAP_ZOOM_KEY = 'mapZoom';
+const WIND_OVERLAY_KEY = 'mapWindOverlay';
+const PERSIST_DEBOUNCE_MS = 400;
 
 // Upward-pointing arrow (north) baseline. windDirection is meteorological: the bearing
 // wind is coming FROM (e.g. 0° = northerly wind, blowing southward). The arrow should
@@ -47,16 +47,16 @@ const PERSIST_DEBOUNCE_MS = 400
 const ARROW_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">' +
   '<path d="M20 4 L32 30 L20 24 L8 30 Z" fill="#1a5a8a" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>' +
-  '</svg>'
-const ARROW_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(ARROW_SVG)}`
+  '</svg>';
+const ARROW_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(ARROW_SVG)}`;
 
 function loadArrowImage(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const img = new Image(40, 40)
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Failed to load wind arrow image'))
-    img.src = ARROW_DATA_URL
-  })
+    const img = new Image(40, 40);
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load wind arrow image'));
+    img.src = ARROW_DATA_URL;
+  });
 }
 
 function isValidCenter(v: unknown): v is [number, number] {
@@ -69,22 +69,22 @@ function isValidCenter(v: unknown): v is [number, number] {
     Number.isFinite(v[1]) &&
     Math.abs(v[0]) <= 180 &&
     Math.abs(v[1]) <= 90
-  )
+  );
 }
 
 function isValidZoom(v: unknown): v is number {
-  return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 24;
 }
 
-type LabelKey = 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral'
-type ResolvedColors = Record<LabelKey, string> & { cluster: string }
+type LabelKey = 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral';
+type ResolvedColors = Record<LabelKey, string> & { cluster: string };
 
 function resolveLabelColors(): ResolvedColors {
-  const styles = getComputedStyle(document.documentElement)
+  const styles = getComputedStyle(document.documentElement);
   const read = (name: string, fallback: string) => {
-    const v = styles.getPropertyValue(name).trim()
-    return v.length > 0 ? v : fallback
-  }
+    const v = styles.getPropertyValue(name).trim();
+    return v.length > 0 ? v : fallback;
+  };
   return {
     'very-good': read('--color-surf-very-good', '#2d9e5f'),
     good: read('--color-surf-good', '#1a72c4'),
@@ -92,7 +92,7 @@ function resolveLabelColors(): ResolvedColors {
     poor: read('--color-surf-poor', '#c0392b'),
     neutral: read('--color-neutral-300', '#dee2e6'),
     cluster: read('--color-ocean-700', '#1a5a8a'),
-  }
+  };
 }
 
 function toFeatureCollection(beaches: Beach[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
@@ -106,22 +106,25 @@ function toFeatureCollection(beaches: Beach[]): GeoJSON.FeatureCollection<GeoJSO
         label: b.currentLabel ?? 'neutral',
         score: b.currentScore,
         lastUpdated: b.lastUpdated,
-      }
+      };
       // Omit wind props when null so ['has', 'windSpeed'/'windDirection'] filter
       // correctly excludes features without forecast data from the wind-arrow layer.
-      if (b.windSpeed != null) properties.windSpeed = b.windSpeed
-      if (b.windDirection != null) properties.windDirection = b.windDirection
+      if (b.windSpeed != null) properties.windSpeed = b.windSpeed;
+      if (b.windDirection != null) properties.windDirection = b.windDirection;
       return {
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [b.coords.lon, b.coords.lat] },
         properties,
-      }
-    })
-  return { type: 'FeatureCollection', features }
+      };
+    });
+  return { type: 'FeatureCollection', features };
 }
 
-function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollection<GeoJSON.Point>) {
-  const colors = resolveLabelColors()
+function addBeachLayers(
+  mapInstance: maplibregl.Map,
+  data: GeoJSON.FeatureCollection<GeoJSON.Point>,
+) {
+  const colors = resolveLabelColors();
 
   mapInstance.addSource(BEACH_SOURCE_ID, {
     type: 'geojson',
@@ -129,7 +132,7 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
     cluster: true,
     clusterMaxZoom: 8,
     clusterRadius: 50,
-  })
+  });
 
   mapInstance.addLayer({
     id: CLUSTER_CIRCLE_LAYER,
@@ -142,7 +145,7 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
       'circle-stroke-width': 2,
       'circle-radius': ['step', ['get', 'point_count'], 18, 10, 22, 30, 28],
     },
-  })
+  });
 
   mapInstance.addLayer({
     id: CLUSTER_COUNT_LAYER,
@@ -159,7 +162,7 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
     paint: {
       'text-color': '#ffffff',
     },
-  })
+  });
 
   mapInstance.addLayer({
     id: BEACH_CIRCLE_LAYER,
@@ -173,14 +176,18 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
       'circle-color': [
         'match',
         ['get', 'label'],
-        'very-good', colors['very-good'],
-        'good', colors.good,
-        'maybe', colors.maybe,
-        'poor', colors.poor,
+        'very-good',
+        colors['very-good'],
+        'good',
+        colors.good,
+        'maybe',
+        colors.maybe,
+        'poor',
+        colors.poor,
         colors.neutral,
       ],
     },
-  })
+  });
 
   mapInstance.addLayer({
     id: BEACH_LABEL_LAYER,
@@ -188,12 +195,7 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
     source: BEACH_SOURCE_ID,
     filter: ['!', ['has', 'point_count']],
     layout: {
-      'text-field': [
-        'case',
-        ['!=', ['get', 'score'], null],
-        ['to-string', ['get', 'score']],
-        '—',
-      ],
+      'text-field': ['case', ['!=', ['get', 'score'], null], ['to-string', ['get', 'score']], '—'],
       'text-size': 13,
       'text-font': ['Noto Sans Regular'],
       'text-allow-overlap': true,
@@ -202,59 +204,64 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
     paint: {
       'text-color': '#ffffff',
     },
-  })
+  });
 
   mapInstance.on('click', CLUSTER_CIRCLE_LAYER, (e) => {
-    const features = mapInstance.queryRenderedFeatures(e.point, { layers: [CLUSTER_CIRCLE_LAYER] })
-    const feature = features[0]
-    if (!feature) return
-    const clusterId = feature.properties?.cluster_id as number | undefined
-    if (clusterId === undefined) return
-    const source = mapInstance.getSource(BEACH_SOURCE_ID) as maplibregl.GeoJSONSource | undefined
-    if (!source) return
+    const features = mapInstance.queryRenderedFeatures(e.point, { layers: [CLUSTER_CIRCLE_LAYER] });
+    const feature = features[0];
+    if (!feature) return;
+    const clusterId = feature.properties?.cluster_id as number | undefined;
+    if (clusterId === undefined) return;
+    const source = mapInstance.getSource(BEACH_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
     source.getClusterExpansionZoom(clusterId).then((zoom) => {
-      if (feature.geometry.type !== 'Point') return
+      if (feature.geometry.type !== 'Point') return;
       mapInstance.easeTo({
         center: feature.geometry.coordinates as [number, number],
         zoom,
-      })
-    })
-  })
+      });
+    });
+  });
 
   mapInstance.on('mouseenter', CLUSTER_CIRCLE_LAYER, () => {
-    mapInstance.getCanvas().style.cursor = 'pointer'
-  })
+    mapInstance.getCanvas().style.cursor = 'pointer';
+  });
   mapInstance.on('mouseleave', CLUSTER_CIRCLE_LAYER, () => {
-    mapInstance.getCanvas().style.cursor = ''
-  })
+    mapInstance.getCanvas().style.cursor = '';
+  });
 
   mapInstance.on('click', BEACH_CIRCLE_LAYER, (e) => {
-    const feature = e.features?.[0]
-    if (!feature) return
-    const beachId = feature.properties?.id
-    if (typeof beachId !== 'string') return
-    const beach = beachStore.beaches.find((b) => b.id === beachId)
-    if (!beach) return
-    selectedBeach.value = beach
-    sheetOpen.value = true
-  })
+    const feature = e.features?.[0];
+    if (!feature) return;
+    const beachId = feature.properties?.id;
+    if (typeof beachId !== 'string') return;
+    const beach = beachStore.beaches.find((b) => b.id === beachId);
+    if (!beach) return;
+    selectedBeach.value = beach;
+    sheetOpen.value = true;
+  });
 
   mapInstance.on('mouseenter', BEACH_CIRCLE_LAYER, () => {
-    mapInstance.getCanvas().style.cursor = 'pointer'
-  })
+    mapInstance.getCanvas().style.cursor = 'pointer';
+  });
   mapInstance.on('mouseleave', BEACH_CIRCLE_LAYER, () => {
-    mapInstance.getCanvas().style.cursor = ''
-  })
+    mapInstance.getCanvas().style.cursor = '';
+  });
 
   if (arrowImage && !mapInstance.hasImage(ARROW_IMAGE_ID)) {
-    mapInstance.addImage(ARROW_IMAGE_ID, arrowImage)
+    mapInstance.addImage(ARROW_IMAGE_ID, arrowImage);
   }
   if (mapInstance.hasImage(ARROW_IMAGE_ID)) {
     mapInstance.addLayer({
       id: WIND_ARROW_LAYER,
       type: 'symbol',
       source: BEACH_SOURCE_ID,
-      filter: ['all', ['!', ['has', 'point_count']], ['has', 'windSpeed'], ['has', 'windDirection']],
+      filter: [
+        'all',
+        ['!', ['has', 'point_count']],
+        ['has', 'windSpeed'],
+        ['has', 'windDirection'],
+      ],
       layout: {
         'icon-image': ARROW_IMAGE_ID,
         'icon-rotate': ['+', ['get', 'windDirection'], 180],
@@ -267,7 +274,7 @@ function addBeachLayers(mapInstance: maplibregl.Map, data: GeoJSON.FeatureCollec
       paint: {
         'icon-opacity': 0.85,
       },
-    })
+    });
   }
 }
 
@@ -278,75 +285,75 @@ function hasForecast(b: Beach): boolean {
     b.swellDirection != null &&
     b.windSpeed != null &&
     b.windDirection != null
-  )
+  );
 }
 
 function swellText(b: Beach): string {
-  return `${(b.swellHeight as number).toFixed(1)}m · ${Math.round(b.swellPeriod as number)}s · ${degreesToCompass(b.swellDirection as number)}`
+  return `${(b.swellHeight as number).toFixed(1)}m · ${Math.round(b.swellPeriod as number)}s · ${degreesToCompass(b.swellDirection as number)}`;
 }
 
 function windText(b: Beach): string {
-  return `${Math.round(b.windSpeed as number)} km/h ${degreesToCompass(b.windDirection as number)}`
+  return `${Math.round(b.windSpeed as number)} km/h ${degreesToCompass(b.windDirection as number)}`;
 }
 
-const selectedBadgeVariant = computed(() => selectedBeach.value?.currentLabel ?? 'neutral')
+const selectedBadgeVariant = computed(() => selectedBeach.value?.currentLabel ?? 'neutral');
 const selectedStaleness = computed(() => {
-  const b = selectedBeach.value
-  if (!b?.lastUpdated) return 'No data yet'
-  return formatRelativeTime(b.lastUpdated)
-})
+  const b = selectedBeach.value;
+  if (!b?.lastUpdated) return 'No data yet';
+  return formatRelativeTime(b.lastUpdated);
+});
 
 function onSheetClose() {
-  sheetOpen.value = false
-  selectedBeach.value = null
+  sheetOpen.value = false;
+  selectedBeach.value = null;
 }
 
 function openSelectedDetail() {
-  const b = selectedBeach.value
-  if (!b) return
-  sheetOpen.value = false
-  router.push({ name: 'beach-detail', params: { id: b.id } })
+  const b = selectedBeach.value;
+  if (!b) return;
+  sheetOpen.value = false;
+  router.push({ name: 'beach-detail', params: { id: b.id } });
 }
 
 function backToList() {
-  router.push('/')
+  router.push('/');
 }
 
 function showLocateError() {
-  locateError.value = true
-  if (locateErrorTimer !== null) clearTimeout(locateErrorTimer)
+  locateError.value = true;
+  if (locateErrorTimer !== null) clearTimeout(locateErrorTimer);
   locateErrorTimer = setTimeout(() => {
-    locateError.value = false
-    locateErrorTimer = null
-  }, 4000)
+    locateError.value = false;
+    locateErrorTimer = null;
+  }, 4000);
 }
 
 function toggleWindOverlay() {
-  windOverlayOn.value = !windOverlayOn.value
+  windOverlayOn.value = !windOverlayOn.value;
   if (map && map.getLayer(WIND_ARROW_LAYER)) {
-    map.setLayoutProperty(WIND_ARROW_LAYER, 'visibility', windOverlayOn.value ? 'visible' : 'none')
+    map.setLayoutProperty(WIND_ARROW_LAYER, 'visibility', windOverlayOn.value ? 'visible' : 'none');
   }
   db.settings.put({ key: WIND_OVERLAY_KEY, value: windOverlayOn.value }).catch((err) => {
-    console.error('Failed to persist wind overlay state', err)
-  })
+    console.error('Failed to persist wind overlay state', err);
+  });
 }
 
 function handleLocateMe() {
-  if (locating.value) return
+  if (locating.value) return;
   if (!navigator.geolocation) {
-    showLocateError()
-    return
+    showLocateError();
+    return;
   }
-  locating.value = true
+  locating.value = true;
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      locating.value = false
-      if (!map) return
-      const { longitude, latitude } = position.coords
+      locating.value = false;
+      if (!map) return;
+      const { longitude, latitude } = position.coords;
       if (userLocationMarker) {
-        userLocationMarker.setLngLat([longitude, latitude])
+        userLocationMarker.setLngLat([longitude, latitude]);
       } else {
-        const el = document.createElement('div')
+        const el = document.createElement('div');
         el.setAttribute(
           'style',
           [
@@ -358,130 +365,128 @@ function handleLocateMe() {
             'box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3)',
             'box-sizing: border-box',
           ].join(';'),
-        )
+        );
         userLocationMarker = new maplibregl.Marker({ element: el })
           .setLngLat([longitude, latitude])
-          .addTo(map)
+          .addTo(map);
       }
       map.easeTo({
         center: [longitude, latitude],
         zoom: Math.max(map.getZoom(), 11),
-      })
+      });
     },
     () => {
-      locating.value = false
-      showLocateError()
+      locating.value = false;
+      showLocateError();
     },
     { timeout: 10000 },
-  )
+  );
 }
 
 function plotBeaches(beaches: Beach[]) {
-  if (!map || beachesPlotted) return
-  const data = toFeatureCollection(beaches)
-  if (data.features.length === 0) return
+  if (!map || beachesPlotted) return;
+  const data = toFeatureCollection(beaches);
+  if (data.features.length === 0) return;
 
-  addBeachLayers(map, data)
+  addBeachLayers(map, data);
 
   if (!hasPersistedCamera) {
-    const bounds = new maplibregl.LngLatBounds()
+    const bounds = new maplibregl.LngLatBounds();
     for (const feature of data.features) {
-      bounds.extend(feature.geometry.coordinates as [number, number])
+      bounds.extend(feature.geometry.coordinates as [number, number]);
     }
-    map.fitBounds(bounds, { padding: 48, animate: false })
+    map.fitBounds(bounds, { padding: 48, animate: false });
   }
-  beachesPlotted = true
+  beachesPlotted = true;
 }
 
 function schedulePersistCamera() {
-  if (!map) return
-  if (persistTimer !== null) clearTimeout(persistTimer)
+  if (!map) return;
+  if (persistTimer !== null) clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
-    persistTimer = null
-    if (!map) return
-    const center = map.getCenter()
-    const zoom = map.getZoom()
-    db.settings
-      .put({ key: MAP_CENTER_KEY, value: [center.lng, center.lat] })
-      .catch((err) => {
-        console.error('Failed to persist mapCenter to IndexedDB', err)
-      })
+    persistTimer = null;
+    if (!map) return;
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    db.settings.put({ key: MAP_CENTER_KEY, value: [center.lng, center.lat] }).catch((err) => {
+      console.error('Failed to persist mapCenter to IndexedDB', err);
+    });
     db.settings.put({ key: MAP_ZOOM_KEY, value: zoom }).catch((err) => {
-      console.error('Failed to persist mapZoom to IndexedDB', err)
-    })
-  }, PERSIST_DEBOUNCE_MS)
+      console.error('Failed to persist mapZoom to IndexedDB', err);
+    });
+  }, PERSIST_DEBOUNCE_MS);
 }
 
 onMounted(async () => {
   if (beachStore.beaches.length === 0) {
-    beachStore.fetchBeaches()
+    beachStore.fetchBeaches();
   }
 
-  if (!container.value) return
+  if (!container.value) return;
 
   const [centerRec, zoomRec, windRec, loadedArrow] = await Promise.all([
     db.settings.get(MAP_CENTER_KEY).catch(() => undefined),
     db.settings.get(MAP_ZOOM_KEY).catch(() => undefined),
     db.settings.get(WIND_OVERLAY_KEY).catch(() => undefined),
     loadArrowImage().catch(() => null),
-  ])
-  const centerVal = centerRec?.value
-  const zoomVal = zoomRec?.value
-  const persistedCenter = isValidCenter(centerVal) ? centerVal : null
-  const persistedZoom = isValidZoom(zoomVal) ? zoomVal : null
-  hasPersistedCamera = persistedCenter !== null && persistedZoom !== null
-  windOverlayOn.value = typeof windRec?.value === 'boolean' ? windRec.value : false
-  arrowImage = loadedArrow
+  ]);
+  const centerVal = centerRec?.value;
+  const zoomVal = zoomRec?.value;
+  const persistedCenter = isValidCenter(centerVal) ? centerVal : null;
+  const persistedZoom = isValidZoom(zoomVal) ? zoomVal : null;
+  hasPersistedCamera = persistedCenter !== null && persistedZoom !== null;
+  windOverlayOn.value = typeof windRec?.value === 'boolean' ? windRec.value : false;
+  arrowImage = loadedArrow;
 
-  if (!container.value) return
+  if (!container.value) return;
   map = new maplibregl.Map({
     container: container.value,
     style: 'https://demotiles.maplibre.org/style.json',
     center: hasPersistedCamera && persistedCenter ? persistedCenter : [23.7275, 37.9838],
     zoom: hasPersistedCamera && persistedZoom !== null ? persistedZoom : 5,
-  })
+  });
 
   map.on('load', () => {
-    plotBeaches(beachStore.beaches)
-  })
+    plotBeaches(beachStore.beaches);
+  });
 
-  map.on('moveend', schedulePersistCamera)
-})
+  map.on('moveend', schedulePersistCamera);
+});
 
 watch(
   () => beachStore.beaches,
   (beaches) => {
     if (map?.loaded()) {
-      plotBeaches(beaches)
+      plotBeaches(beaches);
     } else if (map) {
-      map.once('load', () => plotBeaches(beaches))
+      map.once('load', () => plotBeaches(beaches));
     }
   },
-)
+);
 
 onBeforeUnmount(() => {
   if (persistTimer !== null) {
-    clearTimeout(persistTimer)
-    persistTimer = null
+    clearTimeout(persistTimer);
+    persistTimer = null;
   }
   if (locateErrorTimer !== null) {
-    clearTimeout(locateErrorTimer)
-    locateErrorTimer = null
+    clearTimeout(locateErrorTimer);
+    locateErrorTimer = null;
   }
   if (userLocationMarker) {
-    userLocationMarker.remove()
-    userLocationMarker = null
+    userLocationMarker.remove();
+    userLocationMarker = null;
   }
   if (map) {
-    map.remove()
-    map = null
+    map.remove();
+    map = null;
   }
-  beachesPlotted = false
-  hasPersistedCamera = false
-  arrowImage = null
-  locating.value = false
-  locateError.value = false
-})
+  beachesPlotted = false;
+  hasPersistedCamera = false;
+  arrowImage = null;
+  locating.value = false;
+  locateError.value = false;
+});
 </script>
 
 <template>
@@ -489,9 +494,15 @@ onBeforeUnmount(() => {
     <div ref="container" class="map-canvas"></div>
     <div v-if="!isOnline" class="offline-map-banner" role="status" aria-live="polite">
       <p class="offline-map-banner__text">
-        Map needs internet — tiles won't load. Your cached beach data is still available on the list view.
+        Map needs internet — tiles won't load. Your cached beach data is still available on the list
+        view.
       </p>
-      <surf-button variant="secondary" size="sm" class="offline-map-banner__button" @click="backToList">
+      <surf-button
+        variant="secondary"
+        size="sm"
+        class="offline-map-banner__button"
+        @click="backToList"
+      >
         Back to list
       </surf-button>
     </div>
@@ -527,7 +538,9 @@ onBeforeUnmount(() => {
             <p class="preview-region">{{ selectedBeach.region }}</p>
           </div>
           <surf-badge :variant="selectedBadgeVariant">
-            <template v-if="selectedBeach.currentScore !== null">{{ selectedBeach.currentScore }}%</template>
+            <template v-if="selectedBeach.currentScore !== null"
+              >{{ selectedBeach.currentScore }}%</template
+            >
             <template v-else>No data</template>
           </surf-badge>
         </div>

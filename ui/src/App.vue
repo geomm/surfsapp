@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useOnlineStatus } from './composables/useOnlineStatus'
-import { useServiceWorker } from './composables/useServiceWorker'
+import { computed } from 'vue';
+import { useOnlineStatus } from './composables/useOnlineStatus';
+import { useServiceWorker } from './composables/useServiceWorker';
 
-const { isOnline } = useOnlineStatus()
-const { needRefresh, updateServiceWorker } = useServiceWorker()
+const { isOnline } = useOnlineStatus();
+const { needRefresh, updateServiceWorker } = useServiceWorker();
 
-const showOfflineBanner = computed(() => !isOnline.value)
-const showUpdateBanner = computed(() => needRefresh.value && isOnline.value)
-const showAnyBanner = computed(() => showOfflineBanner.value || showUpdateBanner.value)
+const showOfflineBanner = computed(() => !isOnline.value);
+const showUpdateBanner = computed(() => needRefresh.value && isOnline.value);
+const showAnyBanner = computed(() => showOfflineBanner.value || showUpdateBanner.value);
 
 function handleRefresh() {
-  updateServiceWorker(true)
+  updateServiceWorker(true);
 }
 </script>
 
@@ -24,7 +24,12 @@ function handleRefresh() {
   <Transition name="banner">
     <div v-if="showUpdateBanner" class="update-banner" role="status" aria-live="polite">
       <span class="update-banner__text">New version available</span>
-      <surf-button variant="secondary" size="sm" class="update-banner__button" @click="handleRefresh">
+      <surf-button
+        variant="secondary"
+        size="sm"
+        class="update-banner__button"
+        @click="handleRefresh"
+      >
         Refresh
       </surf-button>
     </div>
@@ -36,7 +41,7 @@ function handleRefresh() {
 
 <style>
 html {
-  background-color:var(--color-surf-maybe);
+  background-color: var(--color-surf-maybe);
   background:
     linear-gradient(
       180deg,
@@ -110,7 +115,9 @@ html {
 
 .banner-enter-active,
 .banner-leave-active {
-  transition: transform 200ms ease, opacity 200ms ease;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease;
 }
 
 .banner-enter-from,

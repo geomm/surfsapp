@@ -1,18 +1,18 @@
-import { LitElement, html, css } from 'lit'
+import { LitElement, html, css } from 'lit';
 
 class SurfBadge extends LitElement {
   static properties = {
     variant: { type: String },
     size: { type: String },
-  }
+  };
 
-  declare variant: 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral'
-  declare size: 'sm' | 'md'
+  declare variant: 'very-good' | 'good' | 'maybe' | 'poor' | 'neutral';
+  declare size: 'sm' | 'md';
 
   constructor() {
-    super()
-    this.variant = 'neutral'
-    this.size = 'md'
+    super();
+    this.variant = 'neutral';
+    this.size = 'md';
   }
 
   static styles = css`
@@ -57,21 +57,21 @@ class SurfBadge extends LitElement {
       background: var(--color-neutral-200);
       color: var(--color-text-secondary);
     }
-  `
+  `;
 
   render() {
     return html`
       <span class="badge size-${this.size} variant-${this.variant}">
         <slot></slot>
       </span>
-    `
+    `;
   }
 }
 
-customElements.define('surf-badge', SurfBadge)
+customElements.define('surf-badge', SurfBadge);
 
 declare global {
   interface HTMLElementTagNameMap {
-    'surf-badge': SurfBadge
+    'surf-badge': SurfBadge;
   }
 }
