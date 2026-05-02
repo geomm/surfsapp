@@ -151,7 +151,7 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-001 (Dev experience baseline). PRD US-004. Last in the order so it documents the scripts and hooks introduced by earlier stories — avoids the README drifting as those land."
     }
   ]

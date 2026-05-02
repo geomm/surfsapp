@@ -130,6 +130,30 @@
   - **Worker error handling needs both `'error'` and `'exit'` listeners.** A `'error'` event fires for sync throws inside the worker; an unclean `'exit'` (non-zero code) can also happen without a prior `'error'`. Both reject any pending jobs and clear `workerInstance` so the next trigger respawns.
 ---
 
+## 2026-05-02 - US-008 (Document Docker + HMR developer workflow in README.md)
+- Restructured README.md: renamed `Getting started` + `Common commands` into a single `## Local development` umbrella section so all dev-workflow info sits in one place.
+- New subsections under Local development:
+  - `First-time setup` — clone → `cp backend/.env.example .env` → `docker compose up` → seed → root `npm install` (the last step explicit so the husky hook is wired up — previously buried in the Pre-commit hooks section only).
+  - `Where things live` — table of `ui/`, `backend/`, `docker-compose.yml`, `docs/`, `scripts/`.
+  - `Ports` — table mapping host:container for ui (5173), backend (3000), mongo (27017).
+  - `Dev workflow` — preserved the existing dev/HMR commands.
+  - `HMR over Docker bind mounts (usePolling)` — explains why `server.watch.usePolling: true` is set in `ui/vite.config.ts`: macOS/Windows Docker VMs don't propagate fsevents/inotify across the bind-mount boundary, so polling is the only reliable cross-platform watcher.
+  - `Production build + preview` — preserved.
+  - `Quality commands` — explicit table listing `lint`, `typecheck`, `format`, `build` for both `ui/` (yarn) and `backend/` (npm), with the `cd` prefix because eslint flat config + tsc both resolve config from cwd. Cross-links to the Pre-commit hooks section.
+  - `Real-device testing over HTTPS (cloudflared)` — preserved + added an explicit pointer to the Phase 1 DoD line in `docs/v0.2-plan.md` and noted the `allowedHosts: ['.trycloudflare.com']` allow-list in `vite.config.ts`.
+- `## Pre-commit hooks` section preserved at root level so the in-page link from Quality commands resolves to a stable anchor.
+- Files modified: `README.md`, `prd.json`, `progress.txt`.
+- Quality gates: `cd ui && yarn typecheck && yarn lint` ✅ ; `cd backend && npm run typecheck && npm run lint` ✅. Prettier ran clean on README.md (root `.prettierrc`).
+- Manual verification: re-read the README top-to-bottom — a fresh contributor following only "Local development → First-time setup" reaches a running stack on `localhost:5173` (UI) and `localhost:3000` (backend) without needing to read source files. Cloudflared block tells them how to expose it for phone smoke tests; Quality commands block tells them what to run before committing; Pre-commit hooks block reassures them that those checks also run automatically.
+- **Learnings for future iterations:**
+  - **README is the install side of the contract for `npm install` at root.** Steps 1–4 of First-time setup boot the stack but the husky hook only wires up after the root `npm install` (step 5). Without it, contributors silently bypass pre-commit. This was previously only mentioned in the Pre-commit hooks section deeper down — now hoisted into the bootstrap sequence.
+  - **Anchor links to `## Pre-commit hooks` rely on the section staying at heading level `##` (not nested under Local development).** Prettier doesn't rewrite heading-link slugs but moving the section into a subsection would change the anchor from `#pre-commit-hooks` to keep the same slug — fine in this case, but worth checking if you reorganize.
+  - **The Phase 1 DoD line in docs/v0.2-plan.md (line 215) explicitly cross-references README's cloudflared section.** When updating either, keep them aligned — the DoD bullet says "via the cloudflared tunnel workflow documented in README.md", so removing the README block would orphan the DoD reference.
+  - **`Where things live` is a small table on purpose.** The `## Project structure` section near the bottom of the README has the deeper tree. Two views (high-level pointer near setup; detailed tree near the docs index) is cheaper than maintaining one sprawling tree at the top.
+  - **No code changes needed for this story** — it's pure docs. The pre-commit hook still runs `prettier --write` on the README via the `*.{js,json,md}` glob, so the file stayed in canonical form post-commit.
+  - **All US-001 through US-008 now pass** — Phase 1 (Foundation) of v0.2 is complete. Next phase per `docs/v0.2-plan.md` will need a fresh PRD (this `prd.json` ends here).
+---
+
 ## 2026-05-02 - US-007 (Bundle-size baseline and perf budget in vite.config.ts)
 - Captured fresh `yarn build` output (commit `3881cf3` plus US-007 changes). Largest chunk: `maplibre-gl-<hash>.js` at 1,047.86 kB raw / 283.21 kB gzip. Entry chunk drifted slightly from the US-006 docs snapshot (now 263.91 kB raw / 91.66 kB gzip vs the earlier 458/159) — included a fresh per-chunk markdown table in `docs/perf-baseline.md` under a new "Bundle size budget (US-007)" subsection.
 - Set `build.chunkSizeWarningLimit: 1155` in `ui/vite.config.ts` with the AC-required comment. Computation: 1,047.86 → 1,050 (round up to nearest 10) → ×1.10 = 1,155 kB.

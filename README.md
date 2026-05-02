@@ -27,9 +27,11 @@ An offline-first PWA that shows surfability scores for Greek beaches. Fetches ma
 | Forecast data | Open-Meteo Marine API (free, no key required) |
 | Containers    | Docker Compose                                |
 
-## Getting started
+## Local development
 
-**Prerequisites:** Docker + Docker Compose
+**Prerequisites:** Docker + Docker Compose. Everything else (Node, Yarn, Mongo) runs inside containers — no host installs required to boot the stack.
+
+### First-time setup
 
 ```bash
 # 1. Clone
@@ -45,17 +47,30 @@ docker compose up
 
 # 4. Seed beach data (first run only)
 docker compose exec backend npm run seed
+
+# 5. Install root devDeps so the husky pre-commit hook is wired up
+npm install
 ```
 
-Services:
+### Where things live
 
-- UI: http://localhost:5173
-- Backend API: http://localhost:3000
-- MongoDB: localhost:27017
+| Path                 | What it is                                                      |
+| -------------------- | --------------------------------------------------------------- |
+| `ui/`                | Vue 3 + Vite frontend (PWA). Yarn workspace.                    |
+| `backend/`           | Node.js + Express API + cron forecast fetcher. npm workspace.   |
+| `docker-compose.yml` | Orchestrates `ui`, `backend`, `mongo` containers                |
+| `docs/`              | Plans, scoring engine, beach profiles, perf baselines           |
+| `scripts/`           | Bench harnesses (`bench-backend.mjs`, `bench-during-fetch.mjs`) |
 
-## Common commands
+### Ports
 
-### Dev flow (hot reload, no service worker)
+| Service     | Host port | Container port |
+| ----------- | --------- | -------------- |
+| UI (Vite)   | 5173      | 5173           |
+| Backend API | 3000      | 3000           |
+| MongoDB     | 27017     | 27017          |
+
+### Dev workflow (hot reload, no service worker)
 
 ```bash
 docker compose up                                    # start everything
@@ -66,6 +81,10 @@ docker compose exec backend npm run seed             # reseed beaches
 ```
 
 The UI runs `vite` in dev mode. Fast HMR, but the service worker is **not registered** and PWA install is unavailable.
+
+### HMR over Docker bind mounts (`usePolling`)
+
+`ui/vite.config.ts` sets `server.watch.usePolling: true`. The UI source is bind-mounted into the container (`./ui:/app`), and on macOS / Windows the Docker VM does not propagate native file-system events (`fsevents`/`inotify`) across that boundary. Without polling, edits on the host never trigger an HMR reload inside the container. Polling adds a small CPU cost but is the only reliable cross-platform watcher inside Docker — leave it on.
 
 ### Production build + preview (service worker live)
 
@@ -78,16 +97,33 @@ docker compose run --rm --service-ports ui sh -c "yarn build && yarn preview"
 
 Serves the built `dist/` on port 5173 (same mapping as dev) with the service worker registered. Ctrl+C the container to stop, then `docker compose up -d ui` to return to dev mode.
 
-### Mobile testing over HTTPS
+### Quality commands
 
-Cloudflared gives you a trusted HTTPS URL pointing at the dev server — required for service worker registration and "Add to Home Screen" on iOS/Android.
+Run from the host (the lint and typecheck tools resolve config relative to cwd, so `cd` into the package first):
+
+| Package    | Command                           | What it does                              |
+| ---------- | --------------------------------- | ----------------------------------------- |
+| `ui/`      | `cd ui && yarn lint`              | ESLint flat config, `--max-warnings 0`    |
+| `ui/`      | `cd ui && yarn typecheck`         | `vue-tsc --noEmit` (full project)         |
+| `ui/`      | `cd ui && yarn format`            | `prettier --write .` (root `.prettierrc`) |
+| `ui/`      | `cd ui && yarn build`             | `vue-tsc && vite build` → `ui/dist/`      |
+| `backend/` | `cd backend && npm run lint`      | ESLint flat config, `--max-warnings 0`    |
+| `backend/` | `cd backend && npm run typecheck` | `tsc --noEmit`                            |
+| `backend/` | `cd backend && npm run format`    | `prettier --write .`                      |
+| `backend/` | `cd backend && npm run build`     | `tsc` → `backend/dist/`                   |
+
+These same commands run automatically on staged files via the pre-commit hook — see [Pre-commit hooks](#pre-commit-hooks) below.
+
+### Real-device testing over HTTPS (cloudflared)
+
+Cloudflared gives you a trusted HTTPS URL pointing at the dev server — required for service worker registration, "Add to Home Screen" on iOS/Android, and the Phase 1 Definition of Done in [`docs/v0.2-plan.md`](docs/v0.2-plan.md).
 
 ```bash
 brew install cloudflared
 cloudflared tunnel --url http://localhost:5173
 ```
 
-Open the printed `https://*.trycloudflare.com` URL on your phone. API requests go through `/api` on the same tunnel (Vite proxies them to the backend).
+Open the printed `https://*.trycloudflare.com` URL on your phone. API requests go through `/api` on the same tunnel (Vite proxies them to the backend). The tunnel host is allow-listed in `ui/vite.config.ts` (`server.allowedHosts: ['.trycloudflare.com']`).
 
 ## Pre-commit hooks
 
