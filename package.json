@@ -14,17 +14,17 @@
   },
   "lint-staged": {
     "ui/**/*.{ts,tsx}": [
-      "bash -c 'cd ui && eslint --fix --max-warnings 0 \"$@\"' --",
+      "bash -c 'cd ui && eslint --fix --max-warnings 0 --no-warn-ignored \"$@\"' --",
       "prettier --write",
       "bash -c 'cd ui && tsc-files --noEmit \"$@\"' --"
     ],
     "ui/**/*.vue": [
-      "bash -c 'cd ui && eslint --fix --max-warnings 0 \"$@\"' --",
+      "bash -c 'cd ui && eslint --fix --max-warnings 0 --no-warn-ignored \"$@\"' --",
       "prettier --write",
       "bash -c 'cd ui && yarn --silent typecheck'"
     ],
     "backend/**/*.ts": [
-      "bash -c 'cd backend && eslint --fix --max-warnings 0 \"$@\"' --",
+      "bash -c 'cd backend && eslint --fix --max-warnings 0 --no-warn-ignored \"$@\"' --",
       "prettier --write",
       "bash -c 'cd backend && tsc-files --noEmit \"$@\"' --"
     ],

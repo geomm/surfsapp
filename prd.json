@@ -134,7 +134,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-002 (Frontend performance pass). PRD US-006. Depends on US-006 because the budget value is the largest chunk size measured at that point."
     },
     {

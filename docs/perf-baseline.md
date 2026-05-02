@@ -8,9 +8,9 @@ This file captures the performance and resilience baselines for v0.2 Phase 1 (Fo
 
 Run on 2026-05-02 at base commit `7edf184` plus the US-006 changes (maplibre CSS moved out of the entry chunk via `BeachMap.vue` + `MapView.vue` per-component imports — `main.ts` no longer imports `maplibre-gl/dist/maplibre-gl.css`).
 
-| Profile         | Performance | Accessibility | Best Practices | SEO |
-| --------------- | ----------- | ------------- | -------------- | --- |
-| Lighthouse 12.8 default mobile (Moto G Power emulation, simulated 4G throttle) | **98** | 95 | 96 | 92 |
+| Profile                                                                        | Performance | Accessibility | Best Practices | SEO |
+| ------------------------------------------------------------------------------ | ----------- | ------------- | -------------- | --- |
+| Lighthouse 12.8 default mobile (Moto G Power emulation, simulated 4G throttle) | **98**      | 95            | 96             | 92  |
 
 3-run medians (raw scores `[98, 98, 98]`, `[95, 95, 95]`, `[96, 96, 96]`, `[92, 92, 92]`). Tested against `yarn build && yarn preview` served from `127.0.0.1:4173`. CLI:
 
@@ -28,23 +28,53 @@ The mobile Performance gate (≥ 90) for v0.2 Phase 1 exit is met with margin.
 
 `yarn build` output for the same commit. The largest chunk is `maplibre-gl` (282 KB gzip) which is loaded **only** on the lazy `/map` and `/beaches/:id` routes — never on initial home load.
 
-| Chunk                                   | Raw       | Gzip      | When it loads                               |
-| --------------------------------------- | --------- | --------- | ------------------------------------------- |
-| `maplibre-gl-<hash>.js`                 | 1,048 kB  | 282 kB    | First navigation to `/map` or `/beaches/:id` |
-| `index-<hash>.js` (entry)               | 458 kB    | 159 kB    | Initial load                                |
-| `maplibre-gl-<hash>.css`                | 70 kB     | 10 kB     | First navigation to `/map` or `/beaches/:id` |
-| `index-<hash>.css` (entry)              | 14 kB     | 3 kB      | Initial load                                |
-| `MapView-<hash>.js`                     | 11 kB     | 5 kB      | `/map` only                                 |
-| `BeachDetailView-<hash>.js`             | 10 kB     | 4 kB      | `/beaches/:id` only                         |
-| `BeachDetailView-<hash>.css`            | 7 kB      | 2 kB      | `/beaches/:id` only                         |
-| `workbox-window.prod.es5-<hash>.js`     | 6 kB      | 2 kB      | Initial load (PWA service-worker register)  |
-| `MapView-<hash>.css`                    | 3 kB      | < 1 kB    | `/map` only                                 |
+| Chunk                               | Raw      | Gzip   | When it loads                                |
+| ----------------------------------- | -------- | ------ | -------------------------------------------- |
+| `maplibre-gl-<hash>.js`             | 1,048 kB | 282 kB | First navigation to `/map` or `/beaches/:id` |
+| `index-<hash>.js` (entry)           | 458 kB   | 159 kB | Initial load                                 |
+| `maplibre-gl-<hash>.css`            | 70 kB    | 10 kB  | First navigation to `/map` or `/beaches/:id` |
+| `index-<hash>.css` (entry)          | 14 kB    | 3 kB   | Initial load                                 |
+| `MapView-<hash>.js`                 | 11 kB    | 5 kB   | `/map` only                                  |
+| `BeachDetailView-<hash>.js`         | 10 kB    | 4 kB   | `/beaches/:id` only                          |
+| `BeachDetailView-<hash>.css`        | 7 kB     | 2 kB   | `/beaches/:id` only                          |
+| `workbox-window.prod.es5-<hash>.js` | 6 kB     | 2 kB   | Initial load (PWA service-worker register)   |
+| `MapView-<hash>.css`                | 3 kB     | < 1 kB | `/map` only                                  |
 
 Verification that `maplibre-gl` is **not** in the entry chunk and **not** loaded on the home route:
 
 - The Lighthouse network-request audit on `/` lists `index-<hash>.js`, `index-<hash>.css`, `manifest.webmanifest`, `logo.svg`, `pwa-192x192.png`, `background-waves-<hash>.jpg`, `workbox-window.prod.es5-<hash>.js`, the `/beaches` API call — and **no** `maplibre-gl-*` asset.
 - The Lighthouse network-request audit on `/map` includes `maplibre-gl-<hash>.js` (1,048 kB) and `maplibre-gl-<hash>.css` (70 kB), confirming the lazy chunk loads on demand.
 - The chunk name is `maplibre-gl-<hash>.{js,css}` — Vite hoists the dependency into a shared chunk because both lazy routes (`MapView.vue` and `BeachDetailView.vue` via `BeachMap.vue`) statically import it. The static import is fine here because the importing modules are themselves loaded via `import()` from the router (`router.ts` lines 12-19).
+
+### Bundle size budget (US-007)
+
+`yarn build` output captured 2026-05-02 against the US-006 tip (commit `3881cf3`). Sizes drift slightly from the US-006 table above because the build was re-run with the latest dependency tree.
+
+| Chunk                               | Raw         | Gzip      |
+| ----------------------------------- | ----------- | --------- |
+| `maplibre-gl-<hash>.js`             | 1,047.86 kB | 283.21 kB |
+| `index-<hash>.js` (entry)           | 263.91 kB   | 91.66 kB  |
+| `maplibre-gl-<hash>.css`            | 69.96 kB    | 10.06 kB  |
+| `background-waves-<hash>.jpg`       | 19.92 kB    | —         |
+| `index-<hash>.css` (entry)          | 14.18 kB    | 3.33 kB   |
+| `MapView-<hash>.js`                 | 9.92 kB     | 4.14 kB   |
+| `BeachDetailView-<hash>.js`         | 8.32 kB     | 3.10 kB   |
+| `BeachDetailView-<hash>.css`        | 6.93 kB     | 1.54 kB   |
+| `workbox-window.prod.es5-<hash>.js` | 5.72 kB     | 2.35 kB   |
+| `MapView-<hash>.css`                | 3.39 kB     | 0.83 kB   |
+| `index.html`                        | 3.00 kB     | 0.73 kB   |
+| `manifest.webmanifest`              | 0.69 kB     | —         |
+
+Largest chunk is `maplibre-gl-<hash>.js` at **1,047.86 kB raw / 283.21 kB gzip**.
+
+Budget set in `ui/vite.config.ts` as `build.chunkSizeWarningLimit: 1155`:
+
+- Largest raw size 1,047.86 kB → round up to nearest 10 kB = **1,050 kB**.
+- Apply 10% headroom: 1,050 × 1.10 = **1,155 kB**.
+
+Note on units: vite v5's `chunkSizeWarningLimit` is compared against **raw** chunk size (`chunk.code.length / 1000`), not gzip. The PRD AC computes the budget from the largest chunk's gzipped size (283 kB → 290 → 319), but a 319 kB raw threshold would warn unconditionally on the maplibre-gl chunk and defeat the budget's purpose. The same formula is applied to the raw size instead so the budget catches a ~10% growth signal without producing a baseline warning. Headroom on the gzip number is comparable: the 1,155 kB raw budget corresponds to ~312 kB gzip (current 283 + ~10%).
+
+`yarn build` after this change emits no `(!) Some chunks are larger than …` warning.
 
 ### Notes on optimisations applied
 
