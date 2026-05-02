@@ -49,7 +49,7 @@ docker compose up
 docker compose exec backend yarn seed
 
 # 5. Install root devDeps so the husky pre-commit hook is wired up
-npm install
+yarn install
 ```
 
 ### Where things live
@@ -138,18 +138,17 @@ Open the printed `https://*.trycloudflare.com` URL on your phone. API requests g
 
 ## Pre-commit hooks
 
-A husky + lint-staged pre-commit hook runs on every `git commit`. After cloning, run `npm install` once at the repo root to install the hooks (the `prepare` script wires up `.husky/`).
+A husky + lint-staged pre-commit hook runs on every `git commit`. After cloning, run `yarn install` once at the repo root to install the hooks (the `prepare` script wires up `.husky/`).
 
 What runs on staged files:
 
-| File pattern                | Checks                                                                      |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `ui/**/*.ts`, `ui/**/*.tsx` | `eslint --fix`, `prettier --write`, `tsc --noEmit` (scoped via `tsc-files`) |
-| `ui/**/*.vue`               | `eslint --fix`, `prettier --write`, `vue-tsc --noEmit` (full ui project)    |
-| `backend/**/*.ts`           | `eslint --fix`, `prettier --write`, `tsc --noEmit` (scoped via `tsc-files`) |
-| `*.{js,json,md}`            | `prettier --write`                                                          |
+| File pattern           | Checks                                                                      |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `ui/**/*.{ts,tsx,vue}` | `eslint --fix`, `prettier --write`, `yarn typecheck` (full ui project)      |
+| `backend/**/*.ts`      | `eslint --fix`, `prettier --write`, `yarn typecheck` (full backend project) |
+| `*.{js,json,md}`       | `prettier --write`                                                          |
 
-A typical 1–3 file commit completes in ~1–2 seconds on a warm cache.
+A typical 1–3 file commit completes in ~2–3 seconds on a warm cache. The typecheck step runs the full project (via `vue-tsc` for ui, `tsc` for backend) instead of per-file because per-file `tsc` doesn't load the project's `*.vue` shims or ambient `declare module` augmentations (e.g. `req.requestId`), causing spurious "Cannot find module" / "Property does not exist" errors.
 
 To skip the hook in an emergency (rolling back, partial commits, etc.):
 

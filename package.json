@@ -9,16 +9,10 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
     "prettier": "^3.8.3",
-    "tsc-files": "^1.1.4",
     "typescript": "~5.9.3"
   },
   "lint-staged": {
-    "ui/**/*.{ts,tsx}": [
-      "bash -c 'cd ui && eslint --fix --max-warnings 0 --no-warn-ignored \"$@\"' --",
-      "prettier --write",
-      "bash -c 'cd ui && tsc-files --noEmit \"$@\"' --"
-    ],
-    "ui/**/*.vue": [
+    "ui/**/*.{ts,tsx,vue}": [
       "bash -c 'cd ui && eslint --fix --max-warnings 0 --no-warn-ignored \"$@\"' --",
       "prettier --write",
       "bash -c 'cd ui && yarn --silent typecheck'"
@@ -26,7 +20,7 @@
     "backend/**/*.ts": [
       "bash -c 'cd backend && eslint --fix --max-warnings 0 --no-warn-ignored \"$@\"' --",
       "prettier --write",
-      "bash -c 'cd backend && tsc-files --noEmit \"$@\"' --"
+      "bash -c 'cd backend && yarn --silent typecheck'"
     ],
     "*.{js,json,md}": [
       "prettier --write"
