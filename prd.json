@@ -116,7 +116,7 @@
         "Verify in browser using dev-browser skill: home loads, list scrolls smoothly, navigating to /map still mounts the map after the lazy chunk loads"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Source: brief US-002 (Frontend performance pass). PRD US-005. Depends on US-001/US-002 (lint + tsconfig) and US-003 (pre-commit) only insofar as those gates must already pass on main when this story lands."
     },
     {

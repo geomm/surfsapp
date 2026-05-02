@@ -3,7 +3,6 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
 import './styles/main.scss';
-import 'maplibre-gl/dist/maplibre-gl.css';
 import './components/lit/index';
 import { useBeachStore } from './stores/beachStore';
 

@@ -2,6 +2,67 @@
 
 This file captures the performance and resilience baselines for v0.2 Phase 1 (Foundation). Future stories append further sections (frontend Lighthouse, bundle sizes, backend latency).
 
+## Frontend baseline
+
+### Lighthouse mobile
+
+Run on 2026-05-02 at base commit `7edf184` plus the US-006 changes (maplibre CSS moved out of the entry chunk via `BeachMap.vue` + `MapView.vue` per-component imports — `main.ts` no longer imports `maplibre-gl/dist/maplibre-gl.css`).
+
+| Profile         | Performance | Accessibility | Best Practices | SEO |
+| --------------- | ----------- | ------------- | -------------- | --- |
+| Lighthouse 12.8 default mobile (Moto G Power emulation, simulated 4G throttle) | **98** | 95 | 96 | 92 |
+
+3-run medians (raw scores `[98, 98, 98]`, `[95, 95, 95]`, `[96, 96, 96]`, `[92, 92, 92]`). Tested against `yarn build && yarn preview` served from `127.0.0.1:4173`. CLI:
+
+```
+lighthouse http://127.0.0.1:4173/ \
+  --output=json --output-path=./mobile_$i.json \
+  --quiet --chrome-flags="--headless=new --no-sandbox --disable-gpu"
+```
+
+Key Core Web Vitals on the home route (run 1 of 3): FCP 1.7 s, LCP 2.3 s, TBT 0 ms, CLS 0, Speed Index 1.7 s.
+
+The mobile Performance gate (≥ 90) for v0.2 Phase 1 exit is met with margin.
+
+### Bundle / chunk graph
+
+`yarn build` output for the same commit. The largest chunk is `maplibre-gl` (282 KB gzip) which is loaded **only** on the lazy `/map` and `/beaches/:id` routes — never on initial home load.
+
+| Chunk                                   | Raw       | Gzip      | When it loads                               |
+| --------------------------------------- | --------- | --------- | ------------------------------------------- |
+| `maplibre-gl-<hash>.js`                 | 1,048 kB  | 282 kB    | First navigation to `/map` or `/beaches/:id` |
+| `index-<hash>.js` (entry)               | 458 kB    | 159 kB    | Initial load                                |
+| `maplibre-gl-<hash>.css`                | 70 kB     | 10 kB     | First navigation to `/map` or `/beaches/:id` |
+| `index-<hash>.css` (entry)              | 14 kB     | 3 kB      | Initial load                                |
+| `MapView-<hash>.js`                     | 11 kB     | 5 kB      | `/map` only                                 |
+| `BeachDetailView-<hash>.js`             | 10 kB     | 4 kB      | `/beaches/:id` only                         |
+| `BeachDetailView-<hash>.css`            | 7 kB      | 2 kB      | `/beaches/:id` only                         |
+| `workbox-window.prod.es5-<hash>.js`     | 6 kB      | 2 kB      | Initial load (PWA service-worker register)  |
+| `MapView-<hash>.css`                    | 3 kB      | < 1 kB    | `/map` only                                 |
+
+Verification that `maplibre-gl` is **not** in the entry chunk and **not** loaded on the home route:
+
+- The Lighthouse network-request audit on `/` lists `index-<hash>.js`, `index-<hash>.css`, `manifest.webmanifest`, `logo.svg`, `pwa-192x192.png`, `background-waves-<hash>.jpg`, `workbox-window.prod.es5-<hash>.js`, the `/beaches` API call — and **no** `maplibre-gl-*` asset.
+- The Lighthouse network-request audit on `/map` includes `maplibre-gl-<hash>.js` (1,048 kB) and `maplibre-gl-<hash>.css` (70 kB), confirming the lazy chunk loads on demand.
+- The chunk name is `maplibre-gl-<hash>.{js,css}` — Vite hoists the dependency into a shared chunk because both lazy routes (`MapView.vue` and `BeachDetailView.vue` via `BeachMap.vue`) statically import it. The static import is fine here because the importing modules are themselves loaded via `import()` from the router (`router.ts` lines 12-19).
+
+### Notes on optimisations applied
+
+The initial Lighthouse run at the start of US-006 already exceeded 90 (median 98), so the optional fixes from `docs/v0.2-design-brief.md` US-002 were applied selectively:
+
+- **Removed `import 'maplibre-gl/dist/maplibre-gl.css'` from `ui/src/main.ts`** — the CSS now lives in `BeachMap.vue` and `MapView.vue`, where it belongs alongside the map mount. Effect: `index-<hash>.css` shrank from 84 kB → 14 kB raw (13 kB → 3 kB gzip) on initial load. Vite hoists the duplicate import into the shared `maplibre-gl-<hash>.css` chunk.
+- **Beach-photo `<img loading="lazy">` and font subsetting were not applied** — there are currently no beach-photo `<img>` tags (the only `<img>` is the 24×24 SVG logo above the fold, where `loading="lazy"` would harm LCP), and the app uses system fonts only (no custom web-font payload to subset).
+- **Route-level dynamic `import()`** was already in place from earlier work (`router.ts` lazy-loads `BeachDetailView.vue` and `MapView.vue`); no changes were needed.
+
+### Manual smoke check
+
+Verified locally via Lighthouse's headless Chrome:
+
+- Home (`/`) loads, the beach list renders, `/beaches` API request fires, no `maplibre-gl` payload.
+- Navigating to `/map` triggers the lazy `maplibre-gl-<hash>.js` + `maplibre-gl-<hash>.css` chunks; the map mounts.
+
+A direct in-browser scroll-smoothness check could not be automated; the synthetic Lighthouse run reports CLS 0 and TBT 0 ms, which is a strong indicator of jank-free rendering on the list view.
+
 ## Backend baseline
 
 ### Indexes
